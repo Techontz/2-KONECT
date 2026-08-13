@@ -1,0 +1,40 @@
+{
+  "name": "direct2kariakoo-web",
+  "version": "0.1.0",
+  "private": true,
+
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "analyze": "ANALYZE=true next build"
+  },
+
+  "dependencies": {
+    "@googlemaps/js-api-loader": "^2.0.1",
+    "axios": "^1.12.2",
+    "framer-motion": "^12.23.24",
+    "lucide-react": "^0.545.0",
+    "next": "^15.5.6",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "swr": "^2.3.6"
+  },
+
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@next/bundle-analyzer": "^14.2.33",
+    "@tailwindcss/postcss": "^4.1.14",
+    "@types/google.maps": "^3.58.1",
+    "@types/node": "^20",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.1",
+    "autoprefixer": "^10.4.21",
+    "eslint": "^9",
+    "eslint-config-next": "^15.5.6",
+    "serve": "^14.2.4",
+    "tailwindcss": "^4.1.14",
+    "typescript": "^5"
+  }
+}

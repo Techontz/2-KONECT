@@ -1,0 +1,154 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   Direct2Kariakoo — design system
+   --------------------------------------------------------------------------
+   Every colour, radius, shadow and type step the storefront uses is declared
+   once here. Components reference the tokens; nothing hard-codes a hex value
+   or a magic pixel number.
+
+   Proportions are taken from the reference marketplace recording: a 50px
+   yellow utility header, a 40px white category bar beneath it, dense product
+   cards on a near-white canvas.
+   ========================================================================== */
+
+@theme {
+  /* --- Brand ------------------------------------------------------------ */
+  --color-brand: #fee500;          /* header / primary brand surface       */
+  --color-brand-dark: #f5d500;     /* hover on brand surfaces              */
+  --color-brand-ink: #101010;      /* text on brand yellow                 */
+
+  /* --- Action ----------------------------------------------------------- */
+  --color-action: #3866df;         /* primary CTA (add to cart, checkout)  */
+  --color-action-dark: #2b52bd;
+  --color-action-soft: #eef3ff;
+
+  /* --- Ink -------------------------------------------------------------- */
+  --color-ink: #101010;
+  --color-ink-muted: #6b6b6b;
+  --color-ink-faint: #9a9a9a;
+
+  /* --- Surfaces --------------------------------------------------------- */
+  --color-canvas: #f4f4f6;         /* page background                      */
+  --color-surface: #ffffff;
+  --color-surface-alt: #fafafb;
+  --color-line: #e6e6e9;
+  --color-line-strong: #d2d2d8;
+
+  /* --- Semantic --------------------------------------------------------- */
+  --color-sale: #e01a2b;           /* discount percentage                  */
+  --color-success: #067d4e;        /* in stock, savings                    */
+  --color-success-soft: #e6f4ee;
+  --color-warn: #b45309;
+  --color-warn-soft: #fef3c7;
+  --color-express: #fee500;
+
+  /* --- Radii ------------------------------------------------------------ */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  /* --- Elevation -------------------------------------------------------- */
+  --shadow-card: 0 1px 2px rgba(16, 16, 16, 0.06);
+  --shadow-hover: 0 6px 20px rgba(16, 16, 16, 0.12);
+  --shadow-pop: 0 12px 32px rgba(16, 16, 16, 0.16);
+
+  /* --- Layout ----------------------------------------------------------- */
+  --header-height: 56px;
+  --nav-height: 42px;
+  --shell-max: 1600px;
+
+  --font-sans: var(--font-brand), "Inter", system-ui, -apple-system, sans-serif;
+}
+
+/* The reference storefront is a light commerce surface. Inheriting the OS
+   dark preference would invert product photography and break contrast on the
+   yellow header, so the palette is deliberately fixed. */
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  min-height: 100vh;
+  /* No page may scroll sideways — wide rails scroll inside their own track. */
+  overflow-x: hidden;
+}
+
+/* --------------------------------------------------------------------------
+   Utilities
+   -------------------------------------------------------------------------- */
+
+/* Horizontal rails: scrollable, but without a visible scrollbar so the row
+   reads as a carousel the way the reference does. */
+.rail {
+  display: flex;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  scroll-snap-type: x proximity;
+}
+.rail::-webkit-scrollbar {
+  display: none;
+}
+.rail > * {
+  scroll-snap-align: start;
+}
+
+/* Product titles clamp to two lines so every card in a row is the same height. */
+.clamp-1,
+.clamp-2,
+.clamp-3 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.clamp-1 { -webkit-line-clamp: 1; }
+.clamp-2 { -webkit-line-clamp: 2; }
+.clamp-3 { -webkit-line-clamp: 3; }
+
+.shell {
+  width: 100%;
+  max-width: var(--shell-max);
+  margin-inline: auto;
+  padding-inline: 16px;
+}
+
+@media (min-width: 1024px) {
+  .shell { padding-inline: 24px; }
+}
+
+/* Skeleton shimmer for loading states. */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, #ececf0 25%, #f6f6f8 50%, #ececf0 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+}
+
+/* Focus ring — visible for keyboard users, quiet for pointer users. */
+:where(a, button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--color-action);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb {
+  background-color: rgba(16, 16, 16, 0.18);
+  border-radius: var(--radius-pill);
+}
+::-webkit-scrollbar-thumb:hover { background-color: rgba(16, 16, 16, 0.3); }
