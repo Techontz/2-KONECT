@@ -2,8 +2,6 @@
 
 namespace App\Services\Auth;
 
-use Firebase\JWT\JWT;
-use Firebase\JWT\Key;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
@@ -50,13 +48,7 @@ class FirebaseIdTokenVerifier
             throw new RuntimeException('Google sign-in is not configured on this server.');
         }
 
-        try {
-            $claims = (array) JWT::decode($idToken, $this->signingKeys());
-        } catch (\Throwable $e) {
-            // Covers a bad signature, an expired token, a malformed one and an
-            // unknown key id. The client is told no more than it needs.
-            throw new RuntimeException('That Google sign-in could not be verified.');
-        }
+        $claims = $this->decodeVerified($idToken);
 
         if (($claims['iss'] ?? '') !== "https://securetoken.google.com/{$projectId}") {
             throw new RuntimeException('That Google sign-in could not be verified.');
@@ -92,7 +84,7 @@ class FirebaseIdTokenVerifier
             'name'           => trim((string) ($claims['name'] ?? '')),
             'picture'        => $claims['picture'] ?? null,
             'email_verified' => true,
-            'provider'       => (string) ($claims['firebase']->sign_in_provider ?? 'google.com'),
+            'provider'       => (string) ($claims['firebase']['sign_in_provider'] ?? 'google.com'),
         ];
     }
 
@@ -102,13 +94,103 @@ class FirebaseIdTokenVerifier
     }
 
     /**
+     * Check the token's signature and lifetime, and return its claims.
+     *
+     * RS256 verification is done with PHP's own OpenSSL rather than a JWT
+     * package. That is a deployment decision as much as a technical one: the
+     * production host has no SSH and therefore no Composer, so a dependency
+     * added here could not actually be installed there. `openssl` and `json`
+     * are extensions Laravel already requires, so this file — and the two
+     * beside it — can be copied to the server and simply work.
+     *
+     * @return array<string, mixed>
+     */
+    private function decodeVerified(string $idToken): array
+    {
+        $parts = explode('.', $idToken);
+
+        if (count($parts) !== 3) {
+            throw new RuntimeException('That Google sign-in could not be verified.');
+        }
+
+        [$encodedHeader, $encodedPayload, $encodedSignature] = $parts;
+
+        $header    = $this->decodeSegment($encodedHeader);
+        $claims    = $this->decodeSegment($encodedPayload);
+        $signature = $this->base64UrlDecode($encodedSignature);
+
+        // Only RS256 is accepted. Reading the algorithm out of the token and
+        // trusting it is the classic JWT break — "alg": "none" and the
+        // HMAC-with-the-public-key trick both start there.
+        if (($header['alg'] ?? '') !== 'RS256') {
+            throw new RuntimeException('That Google sign-in could not be verified.');
+        }
+
+        $kid = (string) ($header['kid'] ?? '');
+        $keys = $this->signingKeys();
+
+        if ($kid === '' || ! isset($keys[$kid])) {
+            throw new RuntimeException('That Google sign-in could not be verified.');
+        }
+
+        $verified = openssl_verify(
+            "{$encodedHeader}.{$encodedPayload}",
+            $signature,
+            $keys[$kid],
+            OPENSSL_ALGO_SHA256,
+        );
+
+        if ($verified !== 1) {
+            throw new RuntimeException('That Google sign-in could not be verified.');
+        }
+
+        // A minute of leeway absorbs ordinary clock drift between Google's
+        // servers and this one, and no more.
+        $now = time();
+        $leeway = 60;
+
+        if (! isset($claims['exp']) || $now >= ((int) $claims['exp'] + $leeway)) {
+            throw new RuntimeException('That Google sign-in has expired. Please try again.');
+        }
+
+        if (isset($claims['iat']) && ((int) $claims['iat'] - $leeway) > $now) {
+            throw new RuntimeException('That Google sign-in could not be verified.');
+        }
+
+        return $claims;
+    }
+
+    /** @return array<string, mixed> */
+    private function decodeSegment(string $segment): array
+    {
+        $decoded = json_decode($this->base64UrlDecode($segment), true);
+
+        if (! is_array($decoded)) {
+            throw new RuntimeException('That Google sign-in could not be verified.');
+        }
+
+        return $decoded;
+    }
+
+    private function base64UrlDecode(string $value): string
+    {
+        $decoded = base64_decode(strtr($value, '-_', '+/'), true);
+
+        if ($decoded === false) {
+            throw new RuntimeException('That Google sign-in could not be verified.');
+        }
+
+        return $decoded;
+    }
+
+    /**
      * Current securetoken public keys, keyed by `kid`.
      *
      * Google rotates these roughly daily and tells us how long they are good
      * for in the response's Cache-Control header; honouring it keeps the cache
      * correct without guessing.
      *
-     * @return array<string, Key>
+     * @return array<string, \OpenSSLAsymmetricKey>
      */
     private function signingKeys(): array
     {
@@ -131,7 +213,7 @@ class FirebaseIdTokenVerifier
             $publicKey = openssl_pkey_get_public($pem);
 
             if ($publicKey !== false) {
-                $keys[$kid] = new Key($publicKey, 'RS256');
+                $keys[$kid] = $publicKey;
             }
         }
 
