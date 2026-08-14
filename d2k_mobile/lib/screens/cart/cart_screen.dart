@@ -405,16 +405,45 @@ class _SummaryCard extends StatelessWidget {
             padding: EdgeInsets.symmetric(vertical: 12),
             child: Divider(height: 1),
           ),
+          // The total is the number the shopper is actually deciding on, so it
+          // is the largest thing in the summary and the only one at full ink.
           Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Expanded(
                 child: Text(strings.total,
                     style: AppTypography.sectionTitleSmall),
               ),
-              Text(currency.format(cart.total),
-                  style: AppTypography.priceHero.copyWith(fontSize: 19)),
+              const SizedBox(width: 12),
+              Flexible(
+                child: Text(
+                  currency.format(cart.total),
+                  maxLines: 1,
+                  textAlign: TextAlign.end,
+                  style: AppTypography.priceHero.copyWith(fontSize: 20),
+                ),
+              ),
             ],
           ),
+          if (cart.savings.baseAmount > 0) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Icon(Icons.savings_outlined,
+                    size: 14, color: AppColors.discountGreen),
+                const SizedBox(width: 5),
+                Expanded(
+                  child: Text(
+                    '${strings.discountLabel} · ${currency.format(cart.savings)}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.discount
+                        .copyWith(color: AppColors.discountGreen),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

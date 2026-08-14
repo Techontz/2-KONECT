@@ -1,5 +1,10 @@
 import 'package:flutter/foundation.dart';
 
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/services.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+
 import '../data/api_client.dart';
 
 enum AccountRole { customer, vendor, admin }
@@ -16,6 +21,7 @@ class AuthUser {
     this.vendorId,
     this.businessName,
     this.vendorApproved = false,
+    this.avatarUrl,
   });
 
   final int id;
@@ -26,6 +32,9 @@ class AuthUser {
   final int? vendorId;
   final String? businessName;
   final bool vendorApproved;
+
+  /// Set for Google accounts; the backend stores it as `avatar_url`.
+  final String? avatarUrl;
 
   bool get isVendor => role == AccountRole.vendor;
 
@@ -47,6 +56,7 @@ class AuthUser {
       businessName: vendor?['business_name'] as String?,
       // The column is a tinyint, so it arrives as 1/0 as often as true/false.
       vendorApproved: vendor?['is_approved'] == true || vendor?['is_approved'] == 1,
+      avatarUrl: source['avatar_url'] as String?,
     );
   }
 }
@@ -129,7 +139,73 @@ class AuthController extends ChangeNotifier {
     });
   }
 
+  /// Signs in with Google through Firebase Authentication.
+  ///
+  /// Firebase performs the Google half and issues an ID token. The backend
+  /// verifies that token's signature, refuses seller and staff accounts, and
+  /// returns the same `{user, token}` envelope as a password login — so from
+  /// here on a Google customer is an ordinary authenticated customer with an
+  /// ordinary Sanctum session.
+  Future<bool> loginWithGoogle() async {
+    return _run(() async {
+      if (Firebase.apps.isEmpty) {
+        throw 'Google sign-in is not configured in this build.';
+      }
+
+      // A stale Google session would silently skip the account chooser, which
+      // is wrong on a shared handset.
+      final google = GoogleSignIn(scopes: const ['email', 'profile']);
+      await google.signOut();
+
+      final GoogleSignInAccount? account;
+      try {
+        account = await google.signIn();
+      } on PlatformException catch (e) {
+        throw _googleMessage(e.code);
+      }
+
+      if (account == null) {
+        // The shopper backed out of the chooser — a decision, not a failure.
+        throw const _CancelledByUser();
+      }
+
+      final googleAuth = await account.authentication;
+
+      final credential = GoogleAuthProvider.credential(
+        idToken: googleAuth.idToken,
+        accessToken: googleAuth.accessToken,
+      );
+
+      final firebaseUser =
+          (await FirebaseAuth.instance.signInWithCredential(credential)).user;
+
+      final idToken = await firebaseUser?.getIdToken();
+
+      if (idToken == null || idToken.isEmpty) {
+        throw 'Google did not return a usable sign-in. Please try again.';
+      }
+
+      await _adopt(await _api.post('/auth/google', {'id_token': idToken}));
+    });
+  }
+
+  /// Turns a platform sign-in failure into something a shopper can act on.
+  String _googleMessage(String code) => switch (code) {
+        'network_error' =>
+          'No internet connection. Check your network and try again.',
+        'sign_in_failed' =>
+          'Google sign-in is not set up for this build of the app.',
+        _ => 'Google sign-in could not be completed. Please try again.',
+      };
+
   Future<void> logout() async {
+    // Clear the Firebase session too, so the next sign-in shows the account
+    // chooser rather than silently reusing the last one.
+    if (Firebase.apps.isNotEmpty) {
+      await FirebaseAuth.instance.signOut().catchError((_) {});
+      await GoogleSignIn().signOut().catchError((_) => null);
+    }
+
     try {
       await _api.post('/logout');
     } catch (_) {
@@ -164,6 +240,12 @@ class AuthController extends ChangeNotifier {
       return true;
     } on ApiException catch (e) {
       _error = e.message;
+    } on _CancelledByUser {
+      // Backing out of the Google sheet is a choice, not a failure.
+      notifyListeners();
+      return false;
+    } on String catch (message) {
+      _error = message;
     } catch (_) {
       _error = 'We could not reach the server. Check your connection.';
     }
@@ -171,4 +253,9 @@ class AuthController extends ChangeNotifier {
     notifyListeners();
     return false;
   }
+}
+
+/// Raised when the shopper dismisses the Google account chooser.
+class _CancelledByUser implements Exception {
+  const _CancelledByUser();
 }

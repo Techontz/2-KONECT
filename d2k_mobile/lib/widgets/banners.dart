@@ -213,8 +213,13 @@ class HeroBannerCard extends StatelessWidget {
       child: Container(
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
+          // Artwork-only banners sit on a neutral ground; a dark gradient would
+          // otherwise show as bars around the contained image.
+          color: banner.title.isEmpty ? AppColors.surface : null,
           borderRadius: AppRadius.banner,
-          gradient: LinearGradient(
+          gradient: banner.title.isEmpty
+              ? null
+              : LinearGradient(
             colors: banner.gradient,
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -228,8 +233,12 @@ class HeroBannerCard extends StatelessWidget {
             // them; letterboxing a full banner into it left a black gutter.
             if (banner.image != null)
               if (banner.title.isEmpty)
+                // `contain`, not `cover`: the artwork has its headline and CTA
+                // baked into it, and cover cropped the sides — the banner read
+                // "e delivery in Dar" with the "Free" cut off. Letterboxing on
+                // the card's own ground is invisible; cutting words is not.
                 Positioned.fill(
-                  child: AppImage(banner.image, fit: BoxFit.cover),
+                  child: AppImage(banner.image, fit: BoxFit.contain),
                 )
               else
                 Positioned(

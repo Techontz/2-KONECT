@@ -9,9 +9,14 @@ import '../state/app_controllers.dart';
 
 /// "📍 Other ⌄ / Kariakoo Market - Dar es Salaam - Tanzania"
 class LocationHeader extends StatelessWidget {
-  const LocationHeader({super.key, this.padding});
+  const LocationHeader({super.key, this.padding, this.compact = false});
 
   final EdgeInsets? padding;
+
+  /// Set when the row shares the header band with the wordmark: it drops the
+  /// "Deliver to" label and right-aligns, so a long Swahili place name still
+  /// fits beside the brand on a 320pt screen.
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -22,30 +27,55 @@ class LocationHeader extends StatelessWidget {
       child: GestureDetector(
         onTap: () => showLocationSheet(context),
         behavior: HitTestBehavior.opaque,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.location_on, size: 19),
-                const SizedBox(width: 5),
-                Text(
-                  location.label,
-                  style: AppTypography.sectionTitle.copyWith(fontSize: 17),
-                ),
-                const Icon(Icons.keyboard_arrow_down, size: 21),
-              ],
-            ),
-            const SizedBox(height: 2),
-            Text(
-              location.summary,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTypography.body.copyWith(fontSize: 14.5),
-            ),
-          ],
-        ),
+        child: compact
+            // Beside the wordmark: one line, right-aligned, and allowed to
+            // ellipsise rather than push the brand off the screen.
+            ? Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  const Icon(Icons.location_on_outlined,
+                      size: 15, color: AppColors.brandBlack),
+                  const SizedBox(width: 3),
+                  Flexible(
+                    child: Text(
+                      location.summary,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.end,
+                      style: AppTypography.meta.copyWith(
+                        color: AppColors.brandBlack,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const Icon(Icons.keyboard_arrow_down,
+                      size: 17, color: AppColors.brandBlack),
+                ],
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.location_on, size: 19),
+                      const SizedBox(width: 5),
+                      Text(
+                        location.label,
+                        style: AppTypography.sectionTitle.copyWith(fontSize: 17),
+                      ),
+                      const Icon(Icons.keyboard_arrow_down, size: 21),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    location.summary,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.body.copyWith(fontSize: 14.5),
+                  ),
+                ],
+              ),
       ),
     );
   }

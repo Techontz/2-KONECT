@@ -51,12 +51,39 @@ function Carousel({ slides }: { slides: HeroBannerModel[] }) {
   const [paused, setPaused] = useState(false);
   const timer = useRef<number | null>(null);
 
+  // The rendered <img> for each slide, read directly when the timer fires.
+  const artwork = useRef<(HTMLImageElement | null)[]>([]);
+
   const count = slides.length;
   const go = useCallback((next: number) => setIndex((next + count) % count), [count]);
 
   useEffect(() => {
     if (count <= 1 || paused) return;
-    timer.current = window.setInterval(() => setIndex((current) => (current + 1) % count), 6000);
+
+    // Rotate only onto artwork that has actually arrived.
+    //
+    // Banner files come from the admin at whatever size was uploaded, and the
+    // API host serves them slowly — a 5.7 MB banner takes the better part of a
+    // minute on a Tanzanian connection. Advancing on a fixed timer regardless
+    // meant the hero spent most of its cycle on empty panels, which is what
+    // made a freshly published banner look like it had never been published.
+    // A broken or unreachable image is skipped for the same reason.
+    //
+    // Readiness is read off the elements rather than tracked from `load`
+    // events: a cached banner can finish before React attaches a handler, and
+    // the event is not replayed for a late listener. `complete` is always true
+    // by then, so asking the DOM at the moment it matters cannot race.
+    timer.current = window.setInterval(() => {
+      setIndex((current) => {
+        for (let step = 1; step <= count; step += 1) {
+          const candidate = (current + step) % count;
+          const image = artwork.current[candidate];
+          if (image?.complete && image.naturalWidth > 0) return candidate;
+        }
+        return current;
+      });
+    }, 6000);
+
     return () => {
       if (timer.current) window.clearInterval(timer.current);
     };
@@ -84,7 +111,15 @@ function Carousel({ slides }: { slides: HeroBannerModel[] }) {
         style={{ transform: `translateX(-${index * 100}%)` }}
       >
         {slides.map((slide, position) => (
-          <Slide key={slide.id} banner={slide} active={position === index} eager={position === 0} />
+          <Slide
+            key={slide.id}
+            banner={slide}
+            active={position === index}
+            eager={position === 0}
+            imageRef={(node) => {
+              artwork.current[position] = node;
+            }}
+          />
         ))}
       </div>
 
@@ -119,26 +154,20 @@ function Slide({
   banner,
   active,
   eager,
+  imageRef,
 }: {
   banner: HeroBannerModel;
   active: boolean;
   eager: boolean;
+  imageRef(node: HTMLImageElement | null): void;
 }) {
   const image = (
-    <picture>
-      {banner.mobile_image && banner.mobile_image !== banner.image ? (
-        <source media="(max-width: 640px)" srcSet={banner.mobile_image} />
-      ) : null}
-      <img
-        src={banner.image ?? ""}
-        alt={banner.alt ?? banner.title ?? ""}
-        // Only the first slide is above the fold; the rest wait.
-        loading={eager ? "eager" : "lazy"}
-        fetchPriority={eager ? "high" : "low"}
-        decoding="async"
-        className="aspect-[3/1] w-full object-cover"
-      />
-    </picture>
+    <BannerArtwork
+      banner={banner}
+      eager={eager}
+      className="aspect-[3/1] w-full object-cover"
+      imageRef={imageRef}
+    />
   );
 
   return (
@@ -154,24 +183,73 @@ function Slide({
   );
 }
 
-/** The fixed card. It never rotates — it stays until an admin changes it. */
-function SideCard({ banner }: { banner: HeroBannerModel }) {
-  const image = (
+/**
+ * A banner's artwork.
+ *
+ * Served straight from the API host rather than through Next's image
+ * optimiser. That is a measured decision, not an oversight: the optimiser has
+ * a short upstream fetch budget, and the API host currently delivers banner
+ * files at roughly 140 KB/s — a 5.7 MB upload takes forty seconds to read, so
+ * the optimiser times out and returns nothing at all. A slow banner beats a
+ * broken one. The lasting fix is on the other side of the wire, where banner
+ * uploads are now bounded so artwork of that size cannot be stored again.
+ *
+ * Every slide loads eagerly, including the ones off-screen. Lazy loading is
+ * wrong for a translate-based carousel: the later slides sit outside the
+ * clipped strip, so the browser never considers them near the viewport and
+ * never fetches them — yet the timer slides them into view. Priority still
+ * differs, because the first slide is the page's largest contentful paint and
+ * must not queue behind the rest.
+ */
+function BannerArtwork({
+  banner,
+  eager,
+  className,
+  cropUntil = "sm",
+  imageRef,
+}: {
+  banner: HeroBannerModel;
+  eager: boolean;
+  className: string;
+  /** The breakpoint above which the wide artwork takes over. */
+  cropUntil?: "sm" | "lg";
+  imageRef?(node: HTMLImageElement | null): void;
+}) {
+  const media = cropUntil === "lg" ? "(max-width: 1023px)" : "(max-width: 640px)";
+
+  return (
     <picture>
-      {/* Below lg the card stacks under the carousel and spans the full width.
-          The square artwork would then stand ~640px tall, so a wide crop is
-          used there and the strip is pinned to the carousel's 3:1. */}
+      {/* A dedicated phone crop is honoured when the administrator uploaded
+          one. `mobile_image` falls back to the wide artwork server-side, so the
+          two are equal for most banners and no source is emitted. */}
       {banner.mobile_image && banner.mobile_image !== banner.image ? (
-        <source media="(max-width: 1023px)" srcSet={banner.mobile_image} />
+        <source media={media} srcSet={banner.mobile_image} />
       ) : null}
       <img
         src={banner.image ?? ""}
         alt={banner.alt ?? banner.title ?? ""}
-        loading="lazy"
+        loading="eager"
+        fetchPriority={eager ? "high" : "low"}
         decoding="async"
-        className="h-full w-full object-cover"
+        ref={imageRef}
+        className={className}
       />
     </picture>
+  );
+}
+
+/** The fixed card. It never rotates — it stays until an admin changes it. */
+function SideCard({ banner }: { banner: HeroBannerModel }) {
+  // Below lg the card stacks under the carousel and spans the full width. The
+  // square artwork would then stand ~640px tall, so a wide crop is used there
+  // and the strip is pinned to the carousel's 3:1.
+  const image = (
+    <BannerArtwork
+      banner={banner}
+      eager={false}
+      cropUntil="lg"
+      className="h-full w-full object-cover"
+    />
   );
 
   return (

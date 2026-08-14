@@ -20,11 +20,22 @@ class User extends Authenticatable implements FilamentUser
         'role',
         'phone',
         'address',
+        'firebase_uid',
+        'avatar_url',
+        'email_verified_at',
     ];
+
+    /** True when the account can only sign in through Google. */
+    public function usesGoogleOnly(): bool
+    {
+        return $this->firebase_uid !== null && $this->password === null;
+    }
 
     protected $hidden = [
         'password',
         'remember_token',
+        // The Firebase UID is an account identifier, not public data.
+        'firebase_uid',
     ];
 
     protected $casts = [

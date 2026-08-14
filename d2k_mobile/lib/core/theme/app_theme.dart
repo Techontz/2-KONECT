@@ -12,6 +12,8 @@ class AppTheme {
     final base = ThemeData(
       useMaterial3: true,
       fontFamily: AppTypography.family,
+      // Chinese has no Manrope glyphs; without this it renders as tofu.
+      fontFamilyFallback: AppTypography.fallback,
       scaffoldBackgroundColor: AppColors.surface,
       colorScheme: ColorScheme.fromSeed(
         seedColor: AppColors.primary,

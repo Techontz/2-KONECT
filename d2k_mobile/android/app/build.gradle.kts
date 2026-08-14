@@ -13,6 +13,15 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Firebase is optional at build time: the plugin is applied only once
+// google-services.json exists, so a checkout without Firebase credentials
+// still builds and runs (without Google sign-in).
+if (rootProject.file("app/google-services.json").exists() ||
+    file("google-services.json").exists()
+) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 android {
     namespace = "com.example.d2k_mobile"
     compileSdk = flutter.compileSdkVersion

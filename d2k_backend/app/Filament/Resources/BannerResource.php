@@ -68,14 +68,32 @@ class BannerResource extends Resource
                             ->maxLength(255),
                     ])->columns(2),
 
+                /*
+                 * Artwork is bounded on the way in.
+                 *
+                 * A banner uploaded straight from a design tool arrived as a
+                 * 5.7 MB PNG, and the API host serves banner files at roughly
+                 * 140 KB/s — forty seconds for one slide. The homepage carousel
+                 * moves on every six, so a newly published banner was never on
+                 * screen long enough to be seen and looked to an administrator
+                 * as though it had not published at all.
+                 *
+                 * Resizing in the browser before upload fixes it at the source:
+                 * 1600px wide is more than the hero can ever show, and nobody
+                 * has to remember to export at the right size.
+                 */
                 Forms\Components\Section::make('Artwork')
                     ->schema([
                         Forms\Components\FileUpload::make('image')
                             ->label('Desktop artwork')
-                            ->helperText('Wide, roughly 3:1. SVG, PNG or JPG.')
+                            ->helperText('Wide, roughly 3:1. PNG or JPG, up to 4 MB — larger images are scaled down to 1600px.')
                             ->disk('public')
                             ->directory('banners')
                             ->image()
+                            ->maxSize(4096)
+                            ->imageResizeMode('contain')
+                            ->imageResizeTargetWidth('1600')
+                            ->imageResizeUpscale(false)
                             ->required(),
 
                         Forms\Components\FileUpload::make('mobile_image')
@@ -83,7 +101,11 @@ class BannerResource extends Resource
                             ->helperText('A taller crop for phones. The desktop image is used when this is empty.')
                             ->disk('public')
                             ->directory('banners')
-                            ->image(),
+                            ->image()
+                            ->maxSize(4096)
+                            ->imageResizeMode('contain')
+                            ->imageResizeTargetWidth('1000')
+                            ->imageResizeUpscale(false),
                     ])->columns(2),
 
                 Forms\Components\Section::make('Scheduling')

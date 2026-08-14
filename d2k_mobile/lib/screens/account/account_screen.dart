@@ -10,6 +10,7 @@ import '../../domain/models/currency.dart';
 import '../../state/app_controllers.dart';
 import '../../state/currency_controller.dart';
 import '../../state/auth_controller.dart';
+import '../../widgets/app_image.dart';
 import '../chat/messages_screen.dart';
 import 'addresses_screen.dart';
 import '../../widgets/states.dart';
@@ -51,6 +52,7 @@ class AccountScreen extends StatelessWidget {
                       name: auth.user!.name,
                       email: auth.user!.email,
                       phone: auth.user!.phone,
+                      avatarUrl: auth.user!.avatarUrl,
                     )
                   else
                     PrimaryButton(
@@ -288,43 +290,66 @@ class _Hero extends StatelessWidget {
 }
 
 class _ProfileCard extends StatelessWidget {
-  const _ProfileCard({required this.name, required this.email, this.phone});
+  const _ProfileCard({
+    required this.name,
+    required this.email,
+    this.phone,
+    this.avatarUrl,
+  });
 
   final String name;
   final String email;
   final String? phone;
 
+  /// Google accounts arrive with a profile picture; showing it is what makes
+  /// the screen feel like the shopper's own account rather than a form.
+  final String? avatarUrl;
+
   @override
   Widget build(BuildContext context) {
-    // Whatever the account actually has: the phone is optional on a D2K
-    // account, so the email is the reliable second line.
-    final secondary = (phone == null || phone!.isEmpty) ? email : phone!;
+    // The name leads, the email identifies, and the phone — optional on a D2K
+    // account — is a third line only when there is one.
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: AppDecorations.flatCard,
       child: Row(
         children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: const BoxDecoration(
-              color: AppColors.brandYellow,
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              name.isEmpty ? 'D' : name.characters.first.toUpperCase(),
-              style: AppTypography.sectionTitle.copyWith(fontSize: 20),
-            ),
+          ClipOval(
+            child: (avatarUrl != null && avatarUrl!.isNotEmpty)
+                ? AppImage(avatarUrl, width: 54, height: 54, fit: BoxFit.cover)
+                : Container(
+                    width: 54,
+                    height: 54,
+                    color: AppColors.brandYellow,
+                    alignment: Alignment.center,
+                    child: Text(
+                      name.isEmpty ? 'D' : name.characters.first.toUpperCase(),
+                      style: AppTypography.sectionTitle.copyWith(fontSize: 21),
+                    ),
+                  ),
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: AppTypography.sectionTitleSmall),
-                const SizedBox(height: 3),
-                Text(secondary, style: AppTypography.metaMuted),
+                Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.sectionTitleSmall,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  email,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.metaMuted,
+                ),
+                if (phone != null && phone!.isNotEmpty) ...[
+                  const SizedBox(height: 1),
+                  Text(phone!, style: AppTypography.metaMuted),
+                ],
               ],
             ),
           ),

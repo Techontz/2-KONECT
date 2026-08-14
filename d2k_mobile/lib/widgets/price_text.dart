@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/theme/app_colors.dart';
+import '../core/theme/app_metrics.dart';
 import '../core/theme/app_typography.dart';
 import '../domain/models/product.dart';
 import '../state/currency_controller.dart';
@@ -45,10 +46,20 @@ class PriceRow extends StatelessWidget {
       style: AppTypography.priceStruck,
       maxLines: 1,
     );
-    final discount = Text(
-      '${product.discountPercent}%',
-      style: AppTypography.discount,
-      maxLines: 1,
+    // A tag rather than bare text: the website badges the percentage, and a
+    // tinted chip reads as a claim about the price instead of another number
+    // competing with it.
+    final discount = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      decoration: BoxDecoration(
+        color: AppColors.saleSoft,
+        borderRadius: BorderRadius.circular(AppRadius.xs),
+      ),
+      child: Text(
+        '-${product.discountPercent}%',
+        style: AppTypography.discount,
+        maxLines: 1,
+      ),
     );
 
     // Shilling amounts run long, so the strike-through original and the

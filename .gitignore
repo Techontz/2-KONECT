@@ -17,6 +17,9 @@
 *.keystore
 *.mobileprovision
 auth.json
+google-services.json
+GoogleService-Info.plist
+firebase-service-account*.json
 credentials.json
 service-account*.json
 **/android/local.properties

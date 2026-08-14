@@ -242,8 +242,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     children: [
                       const Icon(Icons.search, size: 20),
                       const SizedBox(width: 10),
-                      Text(strings.searchPrefix,
-                          style: AppTypography.searchHint.copyWith(fontSize: 15)),
+                      // The bar shares its row with a back button, a heart and
+                      // a cart icon, so on a 320pt screen the hint has to be
+                      // able to give way rather than overflow the pill.
+                      Expanded(
+                        child: Text(
+                          strings.searchPrefix,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.searchHint.copyWith(fontSize: 15),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -457,11 +466,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 color: product.inStock ? AppColors.success : AppColors.error,
               ),
               const SizedBox(width: 6),
-              Text(
-                product.inStock
-                    ? '${strings.inStock} · ${product.stock} available'
-                    : strings.outOfStock,
-                style: AppTypography.meta,
+              // The stock line grows with the number and with translation —
+              // "Ipo · 12 available" in Swahili is longer again — so it takes
+              // the remaining width rather than pushing the row past the card.
+              Expanded(
+                child: Text(
+                  product.inStock
+                      ? '${strings.inStock} · ${product.stock} available'
+                      : strings.outOfStock,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.meta,
+                ),
               ),
             ],
           ),

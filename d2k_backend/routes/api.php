@@ -61,6 +61,12 @@ Route::get('/products/search', [ProductController::class, 'search']);
 // 🧾 Auth
 Route::post('/register', [RegisterController::class, 'register']);
 Route::post('/login', [LoginController::class, 'login']);
+// Customers only — privileged accounts keep the password flow.
+Route::post('/auth/google', [\App\Http\Controllers\Auth\GoogleAuthController::class, 'store'])
+    // This endpoint can create an account, so it is throttled even though the
+    // older password routes are not. Ten attempts a minute is far above what a
+    // real shopper needs and far below what a script would want.
+    ->middleware('throttle:10,1');
 
 // 💳 AzamPay Callback
 Route::post('/v1/Checkout/Callback', [PaymentController::class, 'azampayCallback']);

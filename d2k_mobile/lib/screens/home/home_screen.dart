@@ -204,14 +204,17 @@ class _HomeScreenState extends State<HomeScreen> {
     if (feed.heroSide != null) hero.add(feed.heroSide!.toPromo());
 
     return [
+      // The band directly under the yellow header: hero, then the category
+      // rail, then promos. It sits on white so the header's yellow is the only
+      // strong colour above the fold, the way the website opens.
       SliverToBoxAdapter(
         child: Container(
-          color: AppColors.homeSkin,
-          padding: const EdgeInsets.only(bottom: 18),
+          color: AppColors.surface,
+          padding: const EdgeInsets.only(bottom: AppSpacing.sectionGap),
           child: Column(
             children: [
               if (hero.isNotEmpty) ...[
-                const SizedBox(height: 6),
+                const SizedBox(height: 14),
                 HeroBannerCarousel(
                   banners: hero,
                   showIndicator: hero.length > 1,
@@ -219,18 +222,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ],
               if (feed.categories.isNotEmpty) ...[
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.sectionGap),
                 HomeCategoryRail(
                   categories: feed.categories,
                   onTap: (category) => _openCategory(category.id),
                 ),
               ],
               if (feed.promos.isNotEmpty) ...[
-                const SizedBox(height: 18),
+                const SizedBox(height: AppSpacing.sectionGap),
                 SectionHeader(
                   title: strings.offersForYou,
                   padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.gutter, 0, AppSpacing.gutter, 10),
+                      AppSpacing.gutter, 0, AppSpacing.gutter, 12),
                 ),
                 SizedBox(
                   height: 150,
@@ -365,11 +368,16 @@ class _HomeHeaderDelegate extends SliverPersistentHeaderDelegate {
     bool overlapsContent,
   ) {
     final collapse = (shrinkOffset / _locationHeight).clamp(0.0, 1.0);
+
+    // Brand yellow, as on the website. The old pale-blue header was the single
+    // biggest reason the app did not read as the same product as the site.
     return Container(
-      color: AppColors.homeSkin,
+      color: AppColors.brandYellow,
       padding: EdgeInsets.only(top: topInset),
       child: Column(
         children: [
+          // The wordmark and the delivery row share the collapsing band, so
+          // scrolling leaves a compact yellow bar with just the search field.
           ClipRect(
             child: Align(
               alignment: Alignment.topLeft,
@@ -378,9 +386,18 @@ class _HomeHeaderDelegate extends SliverPersistentHeaderDelegate {
                 opacity: 1 - collapse,
                 child: const SizedBox(
                   height: _locationHeight,
-                  child: LocationHeader(
-                    padding: EdgeInsets.fromLTRB(
-                        AppSpacing.gutter, 2, AppSpacing.gutter, 0),
+                  child: Row(
+                    children: [
+                      SizedBox(width: AppSpacing.gutter),
+                      _Wordmark(),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: LocationHeader(
+                          padding: EdgeInsets.fromLTRB(0, 2, AppSpacing.gutter, 0),
+                          compact: true,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -388,7 +405,7 @@ class _HomeHeaderDelegate extends SliverPersistentHeaderDelegate {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(
-                AppSpacing.gutter, 4, AppSpacing.gutter, 10),
+                AppSpacing.gutter, 2, AppSpacing.gutter, 12),
             child: D2KSearchField(rotating: true, onTap: onSearchTap),
           ),
         ],
@@ -473,9 +490,15 @@ class HomeProductShelf extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (products.isEmpty) return const SizedBox.shrink();
+
+    // Each shelf is a white block on the page canvas, so the feed reads as a
+    // stack of sections rather than one long scroll. This is how the website
+    // separates its rows, and it is what lets the section title carry weight
+    // without needing a rule or a heavy border.
     return Container(
-      color: canvas,
-      padding: EdgeInsets.only(top: topPadding, bottom: canvas == null ? 0 : 18),
+      color: canvas ?? AppColors.surface,
+      margin: const EdgeInsets.only(top: 10),
+      padding: EdgeInsets.only(top: topPadding, bottom: 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -490,6 +513,37 @@ class HomeProductShelf extends StatelessWidget {
                 ProductCard(product: products[index]),
           ),
         ],
+      ),
+    );
+  }
+}
+
+
+/// The D2K wordmark, set the way the website sets it: one word, the "2kariakoo"
+/// half carried by weight rather than a second colour, on brand yellow.
+class _Wordmark extends StatelessWidget {
+  const _Wordmark();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(text: 'direct'),
+          TextSpan(
+            text: '2k',
+            style: TextStyle(fontWeight: FontWeight.w800),
+          ),
+        ],
+      ),
+      style: TextStyle(
+        fontFamily: AppTypography.family,
+        fontFamilyFallback: AppTypography.fallback,
+        fontSize: 19,
+        height: 1,
+        fontWeight: FontWeight.w800,
+        letterSpacing: -0.8,
+        color: AppColors.brandBlack,
       ),
     );
   }

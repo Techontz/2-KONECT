@@ -20,7 +20,6 @@ interface Banner {
 /* -------------------------------------------------------------------------- */
 const BANNER_CACHE_KEY = "d2k_cached_banners";
 const BANNER_CACHE_TIME = "d2k_banner_cache_time";
-const CACHE_TTL = 1000 * 60 * 60 * 12; // 12 hours
 
 /* -------------------------------------------------------------------------- */
 /* Component                                                                  */
@@ -51,14 +50,17 @@ export default function BannerCarousel() {
   }, []);
 
   /* -------------------------------------------------------------------------- */
-  /* 🧠 Fetch banners with cache                                                */
+  /* 🧠 Always refresh from the API; the cache is only a first paint           */
   /* -------------------------------------------------------------------------- */
   useEffect(() => {
     const now = Date.now();
-    const cachedTime = localStorage.getItem(BANNER_CACHE_TIME);
 
-    if (cachedTime && now - parseInt(cachedTime) < CACHE_TTL) return;
-
+    // The cached copy above renders instantly so the strip is never empty, but
+    // it must never *replace* the API. This previously returned early whenever
+    // the cache was under twelve hours old, which froze the homepage on
+    // whatever banners a visitor happened to load first — a banner published in
+    // the admin could take half a day to appear, or never, for a returning
+    // shopper. Freshness wins; the cache only covers the request in flight.
     axios
       .get(`${process.env.NEXT_PUBLIC_API_URL}/banners`)
       .then((res) => {

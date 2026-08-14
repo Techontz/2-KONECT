@@ -231,21 +231,33 @@ class _ContactButton extends StatelessWidget {
     return Expanded(
       child: Padding(
         padding: const EdgeInsets.only(right: 8),
-        child: OutlinedButton.icon(
+        // `OutlinedButton.icon` lays the icon and label out in an unconstrained
+        // Row, so a label that cannot fit overflows its own slot instead of
+        // ellipsising. Building the row explicitly lets the label flex.
+        child: OutlinedButton(
           onPressed: onTap,
-          icon: Icon(icon, size: 17, color: color),
-          label: Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: color, fontWeight: FontWeight.w700),
-          ),
           style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
             side: BorderSide(color: color.withValues(alpha: 0.35)),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppRadius.sm),
             ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 17, color: color),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: color, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
           ),
         ),
       ),

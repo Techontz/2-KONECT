@@ -31,6 +31,11 @@ dependencies:
   # D2K banners are authored as SVG; Flutter's raster pipeline cannot decode
   # them, so they need a vector renderer.
   flutter_svg: ^2.0.10
+  # Customer Google sign-in. The plugin returns an ID token which the Laravel
+  # API verifies; the app never sees or holds a client secret.
+  google_sign_in: ^6.2.2
+  firebase_core: ^4.13.0
+  firebase_auth: ^6.5.7
 
 
 dev_dependencies:
@@ -46,15 +51,8 @@ flutter:
     - assets/products/
 
   fonts:
-    - family: JakartaSans
+    # Manrope is the website's typeface. One family, one variable file: the
+    # weight axis covers 200-800, so five static faces are replaced by 165 KB.
+    - family: Manrope
       fonts:
-        - asset: assets/fonts/PlusJakartaSans-Regular.ttf
-          weight: 400
-        - asset: assets/fonts/PlusJakartaSans-Medium.ttf
-          weight: 500
-        - asset: assets/fonts/PlusJakartaSans-SemiBold.ttf
-          weight: 600
-        - asset: assets/fonts/PlusJakartaSans-Bold.ttf
-          weight: 700
-        - asset: assets/fonts/PlusJakartaSans-ExtraBold.ttf
-          weight: 800
+        - asset: assets/fonts/Manrope-Variable.ttf

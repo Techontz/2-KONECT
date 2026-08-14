@@ -47,6 +47,14 @@ class _AuthScreenState extends State<AuthScreen> {
     super.dispose();
   }
 
+  Future<void> _continueWithGoogle() async {
+    setState(() => _busy = true);
+    final ok = await context.read<AuthController>().loginWithGoogle();
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (ok) Navigator.of(context).pop();
+  }
+
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
@@ -232,6 +240,42 @@ class _AuthScreenState extends State<AuthScreen> {
               onPressed: _busy ? null : _submit,
             ),
 
+            // Shoppers only. The seller path deliberately keeps the password
+            // flow: seller accounts carry approval and publishing rights, and
+            // those decisions stay with D2K rather than with Google.
+            if (!isVendorPath) ...[
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  const Expanded(child: Divider(color: AppColors.divider)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text('or', style: AppTypography.metaMuted),
+                  ),
+                  const Expanded(child: Divider(color: AppColors.divider)),
+                ],
+              ),
+              const SizedBox(height: 14),
+              OutlinedButton.icon(
+                onPressed: _busy ? null : _continueWithGoogle,
+                icon: const _GoogleMark(),
+                label: const Text('Continue with Google'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(52),
+                  foregroundColor: AppColors.textPrimary,
+                  backgroundColor: AppColors.surface,
+                  side: const BorderSide(color: AppColors.divider),
+                  textStyle: const TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
+                ),
+              ),
+            ],
+
             if (isVendorPath) ...[
               const SizedBox(height: 12),
               Text(
@@ -381,4 +425,49 @@ class _Field extends StatelessWidget {
       ),
     );
   }
+}
+
+
+/// Google's mark, drawn to their brand spec.
+class _GoogleMark extends StatelessWidget {
+  const _GoogleMark();
+
+  @override
+  Widget build(BuildContext context) => const SizedBox(
+        height: 18,
+        width: 18,
+        child: CustomPaint(painter: _GooglePainter()),
+      );
+}
+
+class _GooglePainter extends CustomPainter {
+  const _GooglePainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final r = size.width / 2;
+    final c = Offset(r, r);
+    final paint = Paint()..style = PaintingStyle.stroke..strokeWidth = r * 0.42;
+
+    // The four brand quadrants of the G, in Google's order.
+    const colors = [
+      Color(0xFF4285F4),
+      Color(0xFF34A853),
+      Color(0xFFFBBC05),
+      Color(0xFFEA4335),
+    ];
+    for (var i = 0; i < 4; i++) {
+      paint.color = colors[i];
+      canvas.drawArc(
+        Rect.fromCircle(center: c, radius: r * 0.78),
+        -0.79 + i * 1.57,
+        1.57,
+        false,
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

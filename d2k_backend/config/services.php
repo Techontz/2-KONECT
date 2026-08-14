@@ -3,6 +3,18 @@
 return [
 
     /*
+    | Firebase Authentication (customer Google sign-in). Only the project id
+    | is needed server-side: tokens are verified against Google's published
+    | public certificates, so there is no secret to leak or rotate.
+    */
+    'firebase' => [
+        // Verifying an ID token needs only the project id and Google's public
+        // certificates — no service-account private key is stored here.
+        'project_id' => env('FIREBASE_PROJECT_ID'),
+    ],
+
+
+    /*
     |--------------------------------------------------------------------------
     | Third Party Services
     |--------------------------------------------------------------------------
