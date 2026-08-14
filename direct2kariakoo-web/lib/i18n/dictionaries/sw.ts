@@ -383,6 +383,10 @@ export const sw: Dictionary = {
   },
 
   auth: {
+    popupBlocked: "Kivinjari chako kimezuia dirisha la Google. Ruhusu madirisha ibukizi kisha jaribu tena.",
+    googleUnavailable: "Kuingia kwa Google bado hakupatikani kwenye tovuti hii.",
+    or: "au",
+    continueWithGoogle: "Endelea na Google",
     registered: "Akaunti imetengenezwa. Ingia ili kuendelea.",
     join: "Jiunge na {brand}",
     confirmPassword: "Thibitisha nenosiri",

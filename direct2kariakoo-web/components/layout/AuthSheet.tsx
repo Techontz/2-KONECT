@@ -6,6 +6,7 @@ import { useT } from "@/lib/i18n";
 import { apiError } from "@/lib/api";
 import { useAuth } from "@/lib/store/auth";
 import { Button } from "@/components/ui/Primitives";
+import { GoogleButton } from "@/components/auth/GoogleButton";
 
 /**
  * Modal sign-in / sign-up.
@@ -178,6 +179,9 @@ export function AuthSheet() {
               {busy ? t("auth.pleaseWait") : mode === "login" ? t("auth.login") : t("auth.createAccountBtn")}
             </Button>
           </form>
+
+          {/* Shoppers only — sellers and staff sign in with a password. */}
+          <GoogleButton onDone={closeAuthPrompt} />
 
           <p className="mt-4 text-center text-[11px] leading-relaxed text-[color:var(--color-ink-faint)]">
             {t("auth.termsNote", { brand: BRAND.name })}

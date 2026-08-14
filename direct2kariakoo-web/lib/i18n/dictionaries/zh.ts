@@ -375,6 +375,10 @@ export const zh: Dictionary = {
   },
 
   auth: {
+    popupBlocked: "浏览器拦截了 Google 窗口。请允许弹出窗口后重试。",
+    googleUnavailable: "本站尚未启用 Google 登录。",
+    or: "或",
+    continueWithGoogle: "使用 Google 继续",
     registered: "账户已创建，请登录以继续。",
     join: "加入 {brand}",
     confirmPassword: "确认密码",

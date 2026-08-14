@@ -377,6 +377,10 @@ export const fr: Dictionary = {
   },
 
   auth: {
+    popupBlocked: "Votre navigateur a bloqué la fenêtre Google. Autorisez les pop-ups et réessayez.",
+    googleUnavailable: "La connexion Google n'est pas encore disponible sur ce site.",
+    or: "ou",
+    continueWithGoogle: "Continuer avec Google",
     registered: "Compte créé. Connectez-vous pour continuer.",
     join: "Rejoindre {brand}",
     confirmPassword: "Confirmer le mot de passe",

@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import api, { TOKEN_KEY, USER_KEY, setToken } from "../api";
+import { signOutOfFirebase } from "../firebase";
 import type { AuthUser } from "../types";
 
 /**
@@ -20,6 +21,8 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   isVendor: boolean;
   login(identifier: string, password: string): Promise<AuthUser>;
+  /** Exchanges a Google ID token for a normal D2K session. Customers only. */
+  loginWithGoogle(idToken: string): Promise<AuthUser>;
   register(payload: RegisterPayload | FormData): Promise<AuthUser>;
   /** Creates the account without signing in — used by the customer sheet. */
   signUp(payload: RegisterPayload): Promise<void>;
@@ -107,6 +110,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [persist]
   );
 
+  /**
+   * The backend verifies the Google ID token, then returns the same
+   * `{ user, token }` envelope as `/login` — so a Google session is stored,
+   * refreshed and cleared through exactly the same path as a password one.
+   */
+  const loginWithGoogle = useCallback(
+    async (idToken: string) => {
+      const { data } = await api.post("/auth/google", { id_token: idToken });
+      const account = normalise(data.user ?? data);
+      persist(data.token ?? data.access_token, account);
+      return account;
+    },
+    [persist]
+  );
+
   const register = useCallback(
     async (payload: RegisterPayload | FormData) => {
       // A seller application carries file uploads, so it must go as multipart.
@@ -133,6 +151,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(() => {
     // Best-effort server-side revocation; the local session goes either way.
     api.post("/logout").catch(() => undefined);
+    // Clear the Firebase half too, so the next sign-in shows the chooser
+    // instead of silently reusing the previous account.
+    void signOutOfFirebase();
     setToken(null);
     window.localStorage.removeItem(USER_KEY);
     setUser(null);
@@ -194,6 +215,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isAuthenticated: Boolean(user),
       isVendor: user?.role === "vendor",
       login,
+      loginWithGoogle,
       register,
       signUp,
       logout,
@@ -202,7 +224,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       openAuthPrompt: () => setAuthPromptOpen(true),
       closeAuthPrompt,
     }),
-    [user, ready, login, register, signUp, logout, requireAuth, authPromptOpen, closeAuthPrompt]
+    [user, ready, login, loginWithGoogle, register, signUp, logout, requireAuth, authPromptOpen, closeAuthPrompt]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -384,6 +384,10 @@ export const en = {
   },
 
   auth: {
+    popupBlocked: "Your browser blocked the Google window. Allow pop-ups and try again.",
+    googleUnavailable: "Google sign-in is not available on this site yet.",
+    or: "or",
+    continueWithGoogle: "Continue with Google",
     registered: "Account created. Sign in to continue.",
     join: "Join {brand}",
     confirmPassword: "Confirm password",

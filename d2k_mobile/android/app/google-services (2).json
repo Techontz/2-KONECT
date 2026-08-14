@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "97979427888",
+    "project_id": "direct2kariakoo-56782",
+    "storage_bucket": "direct2kariakoo-56782.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:97979427888:android:c43df31bf55323d43f11f5",
+        "android_client_info": {
+          "package_name": "co.tz.direct2kariakoo"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "97979427888-pogaiop2itp7g6upm092se5i5e7vrd2n.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "co.tz.direct2kariakoo",
+            "certificate_hash": "a398e108286ecec31eb6fad63c3bfa761112ad74"
+          }
+        },
+        {
+          "client_id": "97979427888-heksk5a9u05vnkonspihi60qkfvkka0e.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDfvvo2lXptn7vKRsDDVGrIi9YIQJGNJIw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "97979427888-heksk5a9u05vnkonspihi60qkfvkka0e.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
