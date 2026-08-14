@@ -19,7 +19,7 @@ export default function HelpPage() {
     <SiteChrome>
       <div className="shell py-4">
         <nav className="mb-3 flex items-center gap-1 text-[12px] text-[color:var(--color-ink-muted)]">
-          <Link href="/" className="hover:underline">{t("common.home")}</Link>
+          <Link href="/" className="crumb hover:underline">{t("common.home")}</Link>
           <span aria-hidden="true">›</span>
           <span className="font-semibold text-[color:var(--color-ink)]">{copy.title}</span>
         </nav>
@@ -55,16 +55,19 @@ export default function HelpPage() {
 
         <section className="mt-4 rounded-[var(--radius-md)] bg-[color:var(--color-surface)] p-5">
           <h2 className="text-[15px] font-extrabold">{BRAND.name}</h2>
-          <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-[color:var(--color-ink-muted)]">
+          {/* These two are the point of the card — the way you actually reach
+              support — so on a phone each is a full-height row rather than a
+              line of 18px text. */}
+          <p className="mt-1 flex flex-wrap items-center gap-x-4 text-[13px] text-[color:var(--color-ink-muted)] sm:mt-2 sm:gap-y-1">
             <a
               href={`mailto:${BRAND.supportEmail}`}
-              className="break-words font-semibold text-[color:var(--color-action)] hover:underline"
+              className="block break-words py-3 font-semibold text-[color:var(--color-action)] hover:underline sm:py-0"
             >
               {BRAND.supportEmail}
             </a>
             <a
               href={`tel:${BRAND.supportPhone.replace(/\s/g, "")}`}
-              className="font-semibold text-[color:var(--color-action)] hover:underline"
+              className="block py-3 font-semibold text-[color:var(--color-action)] hover:underline sm:py-0"
             >
               {BRAND.supportPhone}
             </a>

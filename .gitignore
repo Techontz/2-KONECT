@@ -30,7 +30,14 @@ admin.creds.json
 
 # ------------------------------------------------------------ dependencies --
 node_modules/
-vendor/
+# Composer's directory, named explicitly.
+#
+# A bare `vendor/` matches any directory with that name at any depth, and four
+# of ours hold source: the Next.js /vendor route and its components (the whole
+# seller dashboard), the Flutter seller screens, and Laravel's published vendor
+# views. None of them had ever been committed, which is why every /vendor/*
+# page on the live site answered 404.
+/d2k_backend/vendor/
 **/Pods/
 .pub-cache/
 

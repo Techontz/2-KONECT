@@ -14,7 +14,7 @@ import { LocationPicker } from "@/components/location/LocationPicker";
 import { useAuth } from "@/lib/store/auth";
 import { useCart } from "@/lib/store/cart";
 import { SiteChrome } from "@/components/layout/SiteChrome";
-import { Button, EmptyState } from "@/components/ui/Primitives";
+import { Button, ButtonLink, EmptyState } from "@/components/ui/Primitives";
 
 const DELIVERY_FEE = 3000;
 
@@ -109,7 +109,7 @@ function CheckoutContent() {
       <EmptyState
         title={t("checkout.nothingToCheckout")}
         message={t("checkout.cartEmpty")}
-        action={<Link href="/"><Button size="lg">{t("checkout.browseProducts")}</Button></Link>}
+        action={<ButtonLink href="/" size="lg">{t("checkout.browseProducts")}</ButtonLink>}
       />
     );
   }

@@ -77,7 +77,7 @@ export function ProductShelf({
           <Link
             href={viewAllHref}
             prefetch={false}
-            className="shrink-0 rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide transition-colors hover:border-[color:var(--color-ink)]"
+            className="flex min-h-11 shrink-0 items-center rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide transition-colors hover:border-[color:var(--color-ink)] sm:min-h-0"
           >
             {t("common.viewAll")}
           </Link>

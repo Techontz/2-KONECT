@@ -87,7 +87,7 @@ function AddressesContent() {
   return (
     <div className="shell py-4">
       <nav className="mb-3 flex items-center gap-1 text-[12px] text-[color:var(--color-ink-muted)]">
-        <Link href="/account" className="hover:underline">{t("account.title")}</Link>
+        <Link href="/account" className="crumb hover:underline">{t("account.title")}</Link>
         <span aria-hidden="true">›</span>
         <span className="font-semibold text-[color:var(--color-ink)]">{t("address.title")}</span>
       </nav>

@@ -15,6 +15,7 @@ import { useT } from "@/lib/i18n";
  * added in the admin appears here without a code change.
  */
 export function CategoryNav({ categories }: { categories: Category[] }) {
+  const t = useT();
   const [openId, setOpenId] = useState<number | null>(null);
   const railRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -87,12 +88,16 @@ export function CategoryNav({ categories }: { categories: Category[] }) {
           <NavArrow side="right" onClick={() => railRef.current?.scrollBy({ left: 320, behavior: "smooth" })} />
         ) : null}
 
+        {/* Appears with the bar itself, not 256px later.
+            The burger — and with it the mobile menu that carries this same
+            link — is hidden from lg, so gating the CTA at xl left 1024–1279px
+            with no seller entry point anywhere but the footer. */}
         <Link
           href="/sell"
           prefetch={false}
-          className="ml-3 hidden shrink-0 items-center gap-1.5 rounded-[var(--radius-pill)] border border-[color:var(--color-brand-dark)] bg-[color:var(--color-brand)] px-3 py-1.5 text-[11px] font-extrabold text-[color:var(--color-brand-ink)] transition-colors hover:bg-[color:var(--color-brand-dark)] xl:inline-flex"
+          className="ml-3 hidden shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-pill)] border border-[color:var(--color-brand-dark)] bg-[color:var(--color-brand)] px-3 py-1.5 text-[11px] font-extrabold text-[color:var(--color-brand-ink)] transition-colors hover:bg-[color:var(--color-brand-dark)] lg:inline-flex"
         >
-          Sell on {BRAND.short}
+          {t("header.sellOn", { brand: BRAND.short })}
           <span aria-hidden="true">›</span>
         </Link>
       </div>

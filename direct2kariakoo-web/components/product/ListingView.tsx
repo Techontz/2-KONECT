@@ -163,7 +163,7 @@ export function ListingView({
               <button
                 type="button"
                 onClick={() => setFiltersOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] px-3 py-1.5 text-[13px] font-semibold lg:hidden"
+                className="inline-flex min-h-11 items-center gap-1.5 rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] px-3 py-1.5 text-[13px] font-semibold lg:hidden"
               >
                 {t("listing.filters")}
                 {activeFilterCount > 0 ? (
@@ -178,7 +178,7 @@ export function ListingView({
                 <select
                   value={sort}
                   onChange={(event) => setSort(event.target.value as ProductQuery["sort"])}
-                  className="h-9 rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] bg-white px-2 text-[13px] font-semibold outline-none"
+                  className="h-11 rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] bg-white px-2 text-[13px] font-semibold outline-none sm:h-9"
                 >
                   {SORTS.map((option) => (
                     <option key={option.value} value={option.value}>{t(option.label)}</option>
@@ -228,7 +228,12 @@ export function ListingView({
           <div className="absolute inset-x-0 bottom-0 max-h-[80vh] overflow-y-auto rounded-t-[var(--radius-lg)] bg-[color:var(--color-canvas)] p-4">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-base font-extrabold">{t("listing.filters")}</h2>
-              <button type="button" onClick={() => setFiltersOpen(false)} aria-label={t("listing.closeFilters")} className="p-1">
+              <button
+                type="button"
+                onClick={() => setFiltersOpen(false)}
+                aria-label={t("listing.closeFilters")}
+                className="-mr-2 flex h-11 w-11 items-center justify-center"
+              >
                 <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                   <path d="M6 6l12 12M18 6L6 18" />
                 </svg>
@@ -236,7 +241,7 @@ export function ListingView({
             </div>
             {sidebar}
             <Button className="mt-4 w-full" size="lg" onClick={() => setFiltersOpen(false)}>
-              Show {total.toLocaleString()} products
+              {t("listing.showCount", { count: total.toLocaleString() })}
             </Button>
           </div>
         </div>

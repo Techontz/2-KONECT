@@ -101,12 +101,12 @@ function ProductContent() {
     <div className="shell py-4">
       <nav aria-label="Breadcrumb" className="mb-3 text-[12px] text-[color:var(--color-ink-muted)]">
         <ol className="flex flex-wrap items-center gap-1.5">
-          <li><Link href="/" className="hover:underline">{t("common.home")}</Link></li>
+          <li><Link href="/" className="crumb hover:underline">{t("common.home")}</Link></li>
           {product.category ? (
             <>
               <li aria-hidden="true">›</li>
               <li>
-                <Link href={`/category?id=${product.category.id}`} className="hover:underline">
+                <Link href={`/category?id=${product.category.id}`} className="crumb hover:underline">
                   {product.category.name.trim()}
                 </Link>
               </li>
@@ -118,7 +118,7 @@ function ProductContent() {
               <li>
                 <Link
                   href={`/category?id=${product.category.id}&subcategory=${product.subcategory.id}`}
-                  className="hover:underline"
+                  className="crumb hover:underline"
                 >
                   {product.subcategory.name}
                 </Link>

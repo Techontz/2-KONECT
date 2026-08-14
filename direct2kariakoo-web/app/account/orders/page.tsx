@@ -8,7 +8,7 @@ import shop from "@/lib/shop";
 import { useAuth } from "@/lib/store/auth";
 import type { Order } from "@/lib/types";
 import { SiteChrome } from "@/components/layout/SiteChrome";
-import { Button, EmptyState, Skeleton, Tag } from "@/components/ui/Primitives";
+import { Button, ButtonLink, EmptyState, Skeleton, Tag } from "@/components/ui/Primitives";
 import { useT } from "@/lib/i18n";
 
 /** Colour per fulfilment stage, so status is readable at a glance. */
@@ -107,7 +107,7 @@ function OrdersContent() {
         <EmptyState
           title={t("orders.empty")}
           message={t("orders.emptyHintLong")}
-          action={<Link href="/"><Button size="lg">{t("orders.startShopping")}</Button></Link>}
+          action={<ButtonLink href="/" size="lg">{t("orders.startShopping")}</ButtonLink>}
         />
       ) : (
         <div className="space-y-3">

@@ -7,7 +7,7 @@ import { apiError } from "@/lib/api";
 import { BRAND } from "@/lib/brand";
 import { useAuth } from "@/lib/store/auth";
 import { SiteChrome } from "@/components/layout/SiteChrome";
-import { Button } from "@/components/ui/Primitives";
+import { Button, ButtonLink } from "@/components/ui/Primitives";
 import { useT } from "@/lib/i18n";
 
 /**
@@ -119,9 +119,7 @@ export default function SellPage() {
                     ? t("sell.approved")
                     : t("sell.awaiting")}
                 </p>
-                <Link href="/vendor/dashboard">
-                  <Button size="lg" className="mt-4 w-full">Open seller console</Button>
-                </Link>
+                <ButtonLink href="/vendor/dashboard" size="lg" className="mt-4 w-full">Open seller console</ButtonLink>
               </div>
             ) : isAuthenticated ? (
               <div className="py-6 text-center">

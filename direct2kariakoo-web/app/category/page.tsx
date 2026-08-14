@@ -94,10 +94,10 @@ function CategoryContent() {
 
       <nav aria-label="Breadcrumb" className="shell pt-3 text-[12px] text-[color:var(--color-ink-muted)]">
         <ol className="flex flex-wrap items-center gap-1.5">
-          <li><Link href="/" className="hover:underline">Home</Link></li>
+          <li><Link href="/" className="crumb hover:underline">{t("common.home")}</Link></li>
           <li aria-hidden="true">›</li>
           <li>
-            <Link href={`/category?id=${categoryId}`} className="hover:underline">
+            <Link href={`/category?id=${categoryId}`} className="crumb hover:underline">
               {detail?.category.name.trim() ?? t("listing.category")}
             </Link>
           </li>

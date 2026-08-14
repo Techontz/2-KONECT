@@ -40,7 +40,7 @@ export function ContentPage({
     <SiteChrome>
       <div className="shell py-4">
         <nav className="mb-3 flex items-center gap-1 text-[12px] text-[color:var(--color-ink-muted)]">
-          <Link href="/" className="hover:underline">{t("common.home")}</Link>
+          <Link href="/" className="crumb hover:underline">{t("common.home")}</Link>
           <span aria-hidden="true">›</span>
           <span className="clamp-1 font-semibold text-[color:var(--color-ink)]">{title}</span>
         </nav>

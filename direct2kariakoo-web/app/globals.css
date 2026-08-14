@@ -117,6 +117,22 @@ body {
 .clamp-2 { -webkit-line-clamp: 2; }
 .clamp-3 { -webkit-line-clamp: 3; }
 
+/* A breadcrumb link.
+
+   Breadcrumbs are set at 12px, so on a phone each link is an 18px-tall sliver
+   with 6px between it and the next one — reachable with a mouse and a lottery
+   with a thumb. The hit area grows without the trail getting taller-looking,
+   and the desktop rhythm returns from sm where a pointer is likely. */
+.crumb {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+}
+
+@media (min-width: 640px) {
+  .crumb { min-height: 0; }
+}
+
 .shell {
   width: 100%;
   max-width: var(--shell-max);

@@ -43,7 +43,7 @@ export function LanguageSwitcher() {
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={t("language.label")}
-        className="flex items-center gap-1 rounded-[var(--radius-sm)] px-1.5 py-1.5 text-[13px] font-semibold text-[color:var(--color-brand-ink)] hover:bg-black/5 md:px-2"
+        className="flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-[var(--radius-sm)] px-1.5 py-1.5 text-[13px] font-semibold text-[color:var(--color-brand-ink)] hover:bg-black/5 md:min-w-0 md:px-2"
       >
         <span aria-hidden="true" className="text-[15px] leading-none">{current.flag}</span>
         <span className="hidden uppercase sm:inline">{current.code}</span>

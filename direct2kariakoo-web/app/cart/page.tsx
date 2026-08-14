@@ -6,7 +6,7 @@ import { formatMoney } from "@/lib/format";
 import { useCart } from "@/lib/store/cart";
 import { useWishlist } from "@/lib/store/wishlist";
 import { SiteChrome } from "@/components/layout/SiteChrome";
-import { Button, EmptyState } from "@/components/ui/Primitives";
+import { Button, ButtonLink, EmptyState } from "@/components/ui/Primitives";
 import { useT } from "@/lib/i18n";
 
 const DELIVERY_FEE = 3000; // Matches OrderController::DELIVERY_FEE.
@@ -31,7 +31,7 @@ export default function CartPage() {
           icon={<CartIcon className="h-9 w-9" />}
           title={t("cart.empty")}
           message="Browse the marketplace and add something you like — no account needed."
-          action={<Link href="/"><Button size="lg">{t("cart.startShopping")}</Button></Link>}
+          action={<ButtonLink href="/" size="lg">{t("cart.startShopping")}</ButtonLink>}
         />
       </SiteChrome>
     );

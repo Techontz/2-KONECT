@@ -52,9 +52,9 @@ function VendorsContent() {
     return (
       <div className="shell py-4">
         <nav className="mb-3 flex items-center gap-1 text-[12px] text-[color:var(--color-ink-muted)]">
-          <Link href="/" className="hover:underline">{t("common.home")}</Link>
+          <Link href="/" className="crumb hover:underline">{t("common.home")}</Link>
           <span aria-hidden="true">›</span>
-          <Link href="/vendors" className="hover:underline">{copy.title}</Link>
+          <Link href="/vendors" className="crumb hover:underline">{copy.title}</Link>
           {vendor ? (
             <>
               <span aria-hidden="true">›</span>
@@ -80,7 +80,7 @@ function VendorsContent() {
   return (
     <div className="shell py-4">
       <nav className="mb-3 flex items-center gap-1 text-[12px] text-[color:var(--color-ink-muted)]">
-        <Link href="/" className="hover:underline">{t("common.home")}</Link>
+        <Link href="/" className="crumb hover:underline">{t("common.home")}</Link>
         <span aria-hidden="true">›</span>
         <span className="font-semibold text-[color:var(--color-ink)]">{copy.title}</span>
       </nav>

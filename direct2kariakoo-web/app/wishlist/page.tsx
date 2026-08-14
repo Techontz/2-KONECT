@@ -8,7 +8,7 @@ import { useWishlist } from "@/lib/store/wishlist";
 import type { ProductCard as ProductCardModel } from "@/lib/types";
 import { SiteChrome } from "@/components/layout/SiteChrome";
 import { ProductGrid } from "@/components/product/ProductShelf";
-import { Button, EmptyState } from "@/components/ui/Primitives";
+import { Button, ButtonLink, EmptyState } from "@/components/ui/Primitives";
 import { useT } from "@/lib/i18n";
 
 /**
@@ -91,7 +91,7 @@ function WishlistContent() {
         icon={<HeartIcon className="h-9 w-9" />}
         title={t("wishlist.empty")}
         message={t("wishlist.emptyHint")}
-        action={<Link href="/"><Button size="lg">{t("wishlist.browse")}</Button></Link>}
+        action={<ButtonLink href="/" size="lg">{t("wishlist.browse")}</ButtonLink>}
       />
     );
   }

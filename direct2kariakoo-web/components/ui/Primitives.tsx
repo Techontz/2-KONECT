@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { formatAmount, formatMoney } from "@/lib/format";
 import type { Price, Rating } from "@/lib/types";
 import { useT } from "@/lib/i18n";
@@ -128,6 +130,68 @@ export function DeliveryPill({ label }: { label?: string }) {
   );
 }
 
+type ButtonVariant = "primary" | "secondary" | "ghost" | "dark";
+type ButtonSize = "sm" | "md" | "lg";
+
+const BUTTON_VARIANTS: Record<ButtonVariant, string> = {
+  primary:
+    "bg-[color:var(--color-action)] text-white hover:bg-[color:var(--color-action-dark)] disabled:bg-[color:var(--color-line-strong)]",
+  secondary:
+    "bg-[color:var(--color-surface)] text-[color:var(--color-ink)] border border-[color:var(--color-line-strong)] hover:border-[color:var(--color-ink)]",
+  ghost:
+    "bg-transparent text-[color:var(--color-ink)] hover:bg-[color:var(--color-surface-alt)]",
+  dark: "bg-[color:var(--color-ink)] text-white hover:opacity-90",
+};
+
+// Every size clears the 44px comfortable-tap floor except `sm`, which is only
+// used beside another control on a desktop-width row.
+const BUTTON_SIZES: Record<ButtonSize, string> = {
+  sm: "h-9 px-3 text-[13px]",
+  md: "h-11 px-5 text-sm",
+  lg: "h-13 px-6 text-[15px]",
+};
+
+/**
+ * The shared button appearance, so a link that looks like a button is styled
+ * from the same source as the button itself.
+ */
+export function buttonClass(
+  variant: ButtonVariant = "primary",
+  size: ButtonSize = "md",
+  className = "",
+): string {
+  return `inline-flex items-center justify-center gap-2 rounded-[var(--radius-sm)] font-bold transition-colors disabled:cursor-not-allowed ${BUTTON_VARIANTS[variant]} ${BUTTON_SIZES[size]} ${className}`;
+}
+
+/**
+ * A link that looks like a button.
+ *
+ * Wrapping `<Button>` in a `<Link>` produces `<a><button></button></a>`, which
+ * is invalid — nested interactive elements — and it makes the anchor collapse
+ * to its inline line box, so the thing a screen reader and the accessibility
+ * tree treat as the control is a 22px sliver rather than the button you can
+ * see. This renders one element that is both.
+ */
+export function ButtonLink({
+  href,
+  children,
+  variant = "primary",
+  size = "md",
+  className = "",
+  ...props
+}: Omit<React.ComponentProps<typeof Link>, "className"> & {
+  href: string;
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  className?: string;
+}) {
+  return (
+    <Link href={href} className={buttonClass(variant, size, className)} {...props}>
+      {children}
+    </Link>
+  );
+}
+
 export function Button({
   children,
   variant = "primary",
@@ -135,30 +199,11 @@ export function Button({
   className = "",
   ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: "primary" | "secondary" | "ghost" | "dark";
-  size?: "sm" | "md" | "lg";
+  variant?: ButtonVariant;
+  size?: ButtonSize;
 }) {
-  const variants = {
-    primary:
-      "bg-[color:var(--color-action)] text-white hover:bg-[color:var(--color-action-dark)] disabled:bg-[color:var(--color-line-strong)]",
-    secondary:
-      "bg-[color:var(--color-surface)] text-[color:var(--color-ink)] border border-[color:var(--color-line-strong)] hover:border-[color:var(--color-ink)]",
-    ghost:
-      "bg-transparent text-[color:var(--color-ink)] hover:bg-[color:var(--color-surface-alt)]",
-    dark: "bg-[color:var(--color-ink)] text-white hover:opacity-90",
-  } as const;
-
-  const sizes = {
-    sm: "h-9 px-3 text-[13px]",
-    md: "h-11 px-5 text-sm",
-    lg: "h-13 px-6 text-[15px]",
-  } as const;
-
   return (
-    <button
-      {...props}
-      className={`inline-flex items-center justify-center gap-2 rounded-[var(--radius-sm)] font-bold transition-colors disabled:cursor-not-allowed ${variants[variant]} ${sizes[size]} ${className}`}
-    >
+    <button {...props} className={buttonClass(variant, size, className)}>
       {children}
     </button>
   );

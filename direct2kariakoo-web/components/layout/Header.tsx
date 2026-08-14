@@ -74,17 +74,24 @@ export function Header({ onOpenMenu }: { onOpenMenu?(): void }) {
           language control and five actions no longer leave the search field a
           usable width, so search drops to its own full-width row. */}
       <div className="shell flex flex-wrap items-center gap-x-4 gap-y-2 py-2.5 lg:flex-nowrap">
-        {/* Burger — mobile only; the category bar handles this on desktop. */}
+        {/* Burger — mobile only; the category bar handles this on desktop.
+            It opens the full mobile menu, not just categories, because on a
+            phone this is the only way to reach orders, the wishlist, the
+            account and "Sell on D2K". */}
         <button
           type="button"
           onClick={onOpenMenu}
-          aria-label={t("header.openCategories")}
-          className="-ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-[color:var(--color-brand-ink)] hover:bg-black/5 lg:hidden"
+          aria-label={t("header.menu")}
+          className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-[color:var(--color-brand-ink)] hover:bg-black/5 lg:hidden"
         >
-          <MenuIcon className="h-5 w-5" />
+          <MenuIcon className="h-6 w-6" />
         </button>
 
-        <Link href="/" className="shrink-0" aria-label={t("header.homeAria", { brand: BRAND.name })}>
+        <Link
+          href="/"
+          className="flex min-h-11 shrink-0 items-center"
+          aria-label={t("header.homeAria", { brand: BRAND.name })}
+        >
           <Wordmark />
         </Link>
 
@@ -182,7 +189,8 @@ export function Header({ onOpenMenu }: { onOpenMenu?(): void }) {
             <button
               type="button"
               onClick={() => (isAuthenticated ? setAccountOpen((open) => !open) : openAuthPrompt())}
-              className="flex items-center gap-1.5 rounded-[var(--radius-sm)] px-2 py-1.5 text-[13px] font-semibold text-[color:var(--color-brand-ink)] hover:bg-black/5"
+              aria-label={isAuthenticated ? t("header.account") : t("header.login")}
+              className="flex min-h-11 items-center gap-1.5 rounded-[var(--radius-sm)] px-2 py-1.5 text-[13px] font-semibold text-[color:var(--color-brand-ink)] hover:bg-black/5"
             >
               <UserIcon className="h-5 w-5" />
               <span className="hidden max-w-[110px] truncate lg:inline">
@@ -218,12 +226,23 @@ export function Header({ onOpenMenu }: { onOpenMenu?(): void }) {
             ) : null}
           </div>
 
-          <HeaderAction href="/account/orders" label={t("header.orders")} icon={<BoxIcon className="h-5 w-5" />} />
+          {/* Orders and the wishlist are desktop-only *here* — on a phone they
+              are rows in the mobile menu instead. Five icon actions plus the
+              burger, the wordmark and a language control do not fit a 320px
+              bar without every one of them becoming too small to hit, and the
+              cart is the one that has to stay. */}
+          <HeaderAction
+            href="/account/orders"
+            label={t("header.orders")}
+            icon={<BoxIcon className="h-5 w-5" />}
+            display="hidden lg:flex"
+          />
           <HeaderAction
             href="/wishlist"
             label={t("header.wishlist")}
             icon={<HeartIcon className="h-5 w-5" />}
             badge={wishlist.count}
+            display="hidden lg:flex"
           />
           <HeaderAction
             href="/cart"
@@ -253,17 +272,23 @@ function HeaderAction({
   label,
   icon,
   badge = 0,
+  display = "flex",
 }: {
   href: string;
   label: string;
   icon: React.ReactNode;
   badge?: number;
+  /** Owns the display utility outright, so `hidden` never has to out-rank a
+      `flex` baked into the shared class — that collision resolves by
+      stylesheet order rather than by what is written here. */
+  display?: string;
 }) {
   return (
     <Link
       href={href}
       prefetch={false}
-      className="relative flex items-center gap-1.5 rounded-[var(--radius-sm)] px-2 py-1.5 text-[13px] font-semibold text-[color:var(--color-brand-ink)] hover:bg-black/5"
+      aria-label={label}
+      className={`relative min-h-11 items-center gap-1.5 rounded-[var(--radius-sm)] px-2 py-1.5 text-[13px] font-semibold text-[color:var(--color-brand-ink)] hover:bg-black/5 ${display}`}
     >
       <span className="relative">
         {icon}
