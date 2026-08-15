@@ -119,11 +119,24 @@ export function Footer({ categories = [] }: { categories?: Category[] }) {
       {/* Build credit. Its own quiet band under the legal row so it reads as an
           attribution rather than another footer link, and it is not passed
           through the dictionary — a company name is the same in every
-          language. */}
+          language.
+
+          Only the company name is the link, so the line still reads as a
+          sentence. `inline-block` with vertical padding gives it a thumb-sized
+          hit area without breaking that sentence onto its own line, which is
+          what a flex or block anchor would do here. */}
       <div className="border-t border-[color:var(--color-line)] bg-[color:var(--color-surface-alt)]">
-        <div className="shell py-3.5">
+        <div className="shell py-2.5">
           <p className="text-center text-[12px] font-semibold text-[color:var(--color-ink-muted)]">
-            Built by TechOn Software LLC
+            Built by{" "}
+            <a
+              href="https://techon.co.tz"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block px-1 py-3 font-bold text-[color:var(--color-ink)] underline decoration-[color:var(--color-line-strong)] underline-offset-4 transition-colors hover:text-[color:var(--color-action)] hover:decoration-[color:var(--color-action)]"
+            >
+              TechOn Software LLC
+            </a>
           </p>
         </div>
       </div>
