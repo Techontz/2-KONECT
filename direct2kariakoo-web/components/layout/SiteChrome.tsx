@@ -10,6 +10,7 @@ import { Footer } from "./Footer";
 import { AuthSheet } from "./AuthSheet";
 import { useT } from "@/lib/i18n";
 import { useAuth } from "@/lib/store/auth";
+import { useVendorRedirect } from "@/lib/store/vendorRoute";
 import { useLocation } from "@/lib/store/location";
 import { useWishlist } from "@/lib/store/wishlist";
 import { LocationPicker } from "@/components/location/LocationPicker";
@@ -35,14 +36,29 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
+  // A seller is sent to their console rather than shown the shop. This is the
+  // single place it happens, because this component is what "the customer
+  // experience" actually is — every storefront route composes it, and nothing
+  // under /vendor does.
+  const leavingForConsole = useVendorRedirect();
+
   useEffect(() => {
+    // Pointless work for a seller who is on their way out.
+    if (leavingForConsole) return;
+
     shop
       .categories()
       .then(setCategories)
       // A failed category fetch must not take the page down — the nav simply
       // renders empty and everything else keeps working.
       .catch(() => setCategories([]));
-  }, []);
+  }, [leavingForConsole]);
+
+  // Hold the storefront back while the redirect lands, so a seller never sees
+  // a frame of the shopping interface.
+  if (leavingForConsole) {
+    return <div className="min-h-screen bg-[color:var(--color-canvas)]" aria-hidden="true" />;
+  }
 
   return (
     <CategoriesContext.Provider value={categories}>

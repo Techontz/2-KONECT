@@ -115,6 +115,18 @@ export function Footer({ categories = [] }: { categories?: Category[] }) {
           </div>
         </div>
       </div>
+
+      {/* Build credit. Its own quiet band under the legal row so it reads as an
+          attribution rather than another footer link, and it is not passed
+          through the dictionary — a company name is the same in every
+          language. */}
+      <div className="border-t border-[color:var(--color-line)] bg-[color:var(--color-surface-alt)]">
+        <div className="shell py-3.5">
+          <p className="text-center text-[12px] font-semibold text-[color:var(--color-ink-muted)]">
+            Built by TechOn Software LLC
+          </p>
+        </div>
+      </div>
     </footer>
   );
 }

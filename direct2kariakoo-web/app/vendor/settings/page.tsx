@@ -134,7 +134,9 @@ export default function VendorSettingsPage() {
         {/* ==================== ACCOUNT SECTION ==================== */}
         <Section title="Account">
           <Tile icon={User} title="My Profile" href="/vendor/settings/profile" />
-          <Tile icon={Package} title="My Products" href="/vendor/dashboard/products" />
+          {/* /vendor/dashboard/products has never existed — the products
+              screen is /vendor/products. */}
+          <Tile icon={Package} title="My Products" href="/vendor/products" />
           <Tile icon={Star} title="My Subscription" href="/vendor/settings/subscription" />
           <Tile icon={Wallet} title="My Wallet" href="/vendor/settings/wallet" />
         </Section>
