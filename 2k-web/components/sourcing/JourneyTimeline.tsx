@@ -27,9 +27,12 @@ export function JourneyTimeline({
   const done = timeline.filter((step) => step.state === "done").length;
   const currentIndex = timeline.findIndex((step) => step.state === "current");
   // The line fills to the middle of the active stop, so the progress bar and
-  // the marker agree with each other.
+  // the marker agree with each other. A floor of 4% keeps the very first stop
+  // from rendering as an empty rail that reads as "nothing has happened".
   const reached = currentIndex >= 0 ? currentIndex : done - 1;
-  const percent = timeline.length > 1 ? Math.max(0, (reached / (timeline.length - 1)) * 100) : 0;
+  const percent = timeline.length > 1
+    ? Math.max(4, (reached / (timeline.length - 1)) * 100)
+    : 100;
 
   return (
     <section aria-label="Order progress" className={className}>
@@ -89,13 +92,20 @@ export function JourneyTimeline({
                 ? "border-[color:var(--color-brand)] bg-white text-[color:var(--color-brand)] ring-4 ring-[color:var(--color-brand-100)]"
                 : "border-[color:var(--color-line-strong)] bg-white text-[color:var(--color-ink-faint)]";
 
+          const current = step.state === "current";
+
           return (
-            <li key={`${step.status}-${index}`} className="relative flex gap-3 pb-5 last:pb-0">
+            <li
+              key={`${step.status}-${index}`}
+              className={`relative flex gap-3 pb-5 last:pb-0 ${
+                current ? "-mx-2 rounded-[var(--radius-sm)] bg-[color:var(--color-brand-50)] px-2 pt-2" : ""
+              }`}
+            >
               {/* Connector, drawn behind the markers and stopped at the last. */}
               {!last ? (
                 <span
                   aria-hidden="true"
-                  className={`absolute left-[17px] top-9 h-[calc(100%-20px)] w-0.5 ${
+                  className={`absolute left-[17px] h-[calc(100%-20px)] w-0.5 ${current ? "top-12" : "top-9"} ${
                     step.state === "done"
                       ? "bg-[color:var(--color-brand)]"
                       : "bg-[color:var(--color-line)]"
@@ -104,25 +114,33 @@ export function JourneyTimeline({
               ) : null}
 
               <span
-                className={`relative z-[1] flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 ${marker}`}
+                className={`relative z-[1] flex shrink-0 items-center justify-center rounded-full border-2 ${
+                  current ? "h-10 w-10" : "h-9 w-9"
+                } ${marker}`}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className={current ? "h-5 w-5" : "h-4 w-4"} />
               </span>
 
               <div className="min-w-0 flex-1 pt-1">
+                {/* The stop the order is actually at is the answer to the
+                    question this screen was opened to ask, so it is set larger
+                    and darker than the rest rather than merely a different
+                    shade of the same size. */}
                 <p className="flex flex-wrap items-center gap-2">
                   <span
-                    className={`text-[14px] font-bold ${
-                      step.state === "upcoming"
-                        ? "text-[color:var(--color-ink-faint)]"
-                        : "text-[color:var(--color-ink)]"
-                    }`}
+                    className={
+                      current
+                        ? "text-[16px] font-black text-[color:var(--color-brand)]"
+                        : step.state === "upcoming"
+                          ? "text-[14px] font-bold text-[color:var(--color-ink-faint)]"
+                          : "text-[14px] font-bold text-[color:var(--color-ink)]"
+                    }
                   >
                     {step.title}
                   </span>
-                  {step.state === "current" ? (
-                    <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[color:var(--color-brand-100)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[color:var(--color-brand)]">
-                      <span className="track-pulse h-1.5 w-1.5 rounded-full bg-[color:var(--color-brand)]" />
+                  {current ? (
+                    <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[color:var(--color-brand)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                      <span className="track-pulse h-1.5 w-1.5 rounded-full bg-white" />
                       Now
                     </span>
                   ) : null}
@@ -130,10 +148,12 @@ export function JourneyTimeline({
 
                 {step.note ? (
                   <p
-                    className={`mt-0.5 text-[12px] leading-snug ${
-                      step.state === "upcoming"
-                        ? "text-[color:var(--color-ink-faint)]"
-                        : "text-[color:var(--color-ink-muted)]"
+                    className={`mt-0.5 leading-snug ${
+                      current
+                        ? "text-[13px] font-semibold text-[color:var(--color-ink-soft)]"
+                        : step.state === "upcoming"
+                          ? "text-[12px] text-[color:var(--color-ink-faint)]"
+                          : "text-[12px] text-[color:var(--color-ink-muted)]"
                     }`}
                   >
                     {step.note}

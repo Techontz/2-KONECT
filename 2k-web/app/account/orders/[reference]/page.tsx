@@ -114,12 +114,10 @@ function OrderDetail() {
         </Link>
       </nav>
 
-      {justPlaced ? (
-        <Notice tone="success" title="Order placed" className="mb-3">
-          Thank you. We have your order and you can follow it right here — we will
-          update this page at every step.
-        </Notice>
-      ) : null}
+      {/* Not a toast saying "success". A shopper who has just paid wants three
+          things: confirmation it worked, when it arrives, and what happens
+          next — so all three are on screen before anything else. */}
+      {justPlaced ? <OrderConfirmation order={order} /> : null}
 
       {/* ---- header ---- */}
       <header className="rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 sm:p-5">
@@ -337,6 +335,72 @@ function OrderDetail() {
         onDone={() => { setDeliveryOpen(false); load(); }}
       />
     </div>
+  );
+}
+
+/**
+ * The moment after payment.
+ *
+ * Shown once, straight after checkout. It answers the three questions a buyer
+ * has at that instant and then gets out of the way — reloading the page shows
+ * the ordinary order screen.
+ */
+function OrderConfirmation({ order }: { order: Order }) {
+  const arrival = order.fulfilment?.estimated_arrival_at;
+  const isImport = order.fulfilment?.is_local === false;
+
+  const next = isImport
+    ? [
+        "We place the order with the supplier and pay for it.",
+        `We bring it into ${order.fulfilment?.destination?.name ?? "Tanzania"} and clear it.`,
+        "When it lands, you choose delivery or collection.",
+      ]
+    : [
+        "The seller confirms and prepares your order.",
+        "It is handed to a rider for delivery.",
+        "You pay the rider when it reaches you.",
+      ];
+
+  return (
+    <section className="rise mb-3 overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--color-brand-200)] bg-[color:var(--color-surface)]">
+      <div className="brand-ground flex flex-wrap items-center gap-4 p-5">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/15 text-white">
+          <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2.6"
+            strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M20 6L9 17l-5-5" />
+          </svg>
+        </span>
+
+        <div className="min-w-0 flex-1">
+          <h2 className="text-[20px] font-black tracking-[-0.02em] text-white sm:text-[24px]">
+            Order confirmed
+          </h2>
+          <p className="mt-0.5 text-[13px] text-white/75">
+            Thank you — we have your order and we will keep this page updated at every step.
+          </p>
+        </div>
+
+        {arrival ? (
+          <div className="rounded-[var(--radius-sm)] bg-white/12 px-4 py-2.5">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-white/65">
+              Estimated arrival
+            </p>
+            <p className="text-[16px] font-black text-white">{formatDate(arrival)}</p>
+          </div>
+        ) : null}
+      </div>
+
+      <ol className="grid gap-px bg-[color:var(--color-line)] sm:grid-cols-3">
+        {next.map((step, index) => (
+          <li key={step} className="flex gap-2.5 bg-[color:var(--color-surface)] p-4">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[color:var(--color-brand-100)] text-[11px] font-black text-[color:var(--color-brand)]">
+              {index + 1}
+            </span>
+            <span className="text-[13px] leading-relaxed text-[color:var(--color-ink-soft)]">{step}</span>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 

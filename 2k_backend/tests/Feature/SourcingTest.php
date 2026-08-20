@@ -300,6 +300,36 @@ class SourcingTest extends TestCase
         $this->assertSame('upcoming', $states['arrived_tz']);
     }
 
+    public function test_the_timeline_speaks_in_the_right_tense(): void
+    {
+        Sanctum::actingAs($this->shopper);
+
+        $timeline = $this->postJson('/api/shop/orders', [
+            'items' => [['product_id' => $this->imported->id, 'quantity' => 1]],
+            'delivery_address' => 'Mikocheni',
+            'customer_phone' => '0700000002',
+            'payment_method' => 'cash_on_delivery',
+        ])->assertCreated()->json('order.timeline');
+
+        $steps = collect($timeline)->keyBy('status');
+
+        // A stop the order has passed reads as something that happened; one it
+        // has not reached reads as something that will. Telling a buyer their
+        // package "has arrived in Tanzania" while it is still at the supplier
+        // is how a tracking screen loses their trust.
+        // The recorded event's own note wins on a stop that happened — it is
+        // what actually occurred, and it carries detail the generic line cannot.
+        $this->assertSame('Order received. Payment on delivery.', $steps['pending']['note']);
+        $this->assertSame('Your package will land in Tanzania.', $steps['arrived_tz']['note']);
+        $this->assertSame('A rider will bring your package to you.', $steps['out_for_delivery']['note']);
+
+        // And nothing a shopper reads is a status constant.
+        foreach ($timeline as $step) {
+            $this->assertStringNotContainsString('_', $step['title']);
+            $this->assertMatchesRegularExpression('/^[A-Z]/', $step['title']);
+        }
+    }
+
     public function test_a_seller_walks_an_import_through_its_own_route(): void
     {
         Sanctum::actingAs($this->shopper);

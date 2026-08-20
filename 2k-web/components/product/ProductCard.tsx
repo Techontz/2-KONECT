@@ -138,13 +138,14 @@ export function ProductCard({
 
           <PriceBlock price={product.price} size="sm" />
 
-          {/* Reserved so cards with and without ratings stay the same height. */}
+          {/* Reserved so the price line sits at the same height on every card
+              in a row, whether or not the product has been reviewed. */}
           <div className="min-h-[18px]">
             <RatingPill rating={product.rating} />
           </div>
 
           {product.vendor ? (
-            <span className="mt-auto flex min-w-0 items-center gap-1 pt-1">
+            <span className="flex min-w-0 items-center gap-1">
               <span className="clamp-1 text-[10px] text-[color:var(--color-ink-faint)]">
                 {product.vendor.name}
               </span>

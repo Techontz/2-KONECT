@@ -33,22 +33,92 @@ class OrderJourney
     public const OUT_FOR_DELIVERY = 'out_for_delivery';
 
     /**
-     * Step definitions. `icon` is a name the frontend maps to a glyph, so the
-     * backend never has to know what the timeline looks like.
+     * Step definitions.
+     *
+     * `icon` is a name the frontend maps to a glyph, so the backend never has
+     * to know what the timeline looks like.
+     *
+     * Two notes per step, because tense matters to a person reading it: `done`
+     * is what happened, `next` is what is going to. Showing "Your package has
+     * arrived in Tanzania" against a stop the shipment has not reached is the
+     * fastest way to lose a buyer's trust in the whole screen.
+     *
+     * Both are written as sentences a shopper would say. The status strings
+     * themselves stay technical — they are for the database, not for a person.
      */
     private const STEPS = [
-        self::PENDING          => ['title' => 'Order placed',        'note' => 'We have your order.',                       'icon' => 'receipt'],
-        self::PROCESSING       => ['title' => 'Confirmed',           'note' => 'Your order is being prepared.',             'icon' => 'package'],
-        self::DISPATCHED       => ['title' => 'Dispatched',          'note' => 'Handed to the international carrier.',      'icon' => 'send'],
-        self::IN_TRANSIT       => ['title' => 'In transit',          'note' => 'On the way to Tanzania.',                   'icon' => 'plane'],
-        self::ARRIVED          => ['title' => 'Arrived in Tanzania', 'note' => 'The shipment has landed.',                  'icon' => 'flag'],
-        self::CUSTOMS          => ['title' => 'Clearing customs',    'note' => 'Import formalities in progress.',           'icon' => 'shield'],
-        self::LOCAL_WAREHOUSE  => ['title' => 'At our warehouse',    'note' => 'Ready for local delivery.',                 'icon' => 'warehouse'],
-        self::SHIPPED          => ['title' => 'Shipped',             'note' => 'On its way to your address.',               'icon' => 'truck'],
-        self::OUT_FOR_DELIVERY => ['title' => 'Out for delivery',    'note' => 'A rider has your package.',                 'icon' => 'truck'],
-        self::COMPLETED        => ['title' => 'Delivered',           'note' => 'Package delivered.',                        'icon' => 'check'],
-        self::CANCELLED        => ['title' => 'Cancelled',           'note' => 'This order was cancelled.',                 'icon' => 'x'],
-        self::REFUNDED         => ['title' => 'Refunded',            'note' => 'Payment returned.',                         'icon' => 'refund'],
+        self::PENDING => [
+            'title' => 'Order placed',
+            'done'  => 'We have your order.',
+            'next'  => 'We will confirm your order.',
+            'icon'  => 'receipt',
+        ],
+        self::PROCESSING => [
+            'title' => 'Confirmed',
+            'done'  => 'Your order is confirmed and being prepared.',
+            'next'  => 'The seller will confirm and prepare your order.',
+            'icon'  => 'package',
+        ],
+        self::DISPATCHED => [
+            'title' => 'Dispatched',
+            'done'  => 'Your package has left the supplier.',
+            'next'  => 'The supplier will hand your package to the carrier.',
+            'icon'  => 'send',
+        ],
+        self::IN_TRANSIT => [
+            'title' => 'On the way',
+            'done'  => 'Your package is travelling to Tanzania.',
+            'next'  => 'Your package will travel to Tanzania.',
+            'icon'  => 'plane',
+        ],
+        self::ARRIVED => [
+            'title' => 'Arrived in Tanzania',
+            'done'  => 'Your package has arrived in Tanzania.',
+            'next'  => 'Your package will land in Tanzania.',
+            'icon'  => 'flag',
+        ],
+        self::CUSTOMS => [
+            'title' => 'Clearing customs',
+            'done'  => 'Your package is going through import checks.',
+            'next'  => 'Your package will go through import checks.',
+            'icon'  => 'shield',
+        ],
+        self::LOCAL_WAREHOUSE => [
+            'title' => 'At our warehouse',
+            'done'  => 'Your package is with us and ready to go out.',
+            'next'  => 'We will hold your package ready for delivery.',
+            'icon'  => 'warehouse',
+        ],
+        self::SHIPPED => [
+            'title' => 'Shipped',
+            'done'  => 'Your package is on its way to your address.',
+            'next'  => 'Your package will be sent to your address.',
+            'icon'  => 'truck',
+        ],
+        self::OUT_FOR_DELIVERY => [
+            'title' => 'Out for delivery',
+            'done'  => 'A rider has your package and is on the way.',
+            'next'  => 'A rider will bring your package to you.',
+            'icon'  => 'truck',
+        ],
+        self::COMPLETED => [
+            'title' => 'Delivered',
+            'done'  => 'Your package was delivered. Enjoy it.',
+            'next'  => 'Your package will be handed to you.',
+            'icon'  => 'check',
+        ],
+        self::CANCELLED => [
+            'title' => 'Cancelled',
+            'done'  => 'This order was cancelled.',
+            'next'  => 'This order was cancelled.',
+            'icon'  => 'x',
+        ],
+        self::REFUNDED => [
+            'title' => 'Refunded',
+            'done'  => 'Your payment was returned.',
+            'next'  => 'Your payment will be returned.',
+            'icon'  => 'refund',
+        ],
     ];
 
     /** The stops a local delivery makes. */
@@ -78,9 +148,14 @@ class OrderJourney
         return self::STEPS[$status]['title'] ?? ucfirst(str_replace('_', ' ', $status));
     }
 
-    public static function note(string $status): ?string
+    /**
+     * The sentence for a step, in the tense that fits where the order is.
+     *
+     * `$reached` false gives the future form, for a stop still ahead.
+     */
+    public static function note(string $status, bool $reached = true): ?string
     {
-        return self::STEPS[$status]['note'] ?? null;
+        return self::STEPS[$status][$reached ? 'done' : 'next'] ?? null;
     }
 
     public static function icon(string $status): string
@@ -151,7 +226,9 @@ class OrderJourney
             return [
                 'status'      => $step,
                 'title'       => self::label($step),
-                'note'        => $event?->note ?: self::note($step),
+                // A recorded event's own note wins — it is what actually
+                // happened, and it may carry detail the generic line cannot.
+                'note'        => $event?->note ?: self::note($step, $state !== 'upcoming'),
                 'icon'        => self::icon($step),
                 'state'       => $state,
                 'location'    => $event?->location,
