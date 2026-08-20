@@ -17,6 +17,54 @@ export interface Ref {
   name: string;
 }
 
+/* ==========================================================================
+   Sourcing — where a product is, and when it lands
+   --------------------------------------------------------------------------
+   The distinction the whole storefront is organised around. Composed by the
+   backend (App\Support\Sourcing) so every surface says the same thing.
+   ========================================================================== */
+
+export type Availability = "local" | "import";
+
+export interface Country {
+  code: string;
+  name: string;
+  flag: string;
+}
+
+export interface LeadTime {
+  min: number;
+  max: number;
+  /** Pre-composed, e.g. "1–3 days". */
+  label: string;
+}
+
+export interface Sourcing {
+  type: Availability;
+  is_local: boolean;
+  /** Short form for a card: "In Tanzania" / "Order from abroad". */
+  label: string;
+  /** Long form for a product page: "Available in Tanzania" / "Sourced from China". */
+  headline: string;
+  summary: string;
+  origin: Country | null;
+  destination: Country | null;
+  lead_time: LeadTime;
+  shipping_method: { code: string; label: string } | null;
+  fulfilment_location: string | null;
+}
+
+/** One way to buy a product: its own row, or an imported alternative. */
+export interface BuyingOption {
+  /** Null for the product's own primary offer. */
+  id: number | null;
+  price: Price;
+  stock: number;
+  in_stock: boolean;
+  seller: string;
+  sourcing: Sourcing;
+}
+
 export interface ProductCard {
   id: number;
   name: string;
@@ -28,7 +76,8 @@ export interface ProductCard {
   in_stock: boolean;
   category?: Ref;
   subcategory?: Ref;
-  vendor?: Ref;
+  vendor?: Ref & { is_verified?: boolean };
+  sourcing: Sourcing;
   badges: {
     low_stock: boolean;
     out_of_stock: boolean;
@@ -114,6 +163,9 @@ export interface ProductDetail {
   category: Ref | null;
   subcategory: Ref | null;
   vendor: ProductVendor | null;
+  sourcing: Sourcing;
+  /** Primary offer first; more than one turns the page into a comparison. */
+  buying_options: BuyingOption[];
   specifications: Specification[];
   rating: Rating & {
     distribution: { star: number; count: number; percent: number }[];
@@ -179,6 +231,12 @@ export interface CategoryCollection {
 }
 
 export interface HomeFeed {
+  /** Ready in Tanzania now. */
+  local: ProductCard[];
+  /** Sourced from abroad, cheaper, on the way. */
+  imports: ProductCard[];
+  /** Listings from sellers an administrator has vetted. */
+  verified: ProductCard[];
   /** Kept for the Flutter app; the website reads `hero`. */
   banners: Banner[];
   hero: HeroBanner[];
@@ -210,6 +268,9 @@ export interface ListingMeta {
 export interface ListingFilters {
   price: { min: number; max: number };
   subcategories: { id: number; name: string; count: number }[];
+  /** Counts either side of the local/import toggle, for the primary filter. */
+  availability: { value: Availability; label: string; count: number }[];
+  origins: (Country & { count: number })[];
 }
 
 export interface ProductListing {
@@ -221,6 +282,12 @@ export interface ProductListing {
 export interface CartLine {
   product: ProductCard;
   quantity: number;
+  /**
+   * Which buying option was chosen, when the shopper picked the imported
+   * alternative rather than the product's own offer. Undefined means the
+   * primary offer, which is every line placed before options existed.
+   */
+  option?: BuyingOption;
 }
 
 export interface OrderItem {
@@ -231,11 +298,105 @@ export interface OrderItem {
   price: number;
   total: number;
   status: string;
+  sourcing: Sourcing;
+}
+
+/** One stop on the order journey, as the tracking screen renders it. */
+export interface TimelineStep {
+  status: string;
+  title: string;
+  note: string | null;
+  /** Name the frontend maps to a glyph — receipt, plane, truck, check… */
+  icon: string;
+  state: "done" | "current" | "upcoming";
+  location: string | null;
+  happened_at: string | null;
+}
+
+export interface OrderFulfilment {
+  type: Availability;
+  is_local: boolean;
+  label: string;
+  origin: Country | null;
+  destination: Country | null;
+  eta: LeadTime | null;
+  estimated_arrival_at: string | null;
+  tracking_number: string | null;
+  carrier: string | null;
+  shipping_method: string | null;
+}
+
+/** A last-mile job attached to an order — 2KONECT Rides. */
+export interface DeliveryRequest {
+  reference: string;
+  order_reference?: string;
+  mode: "delivery" | "pickup";
+  status: string;
+  status_label: string;
+  recipient_name: string;
+  recipient_phone: string;
+  address: string | null;
+  pickup_point: string | null;
+  preferred_date: string | null;
+  preferred_window: string | null;
+  fee: number;
+  courier_name: string | null;
+  courier_phone: string | null;
+  created_at?: string | null;
+}
+
+export interface DeliveryOptions {
+  available: boolean;
+  modes: { value: "delivery" | "pickup"; label: string; note: string; fee: number }[];
+  pickup_points: { id: string; name: string; address: string }[];
+  windows: string[];
+}
+
+/** A sourcing request: "find this for me". */
+export interface SourcingRequest {
+  reference: string;
+  name: string;
+  description: string | null;
+  brand: string | null;
+  quantity: number;
+  budget_max: number | null;
+  image: string | null;
+  status: string;
+  status_label: string;
+  step: number;
+  total_steps: number;
+  is_open: boolean;
+  quote: {
+    price: number;
+    currency: string;
+    eta_min: number | null;
+    eta_max: number | null;
+    quoted_at: string | null;
+  } | null;
+  note: string | null;
+  created_at: string | null;
+}
+
+/** An application to sell on 2KONECT. */
+export interface VendorApplication {
+  reference: string;
+  business_name: string;
+  status: string;
+  status_label: string;
+  note: string | null;
+  reviewed_at: string | null;
+  created_at: string | null;
 }
 
 export interface Order {
   reference: string;
   status: string;
+  status_label: string;
+  fulfilment: OrderFulfilment;
+  timeline: TimelineStep[];
+  can_cancel: boolean;
+  can_request_delivery: boolean;
+  delivery_request: DeliveryRequest | null;
   placed_at: string | null;
   item_count: number;
   subtotal: number;

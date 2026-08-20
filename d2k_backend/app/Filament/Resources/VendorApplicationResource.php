@@ -60,6 +60,16 @@ class VendorApplicationResource extends Resource
                     Forms\Components\TextInput::make('id_number')->label('ID / registration number'),
                     Forms\Components\Textarea::make('products')
                         ->label('What they want to sell')->rows(3)->columnSpanFull(),
+
+                    // Approval creates the seller record against this account,
+                    // so an application from a signed-out visitor is linked
+                    // here before it can be approved.
+                    Forms\Components\Select::make('user_id')
+                        ->label('2KONECT account')
+                        ->relationship('user', 'email')
+                        ->searchable()
+                        ->preload()
+                        ->helperText('The account that will sign in to the seller console.'),
                 ]),
 
             Forms\Components\Section::make('Decision')
@@ -121,6 +131,21 @@ class VendorApplicationResource extends Resource
                     ->modalDescription('Creates the seller account and lets them publish products.')
                     ->visible(fn (VendorApplication $a) => $a->status !== 'approved')
                     ->action(function (VendorApplication $application) {
+                        // A seller record has to belong to an account — that is
+                        // what the console logs into. An application sent by a
+                        // signed-out visitor has none yet, so approval is
+                        // blocked with an explanation rather than failing on a
+                        // constraint the administrator cannot see.
+                        if (! $application->user_id && ! $application->vendor_id) {
+                            Notification::make()->warning()
+                                ->title('No account linked')
+                                ->body('Create a user account for ' . $application->email . ' or ' . $application->phone . ', link it on this application, then approve.')
+                                ->persistent()
+                                ->send();
+
+                            return;
+                        }
+
                         DB::transaction(function () use ($application) {
                             // Reuse an existing seller record rather than
                             // creating a second one for the same account.

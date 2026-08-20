@@ -74,7 +74,7 @@ export function ProductGallery({
 
   if (!src) {
     return (
-      <div className="mb-3 aspect-square w-full rounded-[var(--radius-sm)] bg-[color:var(--color-surface-alt)]" />
+      <div className="mb-3 aspect-square max-h-[560px] w-full rounded-[var(--radius-sm)] bg-[color:var(--color-surface-alt)]" />
     );
   }
 
@@ -120,7 +120,7 @@ export function ProductGallery({
           onClick={() => {
             if (!canHover) setViewerOpen(true);
           }}
-          className={`relative mb-3 aspect-square w-full overflow-hidden rounded-[var(--radius-sm)] bg-white ${
+          className={`relative mx-auto mb-3 aspect-square max-h-[560px] w-full overflow-hidden rounded-[var(--radius-sm)] bg-white ${
             canHover ? "cursor-crosshair" : "cursor-zoom-in"
           }`}
         >

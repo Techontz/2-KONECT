@@ -1,27 +1,12 @@
-/** @type {import('tailwindcss').Config} */
+/**
+ * Tailwind v4 reads the design tokens from the `@theme` block in
+ * app/globals.css — that file is the source of truth for colour, radius and
+ * shadow. This config only tells the scanner where class names live.
+ */
 module.exports = {
-    content: [
-      "./app/**/*.{js,ts,jsx,tsx}",
-      "./components/**/*.{js,ts,jsx,tsx}",
-    ],
-    theme: {
-      extend: {
-        colors: {
-          brand: "#FFDE59", // your yellow accent
-          darkText: "#232742",
-          background: "#F6F6F6",
-        },
-        boxShadow: {
-          brand: "0 4px 12px rgba(0,0,0,0.05)",
-        },
-        borderRadius: {
-          lg: "18px",
-        },
-        fontFamily: {
-          inter: ["Inter", "sans-serif"],
-        },
-      },
-    },
-    plugins: [],
-  };
-  
+  content: [
+    "./app/**/*.{js,ts,jsx,tsx}",
+    "./components/**/*.{js,ts,jsx,tsx}",
+    "./lib/**/*.{js,ts,jsx,tsx}",
+  ],
+};

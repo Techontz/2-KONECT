@@ -1,141 +1,162 @@
 "use client";
 
 import Link from "next/link";
+
 import { BRAND } from "@/lib/brand";
-import { useT } from "@/lib/i18n";
 import type { Category } from "@/lib/types";
+import { Logo } from "@/components/brand/Logo";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 
 /**
- * Information-dense footer, matching the reference storefront's structure but
- * written for {BRAND.name} and Tanzania — no imported copy, no foreign
- * markets, no payment brands we do not actually take.
+ * The footer.
+ *
+ * Two jobs: restate what 2KONECT actually does — because a first-time visitor
+ * often reaches the bottom of a page still deciding — and carry the routes
+ * that are too specific for the header. Deep purple so the page ends on the
+ * brand rather than trailing off into grey.
  */
 export function Footer({ categories = [] }: { categories?: Category[] }) {
-  const t = useT();
   const year = new Date().getFullYear();
 
+  const columns: { title: string; links: { href: string; label: string }[] }[] = [
+    {
+      title: "Shop",
+      links: [
+        { href: "/shop/local", label: "Available in Tanzania" },
+        { href: "/shop/abroad", label: "Order from abroad" },
+        { href: "/deals", label: "Deals" },
+        { href: "/shop", label: "All products" },
+        { href: "/vendors", label: "Sellers" },
+      ],
+    },
+    {
+      title: "Services",
+      links: [
+        { href: "/request", label: "Request a product" },
+        { href: "/track", label: "Track your order" },
+        { href: "/sell", label: `Sell with ${BRAND.name}` },
+        { href: "/account/deliveries", label: "2KONECT Rides" },
+      ],
+    },
+    {
+      title: "Help",
+      links: [
+        { href: "/help", label: "Help centre" },
+        { href: "/help/delivery", label: "Delivery & shipping" },
+        { href: "/help/returns", label: "Returns" },
+        { href: "/help/contact", label: "Contact us" },
+      ],
+    },
+    {
+      title: "Company",
+      links: [
+        { href: "/about", label: `About ${BRAND.name}` },
+        { href: "/legal/terms", label: "Terms" },
+        { href: "/legal/privacy", label: "Privacy" },
+        { href: "/legal/cookies", label: "Cookies" },
+      ],
+    },
+  ];
+
   return (
-    <footer className="mt-10 border-t border-[color:var(--color-line)] bg-[color:var(--color-surface)]">
-      {/* Shop by category — driven by the real catalogue. */}
-      {categories.length > 0 ? (
-        <div className="border-b border-[color:var(--color-line)]">
-          <div className="shell py-6">
-            <h2 className="mb-3 text-sm font-extrabold">{t("footer.shopByCategory")}</h2>
-            <div className="flex flex-wrap gap-x-5 sm:gap-y-2">
-              {categories.map((category) => (
-                <Link
-                  key={category.id}
-                  href={`/category?id=${category.id}`}
-                  prefetch={false}
-                  className="block py-2.5 text-[13px] text-[color:var(--color-ink-muted)] hover:text-[color:var(--color-ink)] hover:underline sm:py-0"
-                >
-                  {category.name.trim()}
-                </Link>
-              ))}
+    <footer className="brand-ground mt-10">
+      <div className="shell py-10 lg:py-14">
+        <div className="grid gap-9 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,2.6fr)]">
+          {/* ---- who we are ---- */}
+          <div>
+            <Logo tone="dark" size="lg" />
+            <p className="mt-3 max-w-sm text-[14px] leading-relaxed text-white/75">
+              {BRAND.promise}
+            </p>
+
+            <dl className="mt-5 space-y-1.5 text-[13px] text-white/75">
+              <div className="flex gap-2">
+                <dt className="sr-only">Email</dt>
+                <dd>
+                  <a className="hover:text-white" href={`mailto:${BRAND.supportEmail}`}>
+                    {BRAND.supportEmail}
+                  </a>
+                </dd>
+              </div>
+              <div className="flex gap-2">
+                <dt className="sr-only">Phone</dt>
+                <dd>
+                  <a className="hover:text-white" href={`tel:${BRAND.supportPhone.replace(/\s/g, "")}`}>
+                    {BRAND.supportPhone}
+                  </a>
+                </dd>
+              </div>
+              <div className="flex gap-2">
+                <dt className="sr-only">Address</dt>
+                <dd>{BRAND.city}, {BRAND.country}</dd>
+              </div>
+            </dl>
+
+            <div className="mt-5">
+              <LanguageSwitcher tone="dark" />
             </div>
           </div>
-        </div>
-      ) : null}
 
-      <div className="shell grid grid-cols-2 gap-8 py-10 md:grid-cols-4">
-        <FooterColumn
-          title={t("footer.customerService")}
-          links={[
-            { label: t("footer.help"), href: "/help" },
-            { label: t("footer.trackOrder"), href: "/account/orders" },
-            { label: t("footer.returns"), href: "/help/returns" },
-            { label: t("footer.deliveryInfo"), href: "/help/delivery" },
-            { label: t("footer.contact"), href: "/help/contact" },
-          ]}
-        />
-        <FooterColumn
-          title={t("footer.about", { brand: BRAND.short })}
-          links={[
-            { label: t("footer.whoWeAre"), href: "/about" },
-            { label: t("footer.ourVendors"), href: "/vendors" },
-            { label: t("footer.help"), href: "/help" },
-            { label: t("footer.contact"), href: "/help/contact" },
-          ]}
-        />
-        <FooterColumn
-          title={t("footer.sellWithUs")}
-          links={[
-            { label: t("footer.sellOn", { brand: BRAND.short }), href: "/sell" },
-            { label: t("footer.sellerDashboard"), href: "/vendor/dashboard" },
-            { label: t("footer.sellerGuidelines"), href: "/sell/guidelines" },
-            { label: t("footer.sellerSupport"), href: "/sell/support" },
-          ]}
-        />
-
-        <div>
-          <h3 className="mb-3 text-sm font-extrabold">{t("footer.getInTouch")}</h3>
-          <ul className="text-[13px] text-[color:var(--color-ink-muted)] sm:space-y-2">
-            <li className="min-w-0">
-              {/* A long address is one unbroken token — without break-words it
-                  is the only thing on the page that overflows a 390px phone. */}
-              <a
-                href={`mailto:${BRAND.supportEmail}`}
-                className="block break-words py-3 hover:text-[color:var(--color-ink)] hover:underline sm:py-0"
-              >
-                {BRAND.supportEmail}
-              </a>
-            </li>
-            <li>
-              <a
-                href={`tel:${BRAND.supportPhone.replace(/\s/g, "")}`}
-                className="block py-3 hover:text-[color:var(--color-ink)] hover:underline sm:py-0"
-              >
-                {BRAND.supportPhone}
-              </a>
-            </li>
-            <li className="pt-1">{BRAND.city}, {BRAND.country}</li>
-          </ul>
-
-          <h3 className="mb-2 mt-6 text-sm font-extrabold">{t("footer.weAccept")}</h3>
-          <div className="flex flex-wrap gap-2">
-            {[t("payment.mpesa"), t("payment.tigo"), t("payment.airtel"), t("payment.cashOnDelivery")].map((method) => (
-              <span
-                key={method}
-                className="rounded-[var(--radius-xs)] border border-[color:var(--color-line)] px-2 py-1 text-[11px] font-semibold text-[color:var(--color-ink-muted)]"
-              >
-                {method}
-              </span>
+          {/* ---- links ---- */}
+          <div className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-4">
+            {columns.map((column) => (
+              <nav key={column.title} aria-label={column.title}>
+                <h2 className="text-[12px] font-bold uppercase tracking-wider text-white/55">
+                  {column.title}
+                </h2>
+                <ul className="mt-3 space-y-2">
+                  {column.links.map((link) => (
+                    <li key={link.href}>
+                      <Link
+                        href={link.href}
+                        prefetch={false}
+                        className="inline-flex min-h-[28px] items-center text-[13px] text-white/80 hover:text-white"
+                      >
+                        {link.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
             ))}
           </div>
         </div>
+
+        {/* ---- categories, for crawlers as much as for shoppers ---- */}
+        {categories.length > 0 ? (
+          <nav aria-label="Popular categories" className="mt-10 border-t border-white/12 pt-6">
+            <h2 className="text-[12px] font-bold uppercase tracking-wider text-white/55">
+              Popular categories
+            </h2>
+            <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
+              {categories.slice(0, 14).map((category) => (
+                <li key={category.id}>
+                  <Link
+                    href={`/category?id=${category.id}`}
+                    prefetch={false}
+                    className="text-[12px] text-white/65 hover:text-white"
+                  >
+                    {category.name.trim()}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        ) : null}
       </div>
 
-      <div className="border-t border-[color:var(--color-line)]">
-        <div className="shell flex flex-col gap-2 py-5 text-[12px] text-[color:var(--color-ink-muted)] sm:flex-row sm:items-center sm:justify-between">
-          <p>{t("footer.rights", { year, brand: BRAND.name })}</p>
-          <div className="flex flex-wrap gap-x-5 sm:gap-y-1">
-            <Link href="/legal/terms" className="block py-2.5 hover:underline sm:py-0">{t("footer.termsOfUse")}</Link>
-            <Link href="/legal/privacy" className="block py-2.5 hover:underline sm:py-0">{t("footer.privacy")}</Link>
-            <Link href="/legal/cookies" className="block py-2.5 hover:underline sm:py-0">{t("footer.cookies")}</Link>
-          </div>
-        </div>
-      </div>
-
-      {/* Build credit. Its own quiet band under the legal row so it reads as an
-          attribution rather than another footer link, and it is not passed
-          through the dictionary — a company name is the same in every
-          language.
-
-          Only the company name is the link, so the line still reads as a
-          sentence. `inline-block` with vertical padding gives it a thumb-sized
-          hit area without breaking that sentence onto its own line, which is
-          what a flex or block anchor would do here. */}
-      <div className="border-t border-[color:var(--color-line)] bg-[color:var(--color-surface-alt)]">
-        <div className="shell py-2.5">
-          <p className="text-center text-[12px] font-semibold text-[color:var(--color-ink-muted)]">
+      <div className="border-t border-white/12">
+        <div className="shell flex flex-col gap-2 py-5 text-[12px] text-white/60 sm:flex-row sm:items-center sm:justify-between">
+          <p>© {year} {BRAND.name}. All rights reserved.</p>
+          <p>
             Built by{" "}
             <a
               href="https://techon.co.tz"
               target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block px-1 py-3 font-bold text-[color:var(--color-ink)] underline decoration-[color:var(--color-line-strong)] underline-offset-4 transition-colors hover:text-[color:var(--color-action)] hover:decoration-[color:var(--color-action)]"
+              rel="noreferrer noopener"
+              className="font-semibold text-white/80 hover:text-white"
             >
-              TechOn Software LLC
+              TechOn
             </a>
           </p>
         </div>
@@ -143,41 +164,3 @@ export function Footer({ categories = [] }: { categories?: Category[] }) {
     </footer>
   );
 }
-
-function FooterColumn({
-  title,
-  links,
-}: {
-  title: string;
-  links: { label: string; href: string }[];
-}) {
-  return (
-    <div>
-      <h3 className="mb-2 text-sm font-extrabold">{title}</h3>
-      {/* Footer links sit at their text height on a desktop pointer, which is
-          fine for a mouse and far too small for a thumb — 18px tall with 8px
-          between them. Padding grows the row on phones; the tighter desktop
-          rhythm returns from sm.
-
-          Padding, not flex: these columns are half a 320px screen wide, and a
-          flex item will not shrink below the width of its longest unbreakable
-          word. Making the anchor a flex container is what pushed the contact
-          column past the viewport. */}
-      <ul className="sm:space-y-2">
-        {links.map((link) => (
-          <li key={link.href}>
-            <Link
-              href={link.href}
-              prefetch={false}
-              className="block py-3 text-[13px] text-[color:var(--color-ink-muted)] hover:text-[color:var(--color-ink)] hover:underline sm:py-0"
-            >
-              {link.label}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-export default Footer;

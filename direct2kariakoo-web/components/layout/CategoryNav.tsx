@@ -1,138 +1,150 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { BRAND } from "@/lib/brand";
+import { useEffect, useRef, useState } from "react";
+
 import type { Category } from "@/lib/types";
-import { useT } from "@/lib/i18n";
 
 /**
- * The white category bar that sits directly under the yellow header, with a
- * hover mega-menu of subcategories — the reference storefront's primary
- * navigation.
+ * The category bar, directly beneath the header on a desktop.
  *
- * Categories come from the database, never a hard-coded list, so a category
- * added in the admin appears here without a code change.
+ * "All categories" opens the full tree; beside it sit the routes that define
+ * 2KONECT rather than the catalogue — the two ways to buy, and the sourcing
+ * desk. Those are first-class navigation, not links buried in a footer.
  */
 export function CategoryNav({ categories }: { categories: Category[] }) {
-  const t = useT();
   const [openId, setOpenId] = useState<number | null>(null);
-  const railRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-  const closeTimer = useRef<number | null>(null);
+  const [allOpen, setAllOpen] = useState(false);
+  const barRef = useRef<HTMLDivElement>(null);
 
-  const measure = useCallback(() => {
-    const rail = railRef.current;
-    if (!rail) return;
-    const max = rail.scrollWidth - rail.clientWidth;
-    setCanScrollLeft(rail.scrollLeft > 4);
-    setCanScrollRight(rail.scrollLeft < max - 4);
+  // A menu that stays open after the pointer has left the bar is a trap.
+  useEffect(() => {
+    function close(event: MouseEvent) {
+      if (barRef.current && !barRef.current.contains(event.target as Node)) {
+        setOpenId(null);
+        setAllOpen(false);
+      }
+    }
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpenId(null);
+        setAllOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("keydown", onKey);
+    };
   }, []);
 
-  useEffect(() => {
-    measure();
-    const rail = railRef.current;
-    if (!rail) return;
-    rail.addEventListener("scroll", measure, { passive: true });
-    window.addEventListener("resize", measure);
-    return () => {
-      rail.removeEventListener("scroll", measure);
-      window.removeEventListener("resize", measure);
-    };
-  }, [measure, categories.length]);
+  // Only the busiest categories earn a slot; the rest live behind "All".
+  const featured = [...categories]
+    .sort((a, b) => b.product_count - a.product_count)
+    .slice(0, 6);
 
-  // A small close delay keeps the menu open while the pointer travels from the
-  // category label down into the panel.
-  function openMenu(id: number) {
-    if (closeTimer.current) window.clearTimeout(closeTimer.current);
-    setOpenId(id);
-  }
-  function scheduleClose() {
-    closeTimer.current = window.setTimeout(() => setOpenId(null), 120);
-  }
-
-  const active = categories.find((category) => category.id === openId) ?? null;
+  const open = categories.find((category) => category.id === openId) ?? null;
 
   return (
     <div
-      className="relative z-40 border-b border-[color:var(--color-line)] bg-[color:var(--color-surface)]"
-      onMouseLeave={scheduleClose}
+      ref={barRef}
+      className="relative border-b border-[color:var(--color-line)] bg-[color:var(--color-surface)]"
+      onMouseLeave={() => { setOpenId(null); setAllOpen(false); }}
     >
-      <div className="shell relative flex items-center">
-        {canScrollLeft ? (
-          <NavArrow side="left" onClick={() => railRef.current?.scrollBy({ left: -320, behavior: "smooth" })} />
-        ) : null}
+      <nav aria-label="Categories" className="shell flex h-11 items-center gap-1 text-[13px] font-semibold">
+        <button
+          type="button"
+          onMouseEnter={() => { setAllOpen(true); setOpenId(null); }}
+          onClick={() => setAllOpen((value) => !value)}
+          aria-expanded={allOpen}
+          className="flex h-8 items-center gap-1.5 rounded-[var(--radius-sm)] bg-[color:var(--color-brand)] px-3 text-white"
+        >
+          <GridIcon className="h-4 w-4" />
+          All categories
+        </button>
 
-        <div ref={railRef} className="rail flex-1 gap-1 py-1.5">
-          {categories.map((category) => (
-            <div
-              key={category.id}
-              onMouseEnter={() => openMenu(category.id)}
-              className="shrink-0"
-            >
-              <Link
-                href={`/category?id=${category.id}`}
-                prefetch={false}
-                className={`block whitespace-nowrap rounded-[var(--radius-sm)] px-3 py-1.5 text-[13px] font-semibold transition-colors hover:bg-[color:var(--color-surface-alt)] ${
-                  openId === category.id ? "bg-[color:var(--color-surface-alt)]" : ""
-                }`}
-              >
-                {category.name.trim()}
-              </Link>
-            </div>
-          ))}
+        <NavPill href="/shop/local" accent="local">
+          <span aria-hidden="true">🇹🇿</span> In Tanzania
+        </NavPill>
+        <NavPill href="/shop/abroad" accent="import">
+          <span aria-hidden="true">🌍</span> From abroad
+        </NavPill>
+
+        <span aria-hidden="true" className="mx-1 h-5 w-px bg-[color:var(--color-line)]" />
+
+        {featured.map((category) => (
+          <button
+            key={category.id}
+            type="button"
+            onMouseEnter={() => { setOpenId(category.id); setAllOpen(false); }}
+            onClick={() => (window.location.href = `/category?id=${category.id}`)}
+            className={`hidden h-8 shrink-0 items-center rounded-[var(--radius-sm)] px-2.5 transition-colors xl:flex ${
+              openId === category.id
+                ? "bg-[color:var(--color-brand-50)] text-[color:var(--color-brand)]"
+                : "text-[color:var(--color-ink-soft)] hover:bg-[color:var(--color-surface-alt)]"
+            }`}
+          >
+            {category.name.trim()}
+          </button>
+        ))}
+
+        <span className="ml-auto flex items-center gap-1">
+          <NavPill href="/deals">Deals</NavPill>
+          <NavPill href="/request" accent="brand">Request a product</NavPill>
+        </span>
+      </nav>
+
+      {/* ---- the full tree ---- */}
+      {allOpen ? (
+        <div className="fade-in absolute inset-x-0 top-full z-40 border-b border-[color:var(--color-line)] bg-white shadow-[var(--shadow-pop)]">
+          <div className="shell grid max-h-[70vh] grid-cols-2 gap-x-6 gap-y-4 overflow-y-auto py-5 md:grid-cols-3 lg:grid-cols-4">
+            {categories.map((category) => (
+              <div key={category.id}>
+                <Link
+                  href={`/category?id=${category.id}`}
+                  prefetch={false}
+                  onClick={() => setAllOpen(false)}
+                  className="block text-[13px] font-extrabold hover:text-[color:var(--color-brand)]"
+                >
+                  {category.name.trim()}
+                  <span className="ml-1.5 font-normal text-[color:var(--color-ink-faint)]">
+                    {category.product_count}
+                  </span>
+                </Link>
+                <ul className="mt-1.5 space-y-1">
+                  {category.subcategories.slice(0, 5).map((sub) => (
+                    <li key={sub.id}>
+                      <Link
+                        href={`/search?subcategory_id=${sub.id}`}
+                        prefetch={false}
+                        onClick={() => setAllOpen(false)}
+                        className="block truncate text-[12px] text-[color:var(--color-ink-muted)] hover:text-[color:var(--color-brand)]"
+                      >
+                        {sub.name.trim()}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
         </div>
+      ) : null}
 
-        {canScrollRight ? (
-          <NavArrow side="right" onClick={() => railRef.current?.scrollBy({ left: 320, behavior: "smooth" })} />
-        ) : null}
-
-        {/* Appears with the bar itself, not 256px later.
-            The burger — and with it the mobile menu that carries this same
-            link — is hidden from lg, so gating the CTA at xl left 1024–1279px
-            with no seller entry point anywhere but the footer. */}
-        <Link
-          href="/sell"
-          prefetch={false}
-          className="ml-3 hidden shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-pill)] border border-[color:var(--color-brand-dark)] bg-[color:var(--color-brand)] px-3 py-1.5 text-[11px] font-extrabold text-[color:var(--color-brand-ink)] transition-colors hover:bg-[color:var(--color-brand-dark)] lg:inline-flex"
-        >
-          {t("header.sellOn", { brand: BRAND.short })}
-          <span aria-hidden="true">›</span>
-        </Link>
-      </div>
-
-      {/* ---- mega menu ---- */}
-      {active && active.subcategories.length > 0 ? (
-        <div
-          onMouseEnter={() => openMenu(active.id)}
-          className="absolute inset-x-0 top-full border-b border-[color:var(--color-line)] bg-white shadow-[var(--shadow-pop)]"
-        >
-          <div className="shell grid grid-cols-2 gap-x-6 gap-y-1 py-5 sm:grid-cols-3 lg:grid-cols-5">
-            <div className="col-span-full mb-1 flex items-baseline justify-between">
-              <h3 className="text-sm font-extrabold">{active.name.trim()}</h3>
-              <Link
-                href={`/category?id=${active.id}`}
-                prefetch={false}
-                onClick={() => setOpenId(null)}
-                className="text-xs font-bold text-[color:var(--color-action)] hover:underline"
-              >
-                Shop all {active.product_count} products →
-              </Link>
-            </div>
-
-            {active.subcategories.map((sub) => (
+      {/* ---- one category's subcategories ---- */}
+      {open && open.subcategories.length > 0 ? (
+        <div className="fade-in absolute inset-x-0 top-full z-40 border-b border-[color:var(--color-line)] bg-white shadow-[var(--shadow-pop)]">
+          <div className="shell grid grid-cols-2 gap-x-6 gap-y-2 py-5 md:grid-cols-4 lg:grid-cols-5">
+            {open.subcategories.map((sub) => (
               <Link
                 key={sub.id}
-                href={`/category?id=${active.id}&subcategory=${sub.id}`}
+                href={`/search?subcategory_id=${sub.id}`}
                 prefetch={false}
                 onClick={() => setOpenId(null)}
-                className="flex items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1.5 text-[13px] text-[color:var(--color-ink-muted)] transition-colors hover:bg-[color:var(--color-surface-alt)] hover:text-[color:var(--color-ink)]"
+                className="truncate rounded-[var(--radius-sm)] px-2 py-1.5 text-[13px] text-[color:var(--color-ink-soft)] hover:bg-[color:var(--color-brand-50)] hover:text-[color:var(--color-brand)]"
               >
-                {sub.image ? (
-                  <img src={sub.image} alt="" loading="lazy" className="h-7 w-7 shrink-0 rounded-[var(--radius-xs)] object-cover" />
-                ) : null}
-                <span className="clamp-1">{sub.name}</span>
+                {sub.name.trim()}
               </Link>
             ))}
           </div>
@@ -142,23 +154,39 @@ export function CategoryNav({ categories }: { categories: Category[] }) {
   );
 }
 
-function NavArrow({ side, onClick }: { side: "left" | "right"; onClick(): void }) {
-  const t = useT();
+function NavPill({
+  href,
+  accent,
+  children,
+}: {
+  href: string;
+  accent?: "local" | "import" | "brand";
+  children: React.ReactNode;
+}) {
+  const tones = {
+    local: "text-[color:var(--color-local)] hover:bg-[color:var(--color-local-soft)]",
+    import: "text-[color:var(--color-import)] hover:bg-[color:var(--color-import-soft)]",
+    brand: "text-[color:var(--color-brand)] hover:bg-[color:var(--color-brand-50)]",
+  };
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={side === "left" ? t("header.previousCategories") : t("header.moreCategories")}
-      className={`hidden h-8 w-8 shrink-0 items-center justify-center rounded-full text-[color:var(--color-ink-muted)] hover:bg-[color:var(--color-surface-alt)] md:flex ${
-        side === "left" ? "mr-1" : "ml-1"
+    <Link
+      href={href}
+      prefetch={false}
+      className={`flex h-8 shrink-0 items-center gap-1.5 rounded-[var(--radius-sm)] px-2.5 transition-colors ${
+        accent ? tones[accent] : "text-[color:var(--color-ink-soft)] hover:bg-[color:var(--color-surface-alt)]"
       }`}
     >
-      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor"
-        strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d={side === "left" ? "M15 18l-6-6 6-6" : "M9 18l6-6-6-6"} />
-      </svg>
-    </button>
+      {children}
+    </Link>
   );
 }
 
-export default CategoryNav;
+function GridIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.9"
+      strokeLinecap="round" aria-hidden="true">
+      <path d="M4 7h16M4 12h16M4 17h16" />
+    </svg>
+  );
+}

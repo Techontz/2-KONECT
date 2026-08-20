@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useT } from "@/lib/i18n";
 import type { CategoryCollection as CollectionModel } from "@/lib/types";
 
 /**
@@ -13,8 +12,6 @@ import type { CategoryCollection as CollectionModel } from "@/lib/types";
  * first landing on a 745-product category page and filtering their way down.
  */
 export function CategoryCollection({ collection }: { collection: CollectionModel }) {
-  const t = useT();
-
   // The backend already drops thin collections, but guarding here keeps the
   // component safe to reuse anywhere.
   if (collection.tiles.length < 3) return null;
@@ -22,15 +19,15 @@ export function CategoryCollection({ collection }: { collection: CollectionModel
   return (
     <section>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-[17px] font-extrabold tracking-tight md:text-[19px]">
-          {t("home.shopCategory", { category: collection.title })}
+        <h2 className="text-[18px] font-black tracking-[-0.02em] md:text-[21px]">
+          Shop {collection.title}
         </h2>
         <Link
           href={`/category?id=${collection.id}`}
           prefetch={false}
-          className="rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] px-3 py-1.5 text-[12px] font-bold uppercase tracking-wide hover:border-[color:var(--color-ink)]"
+          className="flex min-h-11 items-center rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] px-3 py-1.5 text-[12px] font-bold transition-colors hover:border-[color:var(--color-brand)] hover:text-[color:var(--color-brand)] sm:min-h-0"
         >
-          {t("common.viewAll")}
+          See all
         </Link>
       </div>
 
@@ -44,7 +41,7 @@ export function CategoryCollection({ collection }: { collection: CollectionModel
             prefetch={false}
             className="group w-[124px] shrink-0 md:w-auto"
           >
-            <span className="block overflow-hidden rounded-[var(--radius-md)] bg-white ring-1 ring-[color:var(--color-line)]">
+            <span className="block overflow-hidden rounded-[var(--radius-md)] bg-white ring-1 ring-[color:var(--color-line)] transition-all group-hover:ring-[color:var(--color-brand-200)]">
               {tile.image ? (
                 <img
                   src={tile.image}

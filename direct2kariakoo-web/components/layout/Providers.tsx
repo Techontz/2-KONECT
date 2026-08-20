@@ -5,7 +5,6 @@ import { AuthProvider } from "@/lib/store/auth";
 import { CartProvider } from "@/lib/store/cart";
 import { LocationProvider } from "@/lib/store/location";
 import { WishlistProvider } from "@/lib/store/wishlist";
-import { LanguageGate } from "./LanguageGate";
 
 /**
  * App-wide state providers.
@@ -18,15 +17,19 @@ import { LanguageGate } from "./LanguageGate";
  */
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    // Language is outermost: every other provider's user-facing text, and the
-    // first-visit gate itself, reads from it.
+    // Language is outermost: every other provider's user-facing text reads
+    // from it.
+    //
+    // There is no first-visit language gate. English is the default and the
+    // switcher sits in the header and footer, so a new visitor lands on the
+    // storefront rather than on a modal asking them a question before they
+    // have seen what this is.
     <LanguageProvider>
       <LocationProvider>
         <AuthProvider>
           <CartProvider>
             <WishlistProvider>
               {children}
-              <LanguageGate />
             </WishlistProvider>
           </CartProvider>
         </AuthProvider>

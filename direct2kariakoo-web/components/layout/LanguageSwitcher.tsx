@@ -7,10 +7,13 @@ import { LANGUAGES, languageMeta, useLanguage } from "@/lib/i18n";
  * Language control in the header.
  *
  * Deliberately compact — a flag plus the code — so it earns its place in the
- * reference header without displacing search or the account actions. The full
- * language names appear in the dropdown, each written in its own language.
+ * header without displacing search or the account actions. The full language
+ * names appear in the dropdown, each written in its own language.
+ *
+ * `tone` picks contrast for the surface it sits on: the deep utility strip on
+ * a desktop, or a white bar in the footer and the mobile menu.
  */
-export function LanguageSwitcher() {
+export function LanguageSwitcher({ tone = "light" }: { tone?: "light" | "dark" }) {
   const { language, setLanguage, t } = useLanguage();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -43,7 +46,11 @@ export function LanguageSwitcher() {
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={t("language.label")}
-        className="flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-[var(--radius-sm)] px-1.5 py-1.5 text-[13px] font-semibold text-[color:var(--color-brand-ink)] hover:bg-black/5 md:min-w-0 md:px-2"
+        className={`flex items-center justify-center gap-1 rounded-[var(--radius-sm)] px-1.5 py-1 text-[12px] font-semibold ${
+          tone === "dark"
+            ? "text-white hover:bg-white/10"
+            : "min-h-11 min-w-11 text-[color:var(--color-ink)] hover:bg-[color:var(--color-surface-alt)] md:min-w-0 md:px-2"
+        }`}
       >
         <span aria-hidden="true" className="text-[15px] leading-none">{current.flag}</span>
         <span className="hidden uppercase sm:inline">{current.code}</span>
@@ -54,7 +61,7 @@ export function LanguageSwitcher() {
         <ul
           role="listbox"
           aria-label={t("language.label")}
-          className="absolute right-0 top-[calc(100%+8px)] z-50 w-48 overflow-hidden rounded-[var(--radius-md)] bg-white py-1 shadow-[var(--shadow-pop)]"
+          className="absolute right-0 top-[calc(100%+8px)] z-50 w-48 overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-white py-1 text-[color:var(--color-ink)] shadow-[var(--shadow-pop)]"
         >
           {LANGUAGES.map((option) => {
             const active = option.code === language;
@@ -73,7 +80,7 @@ export function LanguageSwitcher() {
                   <span aria-hidden="true" className="text-[16px] leading-none">{option.flag}</span>
                   <span className="min-w-0 flex-1 truncate">{option.label}</span>
                   {active ? (
-                    <CheckIcon className="h-3.5 w-3.5 shrink-0 text-[color:var(--color-action)]" />
+                    <CheckIcon className="h-3.5 w-3.5 shrink-0 text-[color:var(--color-brand)]" />
                   ) : null}
                 </button>
               </li>

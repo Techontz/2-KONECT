@@ -2,19 +2,23 @@
 
 import Link from "next/link";
 import { useState } from "react";
+
 import { useCart } from "@/lib/store/cart";
 import { useWishlist } from "@/lib/store/wishlist";
 import type { ProductCard as ProductCardModel } from "@/lib/types";
-import { DeliveryPill, PriceBlock, RatingPill, Tag } from "@/components/ui/Primitives";
-import { useT } from "@/lib/i18n";
+import { PriceBlock, RatingPill, Tag } from "@/components/ui/Primitives";
+import { AvailabilityBadge, DeliveryEstimate } from "@/components/sourcing/Availability";
+import { VerifiedBadge } from "@/components/sourcing/Trust";
 
 /**
- * The single product card used by every grid, shelf and carousel on the site.
+ * The single product card used by every grid, shelf and carousel.
  *
- * Composition follows the reference storefront exactly: square image plate,
- * wishlist heart floating top-right, a round add-to-cart button bottom-right
- * of the plate, then title, rating, price and delivery meta stacked beneath.
- * There is deliberately only one implementation — variants are props, not
+ * Its job is to answer four questions before the shopper has to think: what is
+ * it, what does it cost, where is it, and when would it arrive. The
+ * availability badge sits directly under the photo — above the name — because
+ * on 2KONECT that is the difference between two otherwise identical listings.
+ *
+ * There is deliberately only one implementation; variants are props, not
  * copies.
  */
 export function ProductCard({
@@ -24,7 +28,6 @@ export function ProductCard({
   product: ProductCardModel;
   className?: string;
 }) {
-  const t = useT();
   const { add, quantityOf } = useCart();
   const wishlist = useWishlist();
   const [added, setAdded] = useState(false);
@@ -32,12 +35,17 @@ export function ProductCard({
   const saved = wishlist.has(product.id);
   const inCart = quantityOf(product.id);
   const href = `/product?id=${product.id}`;
+  const sourcing = product.sourcing;
+
+  // An import is bought to order, so a zero on hand does not make it
+  // unbuyable — only local stock actually runs out.
+  const buyable = sourcing ? (sourcing.is_local ? product.in_stock : true) : product.in_stock;
 
   function handleAdd(event: React.MouseEvent) {
     // The whole card is a link; the add button must not navigate.
     event.preventDefault();
     event.stopPropagation();
-    if (!product.in_stock) return;
+    if (!buyable) return;
 
     add(product, 1);
     setAdded(true);
@@ -52,20 +60,20 @@ export function ProductCard({
 
   return (
     <article
-      className={`group relative flex h-full flex-col overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] transition-shadow hover:shadow-[var(--shadow-hover)] ${className}`}
+      className={`group relative flex h-full flex-col overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:var(--color-brand-200)] hover:shadow-[var(--shadow-hover)] ${className}`}
     >
       <Link href={href} className="flex h-full flex-col" prefetch={false}>
         {/* ---- image plate ---- */}
         <div className="relative aspect-square w-full overflow-hidden bg-white">
           {product.image ? (
-            // Plain <img>: images are unoptimized in this static export anyway,
-            // and native lazy loading keeps long grids cheap.
+            // Plain <img>: images are unoptimized in this deployment anyway,
+            // and native lazy loading keeps long grids cheap on a phone.
             <img
               src={product.image}
               alt={product.name}
               loading="lazy"
               decoding="async"
-              className="h-full w-full object-contain p-3 transition-transform duration-300 group-hover:scale-[1.04]"
+              className="h-full w-full object-contain p-3 transition-transform duration-300 group-hover:scale-[1.05]"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-[color:var(--color-surface-alt)] text-[color:var(--color-ink-faint)]">
@@ -76,18 +84,22 @@ export function ProductCard({
           {/* Badges sit over the plate, never over the text block. */}
           <div className="pointer-events-none absolute left-2 top-2 flex flex-col items-start gap-1">
             {product.badges.discounted && product.price.discount_percent ? (
-              <Tag tone="sale">{product.price.discount_percent}% off</Tag>
+              <Tag tone="sale">−{product.price.discount_percent}%</Tag>
             ) : null}
-            {product.badges.low_stock ? <Tag tone="warn">Only {product.stock} left</Tag> : null}
-            {product.badges.out_of_stock ? <Tag tone="neutral">{t("product.soldOut")}</Tag> : null}
+            {sourcing?.is_local && product.badges.low_stock ? (
+              <Tag tone="warn">Only {product.stock} left</Tag>
+            ) : null}
+            {sourcing?.is_local && product.badges.out_of_stock ? (
+              <Tag tone="neutral">Sold out</Tag>
+            ) : null}
           </div>
 
           <button
             type="button"
             onClick={handleWishlist}
-            aria-label={saved ? t("product.removeFromWishlist") : t("product.saveToWishlist")}
+            aria-label={saved ? `Remove ${product.name} from your saved items` : `Save ${product.name}`}
             aria-pressed={saved}
-            className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-[color:var(--color-ink)] shadow-[var(--shadow-card)] backdrop-blur transition-colors hover:bg-white"
+            className="absolute right-2 top-2 flex h-9 w-9 items-center justify-center rounded-full bg-white/92 text-[color:var(--color-ink)] shadow-[var(--shadow-card)] backdrop-blur transition-colors hover:bg-white"
           >
             <HeartIcon
               className={`h-4 w-4 ${saved ? "text-[color:var(--color-sale)]" : ""}`}
@@ -98,38 +110,46 @@ export function ProductCard({
           <button
             type="button"
             onClick={handleAdd}
-            disabled={!product.in_stock}
+            disabled={!buyable}
             aria-label={`Add ${product.name} to cart`}
-            className="absolute bottom-2 right-2 flex h-9 w-9 items-center justify-center rounded-full bg-[color:var(--color-surface)] text-[color:var(--color-ink)] shadow-[var(--shadow-card)] ring-1 ring-[color:var(--color-line)] transition-all hover:bg-[color:var(--color-action)] hover:text-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-[color:var(--color-surface)] disabled:hover:text-[color:var(--color-ink)]"
+            className="absolute bottom-2 right-2 flex h-10 w-10 items-center justify-center rounded-full bg-[color:var(--color-brand)] text-white shadow-[var(--shadow-brand)] transition-all hover:bg-[color:var(--color-brand-strong)] disabled:cursor-not-allowed disabled:bg-[color:var(--color-line-strong)] disabled:shadow-none"
           >
             {added ? <CheckIcon className="h-4 w-4" /> : <PlusIcon className="h-4 w-4" />}
           </button>
 
           {inCart > 0 ? (
-            <span className="absolute bottom-2 left-2 rounded-[var(--radius-xs)] bg-[color:var(--color-action)] px-1.5 py-0.5 text-[10px] font-bold text-white">
+            <span className="absolute bottom-2 left-2 rounded-[var(--radius-xs)] bg-[color:var(--color-ink)] px-1.5 py-0.5 text-[10px] font-bold text-white">
               {inCart} in cart
             </span>
           ) : null}
         </div>
 
         {/* ---- details ---- */}
-        <div className="flex flex-1 flex-col gap-1.5 border-t border-[color:var(--color-line)] p-3">
+        <div className="flex flex-1 flex-col gap-1.5 border-t border-[color:var(--color-line)] p-2.5 sm:p-3">
+          {/* Where it is, first — the thing that separates two otherwise
+              identical listings on this marketplace. */}
+          {sourcing ? <AvailabilityBadge sourcing={sourcing} size="sm" className="self-start" /> : null}
+
           <h3 className="clamp-2 min-h-[34px] text-[13px] leading-[17px] text-[color:var(--color-ink)]">
             {product.name}
           </h3>
+
+          <PriceBlock price={product.price} size="sm" />
 
           {/* Reserved so cards with and without ratings stay the same height. */}
           <div className="min-h-[18px]">
             <RatingPill rating={product.rating} />
           </div>
 
-          <PriceBlock price={product.price} />
+          <div className="mt-auto flex flex-col gap-1 pt-1">
+            {sourcing ? <DeliveryEstimate sourcing={sourcing} size="sm" /> : null}
 
-          <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-1.5">
-            <DeliveryPill />
             {product.vendor ? (
-              <span className="clamp-1 text-[10px] text-[color:var(--color-ink-faint)]">
-                {product.vendor.name}
+              <span className="flex min-w-0 items-center gap-1">
+                <span className="clamp-1 text-[10px] text-[color:var(--color-ink-faint)]">
+                  {product.vendor.name}
+                </span>
+                {product.vendor.is_verified ? <VerifiedBadge size="sm" label="" className="px-1" /> : null}
               </span>
             ) : null}
           </div>
@@ -143,12 +163,13 @@ export function ProductCard({
 export function ProductCardSkeleton() {
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)]">
-      <div className="skeleton aspect-square w-full" />
+      <div className="skeleton aspect-square w-full rounded-none" />
       <div className="flex flex-col gap-2 border-t border-[color:var(--color-line)] p-3">
+        <div className="skeleton h-3.5 w-20 rounded" />
         <div className="skeleton h-3 w-full rounded" />
         <div className="skeleton h-3 w-2/3 rounded" />
         <div className="skeleton h-4 w-1/2 rounded" />
-        <div className="skeleton h-4 w-20 rounded" />
+        <div className="skeleton h-3 w-24 rounded" />
       </div>
     </div>
   );

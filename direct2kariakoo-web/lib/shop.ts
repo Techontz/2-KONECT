@@ -2,6 +2,11 @@ import api from "./api";
 import type {
   Address,
   AddressInput,
+  Availability,
+  DeliveryOptions,
+  DeliveryRequest,
+  SourcingRequest,
+  VendorApplication,
   ChatMessage,
   ChatParticipant,
   ChatProductContext,
@@ -33,6 +38,13 @@ export interface ProductQuery {
   in_stock?: boolean;
   on_sale?: boolean;
   rating?: number;
+  /** The defining filter: is it here, or is it coming? */
+  availability?: Availability;
+  source_country?: string;
+  /** Verified sellers only. */
+  verified?: boolean;
+  /** "I need it within N days" — matched against the promised upper bound. */
+  max_days?: number;
   sort?: "newest" | "price_asc" | "price_desc" | "rating" | "discount" | "relevance";
   page?: number;
   per_page?: number;
@@ -91,6 +103,110 @@ export const shop = {
     };
   },
 
+  /* ---- sourcing requests: "find this for me" ---- */
+
+  /**
+   * Open to signed-out visitors on purpose — someone who cannot find what they
+   * need should not have to register before telling us what it is. Sent as
+   * multipart because a photo is usually the clearest description there is.
+   */
+  async requestProduct(payload: {
+    name: string;
+    description?: string;
+    brand?: string;
+    quantity: number;
+    budget_max?: number;
+    contact_name: string;
+    contact_phone: string;
+    contact_email?: string;
+    delivery_city?: string;
+    image?: File | null;
+  }) {
+    const form = new FormData();
+
+    for (const [key, value] of Object.entries(payload)) {
+      if (value === undefined || value === null || value === "") continue;
+      form.append(key, value instanceof File ? value : String(value));
+    }
+
+    const { data } = await api.post("/shop/requests", form, {
+      // Let the browser set the boundary; a hand-written header breaks it.
+      headers: { "Content-Type": undefined },
+      transformRequest: [(body) => body],
+    });
+
+    return data as { message: string; request: SourcingRequest };
+  },
+
+  async myRequests(): Promise<SourcingRequest[]> {
+    const { data } = await api.get<{ requests: SourcingRequest[] }>("/shop/requests");
+    return data.requests;
+  },
+
+  async cancelRequest(reference: string) {
+    await api.post(`/shop/requests/${reference}/cancel`);
+  },
+
+  /* ---- selling on 2KONECT ---- */
+
+  async applyToSell(payload: {
+    full_name: string;
+    business_name: string;
+    phone: string;
+    email?: string;
+    region?: string;
+    city?: string;
+    business_type?: string;
+    category?: string;
+    products?: string;
+    website?: string;
+    id_number?: string;
+  }) {
+    const { data } = await api.post("/shop/vendor-applications", payload);
+    return data as { message: string; application: VendorApplication };
+  },
+
+  async myApplication(): Promise<VendorApplication | null> {
+    const { data } = await api.get<{ application: VendorApplication | null }>(
+      "/shop/vendor-applications/mine",
+    );
+    return data.application;
+  },
+
+  /* ---- 2KONECT Rides: the last mile ---- */
+
+  async deliveryOptions(reference: string): Promise<DeliveryOptions> {
+    const { data } = await api.get<DeliveryOptions>(`/shop/orders/${reference}/delivery-options`);
+    return data;
+  },
+
+  async requestDelivery(payload: {
+    order_reference: string;
+    mode: "delivery" | "pickup";
+    recipient_name: string;
+    recipient_phone: string;
+    address?: string;
+    city?: string;
+    latitude?: number;
+    longitude?: number;
+    pickup_point?: string;
+    preferred_date?: string;
+    preferred_window?: string;
+    notes?: string;
+  }) {
+    const { data } = await api.post("/shop/deliveries", payload);
+    return data as { message: string; request: DeliveryRequest };
+  },
+
+  async deliveries(): Promise<DeliveryRequest[]> {
+    const { data } = await api.get<{ requests: DeliveryRequest[] }>("/shop/deliveries");
+    return data.requests;
+  },
+
+  async cancelDelivery(reference: string) {
+    await api.post(`/shop/deliveries/${reference}/cancel`);
+  },
+
   async suggest(term: string) {
     const { data } = await api.get("/shop/products/suggest", { params: { q: term } });
     return data as {
@@ -130,7 +246,9 @@ export const shop = {
   },
 
   async placeOrder(payload: {
-    items: { product_id: number; quantity: number }[];
+    // `offer_id` carries the buying option the shopper chose — the imported
+    // alternative rather than the product's own local offer.
+    items: { product_id: number; quantity: number; offer_id?: number | null }[];
     delivery_address: string;
     customer_phone: string;
     payment_method: "cash_on_delivery" | "mobile_money";

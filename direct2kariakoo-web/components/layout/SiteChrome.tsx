@@ -2,23 +2,25 @@
 
 import Link from "next/link";
 import { createContext, useContext, useEffect, useState } from "react";
+
+import { BRAND } from "@/lib/brand";
 import shop from "@/lib/shop";
 import type { Category } from "@/lib/types";
-import { Header } from "./Header";
-import { CategoryNav } from "./CategoryNav";
-import { Footer } from "./Footer";
-import { AuthSheet } from "./AuthSheet";
-import { useT } from "@/lib/i18n";
 import { useAuth } from "@/lib/store/auth";
-import { useVendorRedirect } from "@/lib/store/vendorRoute";
 import { useLocation } from "@/lib/store/location";
+import { useVendorRedirect } from "@/lib/store/vendorRoute";
 import { useWishlist } from "@/lib/store/wishlist";
 import { LocationPicker } from "@/components/location/LocationPicker";
-import { BRAND } from "@/lib/brand";
+import { Logo } from "@/components/brand/Logo";
+import { AuthSheet } from "./AuthSheet";
+import { CategoryNav } from "./CategoryNav";
+import { Footer } from "./Footer";
+import { Header } from "./Header";
+import { MobileTabBar } from "./MobileTabBar";
 
 /**
- * Everything wrapped around a storefront page: providers, header, category
- * navigation, footer and the auth sheet.
+ * Everything wrapped around a storefront page: header, category navigation,
+ * mobile menu, bottom tab bar, footer and the auth sheet.
  *
  * The category tree is fetched once here and shared through context, so the
  * nav, mega menu, footer and mobile drawer all read the same data instead of
@@ -62,6 +64,15 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
 
   return (
     <CategoriesContext.Provider value={categories}>
+      {/* Skip link: the first stop for a keyboard, ahead of a header full of
+          category links on every single page. */}
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-[var(--radius-sm)] focus:bg-[color:var(--color-brand)] focus:px-4 focus:py-2.5 focus:text-sm focus:font-bold focus:text-white"
+      >
+        Skip to content
+      </a>
+
       <div className="flex min-h-screen flex-col">
         <Header onOpenMenu={() => setDrawerOpen(true)} />
 
@@ -69,16 +80,14 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
           <CategoryNav categories={categories} />
         </div>
 
-        <main className="flex-1">{children}</main>
+        <main id="main" className="flex-1">{children}</main>
 
         <Footer categories={categories} />
       </div>
 
-      <MobileMenu
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        categories={categories}
-      />
+      <MobileTabBar />
+
+      <MobileMenu open={drawerOpen} onClose={() => setDrawerOpen(false)} categories={categories} />
 
       <AuthSheet />
     </CategoriesContext.Provider>
@@ -88,16 +97,10 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
 /**
  * The mobile menu.
  *
- * This is the whole of the site's navigation for anyone on a phone, not just
- * its category list. The header can only carry a handful of icons at 320px, so
- * everything the desktop keeps permanently on screen — the account menu, the
- * orders and wishlist actions, and the "Sell on D2K" call to action that lives
- * in the desktop category bar — has to have somewhere to go, and this is it.
- *
- * The seller entry point matters most: it was previously reachable only from
- * the desktop-only category bar or from an account dropdown that requires
- * being signed in, so a shopper on a phone had no way of discovering that they
- * could sell here at all.
+ * This is the whole of the site's navigation on a phone, not just its category
+ * list. The bottom bar carries the five destinations a thumb reaches for; this
+ * carries everything else — the two ways to buy, the sourcing desk, the seller
+ * pitch, the account rows and the full category tree.
  */
 function MobileMenu({
   open,
@@ -113,7 +116,6 @@ function MobileMenu({
   const { location } = useLocation();
   const { user, isAuthenticated, logout, openAuthPrompt } = useAuth();
   const wishlist = useWishlist();
-  const t = useT();
 
   useEffect(() => {
     if (!open) return;
@@ -135,21 +137,19 @@ function MobileMenu({
   const isVendor = user?.role === "vendor";
 
   return (
-    <div className="fixed inset-0 z-[90] lg:hidden" role="dialog" aria-modal="true" aria-label={t("header.menu")}>
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+    <div className="fixed inset-0 z-[90] lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">
+      <div className="fade-in absolute inset-0 bg-black/55" onClick={onClose} />
 
       <aside className="absolute inset-y-0 left-0 flex w-[88%] max-w-sm flex-col bg-white">
-        <div className="flex items-center justify-between border-b border-[color:var(--color-line)] bg-[color:var(--color-brand)] px-4 py-3">
-          <span className="text-sm font-extrabold">{t("header.menu")}</span>
+        <div className="brand-ground flex items-center justify-between px-4 py-4">
+          <Logo tone="dark" size="md" />
           <button
             type="button"
             onClick={onClose}
-            aria-label={t("common.close")}
-            className="-mr-2 flex h-11 w-11 items-center justify-center rounded-[var(--radius-sm)] hover:bg-black/5"
+            aria-label="Close menu"
+            className="-mr-2 flex h-11 w-11 items-center justify-center rounded-[var(--radius-sm)] text-white hover:bg-white/10"
           >
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-              <path d="M6 6l12 12M18 6L6 18" />
-            </svg>
+            <CloseIcon className="h-5 w-5" />
           </button>
         </div>
 
@@ -163,7 +163,7 @@ function MobileMenu({
               onClick={onClose}
               className="flex items-center gap-3 border-b border-[color:var(--color-line)] px-4 py-3.5"
             >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[color:var(--color-brand)] text-sm font-extrabold">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[color:var(--color-brand-100)] text-sm font-extrabold text-[color:var(--color-brand)]">
                 {(user?.name ?? "?").trim().charAt(0).toUpperCase()}
               </span>
               <span className="min-w-0 flex-1">
@@ -174,118 +174,126 @@ function MobileMenu({
             </Link>
           ) : (
             <div className="border-b border-[color:var(--color-line)] px-4 py-4">
-              <p className="mb-2.5 text-[13px] text-[color:var(--color-ink-muted)]">{t("header.signInHint")}</p>
+              <p className="mb-2.5 text-[13px] text-[color:var(--color-ink-muted)]">
+                Sign in to track orders, save items and check out faster.
+              </p>
               <button
                 type="button"
                 onClick={() => { onClose(); openAuthPrompt(); }}
-                className="flex h-11 w-full items-center justify-center rounded-[var(--radius-sm)] bg-[color:var(--color-action)] text-sm font-bold text-white"
+                className="flex h-11 w-full items-center justify-center rounded-[var(--radius-sm)] bg-[color:var(--color-brand)] text-sm font-bold text-white"
               >
-                {t("header.login")}
+                Sign in
               </button>
             </div>
           )}
 
-          <nav className="border-b border-[color:var(--color-line)] py-1">
-            <MenuRow href="/" onClick={onClose} icon={<HomeIcon />} label={t("common.home")} />
-            <MenuRow href="/account/orders" onClick={onClose} icon={<BoxIcon />} label={t("header.myOrders")} />
-            <MenuRow
-              href="/wishlist"
-              onClick={onClose}
-              icon={<HeartIcon />}
-              label={t("header.wishlist")}
-              badge={wishlist.count}
-            />
-            <MenuRow href="/account/messages" onClick={onClose} icon={<ChatIcon />} label={t("chat.inbox")} />
-            {isAuthenticated ? (
-              <MenuRow href="/account" onClick={onClose} icon={<UserIcon />} label={t("header.myAccount")} />
-            ) : null}
-          </nav>
-
-          {/* The seller call to action. Deliberately styled as a block rather
-              than another list row — on desktop it is a standing button in the
-              category bar, and it should read with the same weight here. */}
-          <div className="border-b border-[color:var(--color-line)] p-4">
+          {/* The two ways to buy, given the space they deserve. */}
+          <div className="grid grid-cols-2 gap-2 border-b border-[color:var(--color-line)] p-4">
             <Link
-              href={isVendor ? "/vendor/dashboard" : "/sell"}
+              href="/shop/local"
               prefetch={false}
               onClick={onClose}
-              className="flex min-h-11 items-center gap-3 rounded-[var(--radius-sm)] bg-[color:var(--color-brand)] px-3 py-2.5"
+              className="flex flex-col gap-1 rounded-[var(--radius-md)] border border-[color:var(--color-local-line)] bg-[color:var(--color-local-soft)] p-3"
             >
-              <StoreIcon />
-              <span className="min-w-0 flex-1 text-sm font-extrabold">
-                {isVendor ? t("header.sellerDashboard") : t("header.sellOn", { brand: BRAND.short })}
-              </span>
-              <Chevron />
+              <span aria-hidden="true" className="text-[18px]">🇹🇿</span>
+              <span className="text-[13px] font-extrabold text-[color:var(--color-local)]">In Tanzania</span>
+              <span className="text-[11px] text-[color:var(--color-ink-muted)]">Ready in 1–3 days</span>
+            </Link>
+            <Link
+              href="/shop/abroad"
+              prefetch={false}
+              onClick={onClose}
+              className="flex flex-col gap-1 rounded-[var(--radius-md)] border border-[color:var(--color-import-line)] bg-[color:var(--color-import-soft)] p-3"
+            >
+              <span aria-hidden="true" className="text-[18px]">🌍</span>
+              <span className="text-[13px] font-extrabold text-[color:var(--color-import)]">From abroad</span>
+              <span className="text-[11px] text-[color:var(--color-ink-muted)]">Lower price, we import it</span>
             </Link>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setLocationOpen(true)}
-            className="flex min-h-11 w-full items-center gap-2 border-b border-[color:var(--color-line)] px-4 py-3 text-left"
-          >
-            <PinIcon className="h-4 w-4 shrink-0 text-[color:var(--color-ink-muted)]" />
-            <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">
-              {t("header.deliverTo")}{" "}
-              <span className="font-extrabold">{location?.label ?? BRAND.city}</span>
-            </span>
-            <Chevron />
-          </button>
+          <nav className="border-b border-[color:var(--color-line)] py-1">
+            <MenuRow href="/" onClick={onClose} icon={<HomeIcon />} label="Home" />
+            <MenuRow href="/request" onClick={onClose} icon={<SearchIcon />} label="Request a product" />
+            <MenuRow href="/track" onClick={onClose} icon={<PinIcon />} label="Track an order" />
+            <MenuRow href="/account/orders" onClick={onClose} icon={<BoxIcon />} label="My orders" />
+            <MenuRow href="/wishlist" onClick={onClose} icon={<HeartIcon />} label="Saved items" badge={wishlist.count} />
+            <MenuRow href="/account/messages" onClick={onClose} icon={<ChatIcon />} label="Messages" />
+            <MenuRow href="/deals" onClick={onClose} icon={<TagIcon />} label="Deals" />
+          </nav>
 
-          <p className="px-4 pb-1 pt-4 text-[11px] font-bold uppercase tracking-wide text-[color:var(--color-ink-faint)]">
-            {t("header.browseCategories")}
-          </p>
+          <nav className="border-b border-[color:var(--color-line)] py-1">
+            <MenuRow
+              href={isVendor ? "/vendor/dashboard" : "/sell"}
+              onClick={onClose}
+              icon={<StoreIcon />}
+              label={isVendor ? "Seller console" : `Sell with ${BRAND.name}`}
+            />
+            <button
+              type="button"
+              onClick={() => setLocationOpen(true)}
+              className="flex w-full items-center gap-3 px-4 py-3 text-left text-[14px] hover:bg-[color:var(--color-surface-alt)]"
+            >
+              <span className="text-[color:var(--color-ink-muted)]"><PinIcon /></span>
+              <span className="min-w-0 flex-1">
+                Deliver to{" "}
+                <span className="font-bold">{location?.label ?? BRAND.city}</span>
+              </span>
+              <Chevron />
+            </button>
+          </nav>
 
-          <nav className="pb-2">
-            {categories.map((category) => (
-              <div key={category.id} className="border-b border-[color:var(--color-line)] last:border-0">
-                <div className="flex items-center">
-                  <Link
-                    href={`/category?id=${category.id}`}
-                    prefetch={false}
-                    onClick={onClose}
-                    className="flex min-h-11 flex-1 items-center gap-3 px-4 py-3 text-sm font-semibold"
-                  >
-                    {category.image ? (
-                      <img src={category.image} alt="" loading="lazy" className="h-8 w-8 shrink-0 rounded-[var(--radius-sm)] object-cover" />
-                    ) : null}
-                    <span className="clamp-1">{category.name.trim()}</span>
-                  </Link>
+          {/* ---- categories ---- */}
+          <div className="py-1">
+            <p className="px-4 pb-1 pt-3 text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-ink-faint)]">
+              Categories
+            </p>
+            {categories.map((category) => {
+              const isOpen = expanded === category.id;
 
-                  {category.subcategories.length > 0 ? (
-                    <button
-                      type="button"
-                      aria-label={`${t("header.categories")}: ${category.name}`}
-                      aria-expanded={expanded === category.id}
-                      onClick={() => setExpanded(expanded === category.id ? null : category.id)}
-                      className="flex h-11 w-12 shrink-0 items-center justify-center text-[color:var(--color-ink-muted)]"
+              return (
+                <div key={category.id} className="border-b border-[color:var(--color-line)] last:border-0">
+                  <div className="flex items-stretch">
+                    <Link
+                      href={`/category?id=${category.id}`}
+                      prefetch={false}
+                      onClick={onClose}
+                      className="min-w-0 flex-1 px-4 py-3 text-[14px] hover:bg-[color:var(--color-surface-alt)]"
                     >
-                      <svg viewBox="0 0 24 24" className={`h-4 w-4 transition-transform ${expanded === category.id ? "rotate-180" : ""}`}
-                        fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M6 9l6 6 6-6" />
-                      </svg>
-                    </button>
+                      <span className="block truncate">{category.name.trim()}</span>
+                    </Link>
+                    {category.subcategories.length > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => setExpanded(isOpen ? null : category.id)}
+                        aria-label={`${isOpen ? "Hide" : "Show"} ${category.name.trim()} subcategories`}
+                        aria-expanded={isOpen}
+                        className="flex w-12 shrink-0 items-center justify-center text-[color:var(--color-ink-muted)] hover:bg-[color:var(--color-surface-alt)]"
+                      >
+                        <Chevron className={`h-4 w-4 transition-transform ${isOpen ? "rotate-90" : ""}`} />
+                      </button>
+                    ) : null}
+                  </div>
+
+                  {isOpen ? (
+                    <ul className="bg-[color:var(--color-surface-alt)] py-1">
+                      {category.subcategories.map((sub) => (
+                        <li key={sub.id}>
+                          <Link
+                            href={`/search?subcategory_id=${sub.id}`}
+                            prefetch={false}
+                            onClick={onClose}
+                            className="block truncate py-2.5 pl-8 pr-4 text-[13px] text-[color:var(--color-ink-soft)]"
+                          >
+                            {sub.name.trim()}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
                   ) : null}
                 </div>
-
-                {expanded === category.id ? (
-                  <div className="bg-[color:var(--color-surface-alt)] pb-2">
-                    {category.subcategories.map((sub) => (
-                      <Link
-                        key={sub.id}
-                        href={`/category?id=${category.id}&subcategory=${sub.id}`}
-                        prefetch={false}
-                        onClick={onClose}
-                        className="flex min-h-10 items-center py-2 pl-14 pr-4 text-[13px] text-[color:var(--color-ink-muted)]"
-                      >
-                        {sub.name}
-                      </Link>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            ))}
-          </nav>
+              );
+            })}
+          </div>
 
           {isAuthenticated ? (
             <div className="border-t border-[color:var(--color-line)] p-4">
@@ -294,7 +302,7 @@ function MobileMenu({
                 onClick={() => { onClose(); logout(); }}
                 className="flex h-11 w-full items-center justify-center rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] text-sm font-bold text-[color:var(--color-sale)]"
               >
-                {t("header.logout")}
+                Sign out
               </button>
             </div>
           ) : null}
@@ -306,18 +314,17 @@ function MobileMenu({
   );
 }
 
-/** One navigation row in the mobile menu, sized for a thumb. */
 function MenuRow({
   href,
-  label,
-  icon,
   onClick,
+  icon,
+  label,
   badge = 0,
 }: {
   href: string;
-  label: string;
-  icon: React.ReactNode;
   onClick(): void;
+  icon: React.ReactNode;
+  label: string;
   badge?: number;
 }) {
   return (
@@ -325,13 +332,13 @@ function MenuRow({
       href={href}
       prefetch={false}
       onClick={onClick}
-      className="flex min-h-11 items-center gap-3 px-4 py-2.5 text-sm font-semibold"
+      className="flex items-center gap-3 px-4 py-3 text-[14px] hover:bg-[color:var(--color-surface-alt)]"
     >
-      <span className="shrink-0 text-[color:var(--color-ink-muted)]">{icon}</span>
+      <span className="text-[color:var(--color-ink-muted)]">{icon}</span>
       <span className="min-w-0 flex-1 truncate">{label}</span>
       {badge > 0 ? (
-        <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-[color:var(--color-ink)] px-1.5 text-[11px] font-bold text-white">
-          {badge > 99 ? "99+" : badge}
+        <span className="rounded-full bg-[color:var(--color-brand)] px-1.5 py-0.5 text-[10px] font-bold text-white">
+          {badge}
         </span>
       ) : null}
       <Chevron />
@@ -340,48 +347,44 @@ function MenuRow({
 }
 
 /* ---- icons ---- */
-const line = {
+
+const stroke = {
+  viewBox: "0 0 24 24",
   fill: "none",
   stroke: "currentColor",
-  strokeWidth: 1.8,
+  strokeWidth: 1.7,
   strokeLinecap: "round" as const,
   strokeLinejoin: "round" as const,
+  "aria-hidden": true,
 };
 
-function Chevron() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-[color:var(--color-ink-faint)]" {...line} aria-hidden="true">
-      <path d="M9 18l6-6-6-6" />
-    </svg>
-  );
+function Chevron({ className = "h-4 w-4 shrink-0 text-[color:var(--color-ink-faint)]" }: { className?: string }) {
+  return <svg {...stroke} className={className}><path d="M9 6l6 6-6 6" /></svg>;
 }
-function HomeIcon() {
-  return <svg viewBox="0 0 24 24" className="h-5 w-5" {...line} aria-hidden="true"><path d="M3 10.5L12 3l9 7.5" /><path d="M5 9.5V20h14V9.5" /></svg>;
+function CloseIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return <svg {...stroke} className={className}><path d="M6 6l12 12M18 6L6 18" /></svg>;
 }
-function BoxIcon() {
-  return <svg viewBox="0 0 24 24" className="h-5 w-5" {...line} aria-hidden="true"><path d="M3 8h18v11a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" /><path d="M3 8l2-4h14l2 4M12 8v13" /></svg>;
+function HomeIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return <svg {...stroke} className={className}><path d="M4 10.5L12 4l8 6.5V20a1 1 0 01-1 1h-4.5v-6h-5v6H5a1 1 0 01-1-1v-9.5z" /></svg>;
 }
-function HeartIcon() {
-  return <svg viewBox="0 0 24 24" className="h-5 w-5" {...line} aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 00-7.8 7.8l1.1 1L12 21l7.7-7.6 1.1-1a5.5 5.5 0 000-7.8z" /></svg>;
+function BoxIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return <svg {...stroke} className={className}><path d="M21 8.2L12 3 3 8.2v7.6L12 21l9-5.2V8.2z" /><path d="M3 8.2l9 5.2 9-5.2M12 13.4V21" /></svg>;
 }
-function ChatIcon() {
-  return <svg viewBox="0 0 24 24" className="h-5 w-5" {...line} aria-hidden="true"><path d="M21 12a8 8 0 01-8 8H4l2-3a8 8 0 1115-5z" /></svg>;
+function HeartIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return <svg {...stroke} className={className}><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 00-7.8 7.8l1.1 1L12 21l7.7-7.6 1.1-1a5.5 5.5 0 000-7.8z" /></svg>;
 }
-function UserIcon() {
-  return <svg viewBox="0 0 24 24" className="h-5 w-5" {...line} aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 20c0-3.9 3.6-6 8-6s8 2.1 8 6" /></svg>;
+function ChatIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return <svg {...stroke} className={className}><path d="M21 12a8 8 0 01-11.6 7.1L4 20.5l1.4-5.4A8 8 0 1121 12z" /></svg>;
 }
-function StoreIcon() {
-  return <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" {...line} aria-hidden="true"><path d="M4 9h16v10a1 1 0 01-1 1H5a1 1 0 01-1-1V9z" /><path d="M3 9l1.6-4.4A1 1 0 015.5 4h13a1 1 0 01.9.6L21 9" /><path d="M9 20v-5h6v5" /></svg>;
+function SearchIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return <svg {...stroke} className={className}><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.2-3.2" /></svg>;
 }
-
-function PinIcon({ className = "" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2"
-      strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 21s7-5.6 7-11a7 7 0 10-14 0c0 5.4 7 11 7 11z" />
-      <circle cx="12" cy="10" r="2.6" />
-    </svg>
-  );
+function PinIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return <svg {...stroke} className={className}><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 1116 0z" /><circle cx="12" cy="10" r="3" /></svg>;
 }
-
-export default SiteChrome;
+function TagIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return <svg {...stroke} className={className}><path d="M3 12.5V4h8.5L21 13.5 13.5 21 3 12.5z" /><circle cx="7.5" cy="8" r="1.4" /></svg>;
+}
+function StoreIcon({ className = "h-5 w-5" }: { className?: string }) {
+  return <svg {...stroke} className={className}><path d="M4 9.5V20a1 1 0 001 1h14a1 1 0 001-1V9.5" /><path d="M3 5h18l-1 4.5a3 3 0 01-5.6.6 3 3 0 01-5.6 0 3 3 0 01-5.6-.6L3 5z" /></svg>;
+}

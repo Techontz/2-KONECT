@@ -1,262 +1,227 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+
 import { BRAND } from "@/lib/brand";
-import { formatMoney } from "@/lib/format";
-import type { Category, ProductCard as ProductCardModel } from "@/lib/types";
-import { useT } from "@/lib/i18n";
+import type { Category, HeroBanner } from "@/lib/types";
+import { Skeleton } from "@/components/ui/Primitives";
+import { BoxIcon, GlobeIcon, PlaneIcon, SendIcon, TruckIcon } from "@/components/sourcing/icons";
 
 /* ==========================================================================
-   Homepage composition blocks, mirroring the reference storefront:
-   a circular category rail, a "more reasons to shop" promo grid, a
-   countdown-led mega-deals panel and an editorial "in focus" column.
-
-   Promotional artwork is ours (the brief allows creative marketing assets);
-   every product inside these blocks is real catalogue data.
+   The repeating blocks of the homepage, other than product rails.
+   Each one returns null when it has no data, so an empty section never
+   leaves a heading hanging over nothing.
    ========================================================================== */
 
-/** Circular category shortcuts directly beneath the hero. */
-export function CategoryRail({ categories }: { categories: Omit<Category, "subcategories">[] }) {
-  if (categories.length === 0) return null;
+/** Scrolling row of real categories, photographed from the live catalogue. */
+export function CategoryRail({
+  categories,
+  loading = false,
+}: {
+  categories: Pick<Category, "id" | "name" | "image" | "product_count">[];
+  loading?: boolean;
+}) {
+  if (!loading && categories.length === 0) return null;
 
   return (
-    <section className="rounded-[var(--radius-md)] bg-[color:var(--color-surface)] py-4">
-      <div className="rail gap-2 px-4">
-        {categories.map((category) => (
-          <Link
-            key={category.id}
-            href={`/category?id=${category.id}`}
-            prefetch={false}
-            className="group flex w-[92px] shrink-0 flex-col items-center gap-2 rounded-[var(--radius-sm)] p-1 text-center transition-colors hover:bg-[color:var(--color-surface-alt)]"
-          >
-            <span className="flex h-[72px] w-[72px] items-center justify-center overflow-hidden rounded-full bg-[color:var(--color-surface-alt)] ring-1 ring-[color:var(--color-line)] transition-transform group-hover:scale-105">
-              {category.image ? (
-                <img src={category.image} alt="" loading="lazy" className="h-full w-full object-cover" />
-              ) : (
-                <span className="text-2xl">{category.icon ?? "🛍️"}</span>
-              )}
-            </span>
-            <span className="clamp-2 text-[11px] font-semibold leading-tight">
-              {category.name.trim()}
-            </span>
-          </Link>
-        ))}
+    <section aria-label="Shop by category">
+      <div className="rail gap-2.5 pb-1">
+        {loading
+          ? Array.from({ length: 8 }).map((_, index) => (
+              <div key={index} className="w-[92px] shrink-0">
+                <Skeleton className="aspect-square w-full rounded-[var(--radius-md)]" />
+                <Skeleton className="mt-1.5 h-3 w-full" />
+              </div>
+            ))
+          : categories.slice(0, 14).map((category) => (
+              <Link
+                key={category.id}
+                href={`/category?id=${category.id}`}
+                prefetch={false}
+                className="group w-[92px] shrink-0 text-center sm:w-[104px]"
+              >
+                <span className="block aspect-square overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-white transition-all group-hover:border-[color:var(--color-brand-200)] group-hover:shadow-[var(--shadow-card)]">
+                  {category.image ? (
+                    <img
+                      src={category.image}
+                      alt=""
+                      loading="lazy"
+                      className="h-full w-full object-contain p-2.5 transition-transform duration-300 group-hover:scale-105"
+                    />
+                  ) : (
+                    <span className="flex h-full w-full items-center justify-center text-[color:var(--color-brand-400)]">
+                      <BoxIcon className="h-7 w-7" />
+                    </span>
+                  )}
+                </span>
+                <span className="clamp-2 mt-1.5 block text-[11px] font-semibold leading-tight text-[color:var(--color-ink-soft)]">
+                  {category.name.trim()}
+                </span>
+              </Link>
+            ))}
       </div>
     </section>
   );
 }
 
 /**
- * Three-column band: promo tiles, a live mega-deals panel, and an editorial
- * column — the reference's densest homepage row.
+ * How an imported order actually works.
+ *
+ * Buying something that is not in the country yet is an unfamiliar purchase,
+ * and the single biggest reason not to is not knowing what happens after you
+ * pay. So the answer is on the homepage rather than buried in a help page.
  */
-export function FeatureBand({
-  deals,
-  categories,
-}: {
-  deals: ProductCardModel[];
-  categories: Omit<Category, "subcategories">[];
-}) {
-  return (
-    <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_minmax(0,1fr)]">
-      <ReasonsToShop categories={categories} />
-      <MegaDeals deals={deals} />
-      <InFocus categories={categories} />
-    </div>
-  );
-}
-
-function ReasonsToShop({ categories }: { categories: Omit<Category, "subcategories">[] }) {
-  const t = useT();
-  // Promotional tiles: our own artwork and copy, each pointed at a real
-  // category so the link always lands on genuine stock.
-  const tiles = [
-    { title: t("home.newArrivals"), subtitle: t("home.newArrivalsHint"), tone: "from-[#dbeafe] to-[#eef4ff]", href: "/search?sort=newest" },
-    { title: t("home.bestSellers"), subtitle: t("home.bestSellersHint"), tone: "from-[#fde7e9] to-[#fff1f2]", href: "/search?sort=rating" },
-    { title: t("home.bigSavings"), subtitle: t("home.bigSavingsHint"), tone: "from-[#fef3c7] to-[#fffbeb]", href: "/deals" },
-    { title: t("home.localSellers"), subtitle: t("home.localSellersHint", { country: BRAND.country }), tone: "from-[#dcfce7] to-[#f0fdf4]", href: "/vendors" },
+export function HowImportsWork() {
+  const steps = [
+    {
+      icon: <GlobeIcon className="h-5 w-5" />,
+      title: "You order",
+      note: "Pick the imported price and pay once. Nothing else to arrange.",
+    },
+    {
+      icon: <SendIcon className="h-5 w-5" />,
+      title: "We source it",
+      note: "We buy from the supplier and hand it to the carrier.",
+    },
+    {
+      icon: <PlaneIcon className="h-5 w-5" />,
+      title: "It travels",
+      note: `Air or sea to ${BRAND.country}, tracked at every step.`,
+    },
+    {
+      icon: <TruckIcon className="h-5 w-5" />,
+      title: "You choose delivery",
+      note: "When it lands, have it brought to you or collect it.",
+    },
   ];
 
   return (
-    <section className="rounded-[var(--radius-md)] bg-[color:var(--color-surface)] p-4">
-      <h2 className="mb-3 text-[17px] font-extrabold tracking-tight">{t("home.moreReasons")}</h2>
+    <section className="overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)]">
+      <div className="flex flex-wrap items-end justify-between gap-3 px-5 pt-5">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-import)]">
+            Ordering from abroad
+          </p>
+          <h2 className="mt-0.5 text-[19px] font-black tracking-[-0.02em] sm:text-[22px]">
+            You pay once. We handle the rest.
+          </h2>
+        </div>
+        <Link
+          href="/shop/abroad"
+          prefetch={false}
+          className="text-[13px] font-bold text-[color:var(--color-brand)] hover:underline"
+        >
+          Browse imported products →
+        </Link>
+      </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        {tiles.map((tile, index) => (
-          <Link
-            key={tile.title}
-            href={tile.href}
-            prefetch={false}
-            className={`group flex flex-col justify-between overflow-hidden rounded-[var(--radius-md)] bg-gradient-to-br ${tile.tone} p-3 transition-shadow hover:shadow-[var(--shadow-hover)]`}
-          >
-            <div className="mb-6 flex h-16 items-center justify-center">
-              {categories[index]?.image ? (
-                <img
-                  src={categories[index].image ?? ""}
-                  alt=""
-                  loading="lazy"
-                  className="h-16 w-16 rounded-[var(--radius-sm)] object-cover transition-transform group-hover:scale-105"
-                />
-              ) : (
-                <span className="text-4xl">{["✨", "🏆", "🔥", "🇹🇿"][index]}</span>
-              )}
-            </div>
-            <div>
-              <p className="text-[14px] font-extrabold leading-tight">{tile.title}</p>
-              <p className="clamp-2 text-[11px] text-[color:var(--color-ink-muted)]">{tile.subtitle}</p>
-            </div>
-          </Link>
+      <ol className="mt-4 grid gap-px bg-[color:var(--color-line)] sm:grid-cols-2 lg:grid-cols-4">
+        {steps.map((step, index) => (
+          <li key={step.title} className="relative bg-[color:var(--color-surface)] p-5">
+            <span className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-sm)] bg-[color:var(--color-brand-50)] text-[color:var(--color-brand)]">
+              {step.icon}
+            </span>
+            <p className="mt-3 text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-ink-faint)]">
+              Step {index + 1}
+            </p>
+            <p className="text-[15px] font-extrabold">{step.title}</p>
+            <p className="mt-1 text-[13px] leading-relaxed text-[color:var(--color-ink-muted)]">
+              {step.note}
+            </p>
+          </li>
         ))}
+      </ol>
+    </section>
+  );
+}
+
+/**
+ * The sourcing desk, pitched.
+ *
+ * The catalogue will never carry everything, and a shopper who cannot find
+ * something is otherwise a shopper who leaves. This turns that moment into a
+ * service.
+ */
+export function RequestBand() {
+  return (
+    <section className="overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)]">
+      <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7">
+        <div className="max-w-xl">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-brand)]">
+            Sourcing service
+          </p>
+          <h2 className="mt-1 text-[20px] font-black tracking-[-0.02em] sm:text-[24px]">
+            Can’t find what you’re looking for?
+          </h2>
+          <p className="mt-1.5 text-[14px] leading-relaxed text-[color:var(--color-ink-soft)]">
+            Send us a photo or a description and our team will find it, price it and
+            bring it in. No account needed to ask.
+          </p>
+        </div>
+
+        <Link
+          href="/request"
+          prefetch={false}
+          className="inline-flex h-[52px] shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[color:var(--color-brand)] px-7 text-[15px] font-bold text-white shadow-[var(--shadow-brand)] transition-colors hover:bg-[color:var(--color-brand-strong)]"
+        >
+          Request a product
+        </Link>
       </div>
     </section>
   );
 }
 
-function MegaDeals({ deals }: { deals: ProductCardModel[] }) {
-  const t = useT();
-  const featured = deals.slice(0, 4);
-
+/** The seller pitch, which closes the page once a visitor has seen the shop. */
+export function SellBand() {
   return (
-    <section className="relative rounded-[var(--radius-md)] bg-[#fffbe6] p-4">
-      <CountdownPill />
-
-      <div className="mb-3 flex items-center justify-between gap-3 pt-3">
-        <h2 className="text-[17px] font-extrabold tracking-tight">{t("home.megaDeals")}</h2>
-        <Link
-          href="/deals"
-          prefetch={false}
-          className="rounded-[var(--radius-sm)] bg-[color:var(--color-ink)] px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-wide text-white"
-        >
-          All deals
-        </Link>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        {featured.map((product) => (
-          <Link
-            key={product.id}
-            href={`/product?id=${product.id}`}
-            prefetch={false}
-            className="group flex flex-col overflow-hidden rounded-[var(--radius-sm)] bg-white p-2 transition-shadow hover:shadow-[var(--shadow-hover)]"
-          >
-            {product.price.discount_percent ? (
-              <span className="mb-1 self-start rounded-[var(--radius-xs)] bg-[color:var(--color-brand)] px-1.5 py-0.5 text-[10px] font-extrabold">
-                {product.price.discount_percent}% off
-              </span>
-            ) : null}
-
-            <div className="mb-2 aspect-square w-full overflow-hidden">
-              {product.image ? (
-                <img src={product.image} alt={product.name} loading="lazy"
-                  className="h-full w-full object-contain transition-transform group-hover:scale-105" />
-              ) : (
-                <div className="h-full w-full bg-[color:var(--color-surface-alt)]" />
-              )}
-            </div>
-
-            <p className="clamp-2 mb-1 text-[11px] leading-tight">{product.name}</p>
-            <p className="mt-auto flex flex-wrap items-baseline gap-1.5">
-              <span className="text-[13px] font-extrabold">{formatMoney(product.price.current)}</span>
-              {product.price.was ? (
-                <span className="text-[10px] text-[color:var(--color-ink-faint)] line-through">
-                  {formatMoney(product.price.was)}
-                </span>
-              ) : null}
-            </p>
-          </Link>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-/** Live countdown to midnight — the reference's deal-urgency device. */
-function CountdownPill() {
-  const [remaining, setRemaining] = useState<string | null>(null);
-
-  useEffect(() => {
-    function tick() {
-      const now = new Date();
-      const midnight = new Date(now);
-      midnight.setHours(24, 0, 0, 0);
-
-      const diff = Math.max(0, midnight.getTime() - now.getTime());
-      const hours = Math.floor(diff / 3_600_000);
-      const minutes = Math.floor((diff % 3_600_000) / 60_000);
-      const seconds = Math.floor((diff % 60_000) / 1000);
-
-      setRemaining(
-        [hours, minutes, seconds].map((unit) => String(unit).padStart(2, "0")).join(" : ")
-      );
-    }
-
-    tick();
-    const interval = window.setInterval(tick, 1000);
-    return () => window.clearInterval(interval);
-  }, []);
-
-  // Rendered only after the first client tick, so the server-rendered markup
-  // and the hydrated markup can never disagree about the time.
-  if (!remaining) return <div className="h-6" />;
-
-  return (
-    <div className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2">
-      <span className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[color:var(--color-ink)] px-3 py-1 text-[12px] font-bold tabular-nums text-white">
-        <span aria-hidden="true">⏳</span>
-        {remaining}
-      </span>
-    </div>
-  );
-}
-
-function InFocus({ categories }: { categories: Omit<Category, "subcategories">[] }) {
-  const t = useT();
-  const spotlight = categories.slice(4, 6);
-
-  return (
-    <section className="rounded-[var(--radius-md)] bg-[color:var(--color-surface)] p-4">
-      <h2 className="mb-3 text-[17px] font-extrabold tracking-tight">{t("home.inFocus")}</h2>
-
-      <div className="grid gap-3">
-        <Link
-          href="/deals"
-          prefetch={false}
-          className="group relative flex min-h-[150px] flex-col justify-end overflow-hidden rounded-[var(--radius-md)] bg-gradient-to-br from-[#111827] to-[#374151] p-4 text-white"
-        >
-          {spotlight[0]?.image ? (
-            <img src={spotlight[0].image ?? ""} alt="" loading="lazy"
-              className="absolute inset-0 h-full w-full object-cover opacity-35 transition-transform duration-500 group-hover:scale-105" />
-          ) : null}
-          <div className="relative">
-            <p className="text-[11px] font-bold uppercase tracking-widest text-[color:var(--color-brand)]">
-              Deal of the day
-            </p>
-            <p className="text-[20px] font-black leading-tight">{t("home.bigSavingsHint")}</p>
-            <p className="text-[12px] opacity-80">{t("home.limitedStock")}</p>
-          </div>
-        </Link>
+    <section className="brand-ground overflow-hidden rounded-[var(--radius-md)]">
+      <div className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+        <div className="max-w-xl">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-white/60">
+            For businesses
+          </p>
+          <h2 className="mt-1 text-[20px] font-black tracking-[-0.02em] text-white sm:text-[24px]">
+            Sell with {BRAND.name}
+          </h2>
+          <p className="mt-1.5 text-[14px] leading-relaxed text-white/75">
+            Reach buyers across {BRAND.country} on a marketplace where every seller is
+            reviewed before they list. Apply once — we handle approval and verification.
+          </p>
+        </div>
 
         <Link
           href="/sell"
           prefetch={false}
-          className="group relative flex min-h-[150px] flex-col justify-end overflow-hidden rounded-[var(--radius-md)] bg-[color:var(--color-brand)] p-4"
+          className="inline-flex h-[52px] shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-white px-7 text-[15px] font-bold text-[color:var(--color-brand)] transition-transform hover:-translate-y-0.5"
         >
-          {spotlight[1]?.image ? (
-            <img src={spotlight[1].image ?? ""} alt="" loading="lazy"
-              className="absolute inset-0 h-full w-full object-cover opacity-25 transition-transform duration-500 group-hover:scale-105" />
-          ) : null}
-          <div className="relative">
-            <p className="text-[11px] font-bold uppercase tracking-widest opacity-70">
-              {t("home.forBusinesses")}
-            </p>
-            <p className="text-[20px] font-black leading-tight">{t("home.startSelling")}</p>
-            <p className="text-[12px] opacity-80">
-              {t("home.reachShoppers", { country: BRAND.country })}
-            </p>
-          </div>
+          Apply to sell
         </Link>
       </div>
     </section>
+  );
+}
+
+/** A campaign strip placed by an administrator. Renders nothing without one. */
+export function PromoStrip({ banner }: { banner?: HeroBanner | null }) {
+  if (!banner?.image) return null;
+
+  return (
+    <Link
+      href={banner.link || "/deals"}
+      prefetch={false}
+      className="group block overflow-hidden rounded-[var(--radius-md)]"
+    >
+      {/* A phone crop when the team uploaded one, the wide artwork otherwise —
+          a landscape banner scaled to 360px is unreadable. */}
+      <picture>
+        <source media="(min-width: 768px)" srcSet={banner.image} />
+        <img
+          src={banner.mobile_image || banner.image}
+          alt={banner.alt || banner.title || "Offer"}
+          loading="lazy"
+          className="h-auto w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+        />
+      </picture>
+    </Link>
   );
 }

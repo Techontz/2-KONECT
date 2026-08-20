@@ -1,30 +1,35 @@
 "use client";
 
 import { useEffect, useState } from "react";
+
 import shop from "@/lib/shop";
 import type { HomeFeed } from "@/lib/types";
-import { useT } from "@/lib/i18n";
 import { SiteChrome } from "@/components/layout/SiteChrome";
-import { HeroBanner } from "@/components/home/HeroBanner";
-import { AdSlot, PromoBanner } from "@/components/home/PromoBanner";
+import { Hero } from "@/components/home/Hero";
+import {
+  CategoryRail,
+  HowImportsWork,
+  PromoStrip,
+  RequestBand,
+  SellBand,
+} from "@/components/home/HomeSections";
 import { CategoryCollection } from "@/components/home/CategoryCollection";
-import { CategoryRail, FeatureBand } from "@/components/home/HomeSections";
 import { ProductShelf } from "@/components/product/ProductShelf";
 import { Button, EmptyState } from "@/components/ui/Primitives";
 
 /**
  * Homepage.
  *
- * Composed from interchangeable blocks — hero, category rail, product row,
- * category collection, promotional strip — rather than one long hand-written
- * page. The running order lives in `sections` below, so changing what the
- * homepage looks like is editing a list, not untangling JSX.
+ * Composed from interchangeable blocks rather than one long hand-written page.
+ * The running order lives in `sections` below, so changing what the homepage
+ * looks like is editing a list, not untangling JSX.
  *
- * Every product, category and photo is real catalogue data from a single
+ * The order is deliberate: say what 2KONECT is, prove it with the two kinds of
+ * shelf side by side, explain the unfamiliar half, then let the catalogue take
+ * over. Every product, category and photo is real data from a single
  * `/shop/home` request, and nothing here requires a login.
  */
 export default function HomePage() {
-  const t = useT();
   const [feed, setFeed] = useState<HomeFeed | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -42,11 +47,11 @@ export default function HomePage() {
   if (failed) {
     return (
       <SiteChrome>
-        <div className="shell py-3">
+        <div className="shell py-6">
           <EmptyState
-            title={t("home.loadFailed")}
-            message={t("home.loadFailedHint")}
-            action={<Button onClick={() => window.location.reload()}>{t("common.retry")}</Button>}
+            title="We couldn’t load the storefront"
+            message="Check your connection and try again. If this keeps happening, our team is already on it."
+            action={<Button onClick={() => window.location.reload()}>Try again</Button>}
           />
         </div>
       </SiteChrome>
@@ -58,29 +63,68 @@ export default function HomePage() {
   const collections = feed?.collections ?? [];
   const promos = feed?.promos ?? [];
 
-  /**
-   * The homepage running order.
-   *
-   * Product rows and category collections are interleaved with promotional
-   * strips so the page never becomes an unbroken wall of product cards. A
-   * section that has no data returns null and simply does not appear — an
-   * empty "Beauty" heading is worse than no heading.
-   */
   const sections: React.ReactNode[] = [];
 
-  // Today's deals lead, because a discount is the strongest reason to stop.
+  // The two ways to buy lead, because the difference between them is the
+  // product. Local first: it is the faster promise and the easier sell.
+  sections.push(
+    <ProductShelf
+      key="local"
+      eyebrow={<><span aria-hidden="true">🇹🇿</span> In stock now</>}
+      accent="local"
+      title="Available in Tanzania"
+      subtitle="Ready to ship — delivered in days, not weeks."
+      products={feed?.local ?? []}
+      viewAllHref="/shop/local"
+      loading={loading}
+    />,
+  );
+
+  sections.push(
+    <ProductShelf
+      key="imports"
+      eyebrow={<><span aria-hidden="true">🌍</span> Sourced worldwide</>}
+      accent="import"
+      title="Order from abroad"
+      subtitle="Lower prices. We import it and track it all the way in."
+      products={feed?.imports ?? []}
+      viewAllHref="/shop/abroad"
+      loading={loading}
+    />,
+  );
+
+  sections.push(<HowImportsWork key="how" />);
+
   sections.push(
     <ProductShelf
       key="deals"
-      title={t("home.dealsTitle")}
-      subtitle={t("home.dealsSubtitle")}
+      accent="brand"
+      eyebrow="Best savings"
+      title="Today’s deals"
+      subtitle="The biggest price drops across the catalogue."
       products={feed?.deals ?? []}
       viewAllHref="/deals"
       loading={loading}
     />,
   );
 
-  sections.push(<PromoBanner key="promo-0" banner={promos[0]} />);
+  sections.push(<PromoStrip key="promo-0" banner={promos[0]} />);
+
+  if ((feed?.verified.length ?? 0) > 0) {
+    sections.push(
+      <ProductShelf
+        key="verified"
+        accent="brand"
+        eyebrow="Checked by us"
+        title="From verified sellers"
+        subtitle="Businesses we have reviewed and approved."
+        products={feed?.verified ?? []}
+        viewAllHref="/shop?verified=1"
+      />,
+    );
+  }
+
+  sections.push(<RequestBand key="request" />);
 
   // Then the catalogue itself: a product row, then a way to browse the same
   // category visually, alternating so the two never stack monotonously.
@@ -99,13 +143,8 @@ export default function HomePage() {
       sections.push(<CategoryCollection key={`collection-${collection.id}`} collection={collection} />);
     }
 
-    // Remaining promotional strips are spread through the page rather than
-    // bunched at the end.
     if (index === 1 && promos[1]) {
-      sections.push(<PromoBanner key="promo-1" banner={promos[1]} />);
-    }
-    if (index === 3) {
-      sections.push(<AdSlot key="ad-mid" id="home-mid" />);
+      sections.push(<PromoStrip key="promo-1" banner={promos[1]} />);
     }
   });
 
@@ -115,26 +154,19 @@ export default function HomePage() {
     );
   }
 
-  // The seller pitch closes the page: by here a visitor has seen what the
-  // marketplace carries, which is the moment "sell on D2K" lands.
-  sections.push(<PromoBanner key="promo-last" banner={promos[2]} />);
+  sections.push(<SellBand key="sell" />);
 
   return (
     <SiteChrome>
-      <div className="shell space-y-6 py-3">
-        <HeroBanner slides={feed?.hero ?? []} side={feed?.hero_side ?? null} loading={loading} />
+      {/* pb-tabbar keeps the last section clear of the phone navigation bar. */}
+      <div className="shell space-y-5 py-4 pb-tabbar sm:space-y-6">
+        <Hero
+          categories={feed?.categories ?? []}
+          banner={feed?.hero?.[0] ?? feed?.hero_side ?? null}
+          loading={loading}
+        />
 
-        <CategoryRail categories={feed?.categories ?? []} />
-
-        {feed ? (
-          <FeatureBand deals={feed.deals} categories={feed.categories} />
-        ) : (
-          <div className="grid gap-3 lg:grid-cols-3">
-            {[0, 1, 2].map((index) => (
-              <div key={index} className="skeleton h-[340px] rounded-[var(--radius-md)]" />
-            ))}
-          </div>
-        )}
+        <CategoryRail categories={feed?.categories ?? []} loading={loading} />
 
         {sections}
       </div>

@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { BRAND } from "@/lib/brand";
-import { useT } from "@/lib/i18n";
 import type { ProductDetail, ProductVendor } from "@/lib/types";
+import { VerifiedBadge } from "@/components/sourcing/Trust";
 
 /**
  * Seller block on the product page: who is selling, and how to reach them.
@@ -22,12 +22,10 @@ export function SellerPanel({
   product: ProductDetail;
   onChat(): void;
 }) {
-  const t = useT();
-
   return (
-    <section className="rounded-[var(--radius-md)] bg-[color:var(--color-surface)] p-4">
+    <section className="rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4">
       <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-[color:var(--color-ink-faint)]">
-        {t("product.soldBy")}
+        Sold by
       </p>
 
       <Link
@@ -54,10 +52,10 @@ export function SellerPanel({
           {/* Approval only lets a shop trade; the badge means an
               administrator checked the business behind it. */}
           {vendor.is_verified ? (
-            <span className="text-[11px] font-semibold text-[color:var(--color-success)]">
-              ✓ {t("product.verifiedSeller")}
-            </span>
-          ) : null}
+            <VerifiedBadge size="sm" className="mt-0.5" />
+          ) : (
+            <span className="text-[11px] text-[color:var(--color-ink-faint)]">Approved seller</span>
+          )}
         </span>
 
         <span aria-hidden="true" className="shrink-0 text-[color:var(--color-ink-faint)]">›</span>
@@ -66,7 +64,7 @@ export function SellerPanel({
       {vendor.member_since || vendor.location ? (
         <div className="mt-3 space-y-1 border-t border-[color:var(--color-line)] pt-3 text-[12px] text-[color:var(--color-ink-muted)]">
           {vendor.member_since ? (
-            <p>{t("product.sellingSince", { year: vendor.member_since })}</p>
+            <p>Selling on {BRAND.name} since {vendor.member_since}</p>
           ) : null}
           {vendor.location ? (
             <p className="flex gap-1.5">
@@ -81,7 +79,7 @@ export function SellerPanel({
           under the buy buttons, so showing them again here would duplicate. */}
       <div className="mt-3 hidden border-t border-[color:var(--color-line)] pt-3 lg:block">
         <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-[color:var(--color-ink-faint)]">
-          {t("seller.contact")}
+          Contact this seller
         </p>
         <SellerActions vendor={vendor} product={product} onChat={onChat} />
 
@@ -111,11 +109,9 @@ export function SellerActions({
   product: ProductDetail;
   onChat(): void;
 }) {
-  const t = useT();
-
   const waLink = vendor.whatsapp
     ? `${vendor.whatsapp}${vendor.whatsapp.includes("?") ? "&" : "?"}text=${encodeURIComponent(
-        t("seller.waMessage", { product: product.name, brand: BRAND.name }),
+        `Hi, I'm interested in "${product.name}" on ${BRAND.name}.`,
       )}`
     : null;
 
@@ -126,10 +122,10 @@ export function SellerActions({
       <button
         type="button"
         onClick={onChat}
-        className="flex h-10 w-full items-center justify-center gap-2 rounded-[var(--radius-sm)] bg-[color:var(--color-action)] text-[13px] font-bold text-white transition-colors hover:bg-[color:var(--color-action-dark)]"
+        className="flex h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-sm)] bg-[color:var(--color-brand)] text-[13px] font-bold text-white transition-colors hover:bg-[color:var(--color-brand-strong)]"
       >
         <ChatIcon className="h-4 w-4 shrink-0" />
-        {t("seller.chat")}
+        Message seller
       </button>
 
       {hasContact ? (
@@ -139,27 +135,29 @@ export function SellerActions({
               href={waLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex h-10 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] text-[13px] font-bold transition-colors hover:border-[color:var(--color-success)] hover:text-[color:var(--color-success)]"
+              className="flex h-11 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] text-[13px] font-bold transition-colors hover:border-[color:var(--color-success)] hover:text-[color:var(--color-success)]"
             >
               <WhatsAppIcon className="h-4 w-4 shrink-0" />
-              {t("seller.whatsapp")}
+              WhatsApp
             </a>
           ) : null}
 
           {vendor.phone ? (
             <a
               href={`tel:${vendor.phone}`}
-              className={`flex h-10 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] text-[13px] font-bold transition-colors hover:border-[color:var(--color-ink)] ${
+              className={`flex h-11 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] text-[13px] font-bold transition-colors hover:border-[color:var(--color-ink)] ${
                 waLink ? "" : "col-span-2"
               }`}
             >
               <PhoneIcon className="h-4 w-4 shrink-0" />
-              {t("seller.call")}
+              Call
             </a>
           ) : null}
         </div>
       ) : (
-        <p className="mt-2 text-[11px] text-[color:var(--color-ink-faint)]">{t("seller.noPhone")}</p>
+        <p className="mt-2 text-[11px] text-[color:var(--color-ink-faint)]">
+          This seller has not published a phone number — send a message instead.
+        </p>
       )}
     </>
   );

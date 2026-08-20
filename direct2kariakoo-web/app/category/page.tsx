@@ -7,15 +7,13 @@ import shop from "@/lib/shop";
 import { SiteChrome } from "@/components/layout/SiteChrome";
 import { ListingView } from "@/components/product/ListingView";
 import { EmptyState, Skeleton } from "@/components/ui/Primitives";
-import { useT } from "@/lib/i18n";
 
 /**
  * Category page.
  *
  * Routing is by query string (`/category?id=8&subcategory=33`) rather than a
- * path segment because the site is deployed as a static export — a dynamic
- * `[id]` route would have to pre-render a page per category at build time and
- * would miss anything added afterwards.
+ * path segment, matching every other product link on the site — the catalogue
+ * changes daily and nothing here should depend on a build-time page list.
  */
 export default function CategoryPage() {
   return (
@@ -28,7 +26,6 @@ export default function CategoryPage() {
 }
 
 function CategoryContent() {
-  const t = useT();
   const params = useSearchParams();
   const categoryId = Number(params.get("id"));
   const subcategoryId = params.get("subcategory") ? Number(params.get("subcategory")) : undefined;
@@ -54,9 +51,9 @@ function CategoryContent() {
   if (missing) {
     return (
       <EmptyState
-        title={t("listing.categoryNotFound")}
-        message={t("listing.categoryNotFoundHint")}
-        action={<Link href="/" className="font-bold text-[color:var(--color-action)] hover:underline">Back to home</Link>}
+        title="We couldn’t find that category"
+        message="It may have been renamed or removed. Browse everything instead."
+        action={<Link href="/shop" className="font-bold text-[color:var(--color-brand)] hover:underline">Browse all products</Link>}
       />
     );
   }
@@ -94,11 +91,11 @@ function CategoryContent() {
 
       <nav aria-label="Breadcrumb" className="shell pt-3 text-[12px] text-[color:var(--color-ink-muted)]">
         <ol className="flex flex-wrap items-center gap-1.5">
-          <li><Link href="/" className="crumb hover:underline">{t("common.home")}</Link></li>
+          <li><Link href="/" className="crumb hover:underline">Home</Link></li>
           <li aria-hidden="true">›</li>
           <li>
             <Link href={`/category?id=${categoryId}`} className="crumb hover:underline">
-              {detail?.category.name.trim() ?? t("listing.category")}
+              {detail?.category.name.trim() ?? "Category"}
             </Link>
           </li>
           {activeSub ? (
@@ -112,11 +109,11 @@ function CategoryContent() {
 
       <ListingView
         baseQuery={{ category_id: categoryId, subcategory_id: subcategoryId }}
-        heading={activeSub?.name ?? detail?.category.name.trim() ?? t("header.products")}
+        heading={activeSub?.name.trim() ?? detail?.category.name.trim() ?? "Products"}
         subheading={
           activeSub
-            ? `${activeSub.name} in ${detail?.category.name.trim()}`
-            : t("listing.browseCategory")
+            ? `${activeSub.name.trim()} in ${detail?.category.name.trim()}`
+            : "Local stock and imported options, side by side."
         }
       />
     </>
@@ -145,7 +142,7 @@ function SubcategoryTile({
       <span
         className={`flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-[color:var(--color-surface-alt)] transition-all ${
           active
-            ? "ring-2 ring-[color:var(--color-action)]"
+            ? "ring-2 ring-[color:var(--color-brand)]"
             : "ring-1 ring-[color:var(--color-line)] hover:ring-[color:var(--color-line-strong)]"
         }`}
       >

@@ -2,34 +2,34 @@
 
 import { SiteChrome } from "@/components/layout/SiteChrome";
 import { ListingView } from "@/components/product/ListingView";
-import { BRAND } from "@/lib/brand";
-import { useT } from "@/lib/i18n";
 
 /**
  * Deals — every discounted, in-stock product, biggest saving first.
  * The "on sale" condition is enforced by the API, not by filtering client-side.
  */
 export default function DealsPage() {
-  const t = useT();
   return (
     <SiteChrome>
-      <div className="bg-[color:var(--color-brand)]">
-        <div className="shell py-8">
-          <p className="text-[11px] font-extrabold uppercase tracking-widest opacity-70">
-            {t("deals.title", { brand: BRAND.short })}
+      <section className="brand-ground">
+        <div className="shell py-8 sm:py-10">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-white/60">
+            2KONECT deals
           </p>
-          <h1 className="text-[30px] font-black leading-tight md:text-[38px]">
-            {t("deals.subtitle")}
+          <h1 className="mt-1 text-[28px] font-black leading-tight tracking-[-0.025em] text-white sm:text-[38px]">
+            Big price drops, updated daily.
           </h1>
-          <p className="mt-1 max-w-xl text-sm opacity-80">{t("deals.intro")}</p>
+          <p className="mt-2 max-w-xl text-[14px] text-white/75 sm:text-[15px]">
+            Everything currently discounted across the catalogue — local stock and
+            imported alike — sorted by how much you save.
+          </p>
         </div>
-      </div>
+      </section>
 
       <ListingView
         baseQuery={{ on_sale: true, in_stock: true, sort: "discount" }}
-        heading={t("deals.allDeals")}
-        subheading={t("deals.sortedByDiscount")}
-        emptyMessage={t("deals.none")}
+        heading="All deals"
+        subheading="Sorted by biggest discount first."
+        emptyMessage="No deals are running right now. Check back soon."
       />
     </SiteChrome>
   );
