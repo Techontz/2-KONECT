@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 
+import { BRAND } from "@/lib/brand";
 import shop from "@/lib/shop";
 import type { HomeFeed, ListingFilters } from "@/lib/types";
 import { SiteChrome } from "@/components/layout/SiteChrome";
-import { Hero } from "@/components/home/Hero";
+import { BannerRow } from "@/components/home/BannerRow";
+import { ModuleRow } from "@/components/home/ModuleRow";
 import {
   CategoryRail,
   HowImportsWork,
@@ -30,10 +32,14 @@ import { Button, EmptyState } from "@/components/ui/Primitives";
  * The running order lives in `sections` below, so changing what the homepage
  * looks like is editing a list, not untangling JSX.
  *
- * The order is deliberate: say what 2KONECT is, prove it with the two kinds of
- * shelf side by side, explain the unfamiliar half, then let the catalogue take
- * over. Every product, category and photo is real data from a single
- * `/shop/home` request, and nothing here requires a login.
+ * The order is a marketplace's, not a landing page's: campaign, categories,
+ * three ways in, then shelf after shelf of real stock. Nothing at the top
+ * explains the business in prose — the two ways to buy are permanent fixtures
+ * in the utility strip, the category bar and every product card, so the first
+ * screen can be spent on things to buy instead of on an introduction.
+ *
+ * Every product, category and banner is real data from a single `/shop/home`
+ * request, and nothing here requires a login.
  */
 export default function HomePage() {
   const [feed, setFeed] = useState<HomeFeed | null>(null);
@@ -130,8 +136,6 @@ export default function HomePage() {
     />,
   );
 
-  sections.push(<PromoStrip key="promo-0" banner={promos[0]} />);
-
   if ((feed?.verified.length ?? 0) > 0) {
     sections.push(
       <ProductShelf
@@ -168,7 +172,9 @@ export default function HomePage() {
     }
 
     if (index === 1 && promos[1]) {
-      sections.push(<PromoStrip key="promo-1" banner={promos[1]} />);
+      // The third plate: the spotlight column above has already used the
+      // first two, and the same campaign twice on one page reads as a bug.
+      sections.push(<PromoStrip key="promo-2" banner={promos[2]} />);
     }
   });
 
@@ -180,21 +186,36 @@ export default function HomePage() {
 
   sections.push(<TrustBand key="trust" />);
 
+  // The seller pitch comes last and small. It is the one block on this page
+  // addressed to somebody who is not shopping, and it used to open the page.
   sections.push(<SellBand key="sell" />);
 
   return (
     <SiteChrome>
       {/* pb-tabbar keeps the last section clear of the phone navigation bar. */}
-      <div className="shell py-4 pb-tabbar">
-        <Hero
-          categories={feed?.categories ?? []}
-          banner={feed?.hero?.[0] ?? feed?.hero_side ?? null}
+      <div className="shell py-3 pb-tabbar sm:py-4">
+        {/* The page needs exactly one h1, and the design deliberately has no
+            page title — a marketplace opens with stock, not a headline. So the
+            document's heading is given to assistive technology and to search
+            engines without taking a line of the layout. It is not decoration:
+            without it this page had no h1 at all once the old hero went. */}
+        <h1 className="sr-only">
+          {BRAND.name} — buy what is already in Tanzania, or order it from abroad
+        </h1>
+
+        <BannerRow
+          main={feed?.hero ?? []}
+          side={feed?.hero_side ?? null}
           loading={loading}
         />
 
-        <div className="section">
+        {/* Categories sit directly under the campaign, where a marketplace
+            puts them — one swipe from the top of the page on a phone. */}
+        <div className="mt-3">
           <CategoryRail categories={feed?.categories ?? []} loading={loading} />
         </div>
+
+        <ModuleRow deals={feed?.deals ?? []} promos={promos} loading={loading} />
 
         {sections}
       </div>
