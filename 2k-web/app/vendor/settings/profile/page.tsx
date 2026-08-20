@@ -19,11 +19,57 @@ import {
 import { api } from "@/lib/api";
 
 /* -------------------------------------------------------------------------- */
+/* Shapes this screen reads. Deliberately only the fields it uses — the        */
+/* endpoints return more, and describing the rest here would be guessing.      */
+/* -------------------------------------------------------------------------- */
+
+interface VendorProfile {
+  id?: number;
+  business_name?: string | null;
+  logo?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  business_address?: string | null;
+  is_approved?: boolean | number | null;
+}
+
+interface ProfileUser {
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+}
+
+interface PaymentType {
+  id: number;
+  name: string;
+}
+
+interface PaymentMethodOption {
+  id: number;
+  name: string;
+}
+
+/** What this screen holds about the signed-in seller, cached and refreshed. */
+interface ProfileSnapshot {
+  user?: ProfileUser | null;
+  vendor?: VendorProfile | null;
+  paymentOptions?: PaymentOption[];
+}
+
+/** A payout destination the seller has saved. */
+interface PaymentOption {
+  id: number;
+  account?: string | null;
+  payment_type?: PaymentType | null;
+  payment_method?: PaymentMethodOption | null;
+}
+
+/* -------------------------------------------------------------------------- */
 /* 🌟 Vendor Profile — Cached + Shimmer + Smooth UX                            */
 /* -------------------------------------------------------------------------- */
 export default function VendorProfilePage() {
-  const [vendor, setVendor] = useState<any>(null);
-  const [user, setUser] = useState<any>(null);
+  const [vendor, setVendor] = useState<VendorProfile | null>(null);
+  const [user, setUser] = useState<ProfileUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -33,12 +79,12 @@ export default function VendorProfilePage() {
   const [location, setLocation] = useState("");
 
   // Payment section
-  const [paymentOptions, setPaymentOptions] = useState<any[]>([]);
-  const [paymentTypes, setPaymentTypes] = useState<any[]>([]);
-  const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
+  const [paymentOptions, setPaymentOptions] = useState<PaymentOption[]>([]);
+  const [paymentTypes, setPaymentTypes] = useState<PaymentType[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodOption[]>([]);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [savingPayment, setSavingPayment] = useState(false);
-  const [editingPayment, setEditingPayment] = useState<any>(null);
+  const [editingPayment, setEditingPayment] = useState<PaymentOption | null>(null);
 
   const [paymentForm, setPaymentForm] = useState({
     type_id: "",
@@ -70,9 +116,9 @@ export default function VendorProfilePage() {
     return () => clearInterval(interval);
   }, []);
 
-  function populateData(data: any) {
-    setUser(data.user);
-    setVendor(data.vendor);
+  function populateData(data: ProfileSnapshot) {
+    setUser(data.user ?? null);
+    setVendor(data.vendor ?? null);
     setPhone(data.vendor?.phone || "");
     setLocation(data.vendor?.business_address || "");
     setPaymentOptions(data.paymentOptions || []);
@@ -220,15 +266,20 @@ export default function VendorProfilePage() {
   /* -------------------------------------------------------------------------- */
   /* 🪟 Open Payment Modal                                                      */
   /* -------------------------------------------------------------------------- */
-  function openPaymentModal(option?: any) {
+  function openPaymentModal(option?: PaymentOption) {
     if (option) {
       setEditingPayment(option);
+      // The form holds ids as strings — a <select> value always is one — while
+      // the API returns them as the integers they are in the database.
+      const typeId = option.payment_type ? String(option.payment_type.id) : "";
+
       setPaymentForm({
-        type_id: option.payment_type?.id || "",
-        method_id: option.payment_method?.id || "",
+        type_id: typeId,
+        method_id: option.payment_method ? String(option.payment_method.id) : "",
         account: option.account || "",
       });
-      fetchPaymentMethods(option.payment_type?.id);
+
+      if (typeId) void fetchPaymentMethods(typeId);
     } else {
       setEditingPayment(null);
       setPaymentForm({ type_id: "", method_id: "", account: "" });
@@ -364,7 +415,7 @@ export default function VendorProfilePage() {
           </div>
 
           {paymentOptions.length > 0 ? (
-            paymentOptions.map((opt: any) => (
+            paymentOptions.map((opt) => (
               <div
                 key={opt.id}
                 className="flex justify-between items-center bg-gray-50 hover:bg-gray-100 p-3 rounded-xl transition mb-2"
@@ -425,7 +476,7 @@ export default function VendorProfilePage() {
                 className="w-full border border-gray-200 rounded-xl p-2.5 bg-gray-50 focus:ring-2 focus:ring-[#a78bfa]"
               >
                 <option value="">Select Type</option>
-                {paymentTypes.map((t: any) => (
+                {paymentTypes.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.name}
                   </option>
@@ -441,7 +492,7 @@ export default function VendorProfilePage() {
                 className="w-full border border-gray-200 rounded-xl p-2.5 bg-gray-50 focus:ring-2 focus:ring-[#a78bfa] disabled:opacity-50"
               >
                 <option value="">Select Method</option>
-                {paymentMethods.map((m: any) => (
+                {paymentMethods.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.name}
                   </option>
@@ -492,10 +543,10 @@ function ProfileCard({
   subtitle,
   action,
 }: {
-  icon: any;
+  icon: React.ReactNode;
   title: string;
   subtitle: string;
-  action?: any;
+  action?: React.ReactNode;
 }) {
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4 flex items-start justify-between">
@@ -511,7 +562,21 @@ function ProfileCard({
   );
 }
 
-function EditableRow({ icon, label, value, editing, setEditing, onSave }: any) {
+function EditableRow({
+  icon,
+  label,
+  value,
+  editing,
+  setEditing,
+  onSave,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  editing: boolean;
+  setEditing(editing: boolean): void;
+  onSave(value: string): void;
+}) {
   const [val, setVal] = useState(value);
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4 flex items-start justify-between">

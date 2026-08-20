@@ -55,6 +55,20 @@ export interface VendorOrder {
   product: { id: number; name: string; image: string | null } | null;
 }
 
+/** The seller's earnings, and the payouts they have asked for. */
+export interface VendorWallet {
+  balance: number;
+  currency: string;
+  payouts: {
+    id: number;
+    amount: number;
+    method: string | null;
+    account_number: string | null;
+    status: string;
+    requested_at: string | null;
+  }[];
+}
+
 export interface VendorDashboard {
   vendor: VendorProfile;
   stats: VendorStats;
@@ -83,6 +97,20 @@ export const vendorApi = {
       orders: VendorOrder[];
       meta: { total: number; current_page: number; last_page: number; has_more: boolean };
     };
+  },
+
+  async wallet(): Promise<VendorWallet> {
+    const { data } = await api.get<VendorWallet>("/vendor/wallet");
+    return data;
+  },
+
+  /**
+   * Ask for a payout. The server debits the balance and records the request in
+   * one transaction, so a payout can always be traced back.
+   */
+  async requestPayout(payload: { amount: number; method: string; account_number: string }) {
+    const { data } = await api.post("/withdraw", payload);
+    return data as { message: string };
   },
 
   async setOrderStatus(orderId: number, status: string) {

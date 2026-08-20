@@ -63,9 +63,11 @@ export function LanguageSwitcher({
             : "text-[color:var(--color-ink)] hover:bg-[color:var(--color-surface-alt)]"
         }`}
       >
+        {/* The code is always shown. A lone flag is a guess — and on a phone
+            the footer control was rendering as nothing but one. */}
         <span aria-hidden="true" className="text-[15px] leading-none">{current.flag}</span>
-        <span className="hidden uppercase sm:inline">{current.code}</span>
-        <ChevronIcon className="hidden h-3 w-3 shrink-0 md:block" />
+        <span className="uppercase">{current.code}</span>
+        <ChevronIcon className="h-3 w-3 shrink-0" />
       </button>
 
       {open ? (

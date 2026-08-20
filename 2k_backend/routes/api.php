@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\SubscriptionController;
 use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\WalletController;
 use App\Http\Controllers\Api\WithdrawalController;
 use App\Http\Controllers\Api\VendorOrderController;
 use App\Http\Controllers\Api\BannerController;
@@ -219,6 +220,13 @@ Route::middleware('auth:sanctum')->group(function () {
     /* 🧾 Vendor Profile Update                                  */
     /* --------------------------------------------------------- */
     Route::post('/vendor/update-profile', [RegisterController::class, 'updateProfile']);
+
+    /* --------------------------------------------------------- */
+    /* 👛 Vendor Wallet                                          */
+    /* --------------------------------------------------------- */
+    // WalletController has existed since the seller console was built but was
+    // never routed, so the wallet screen could only ever say "no wallet data".
+    Route::get('/vendor/wallet', [WalletController::class, 'balance']);
 
     /* --------------------------------------------------------- */
     /* 💵 Vendor Payment Methods                                 */

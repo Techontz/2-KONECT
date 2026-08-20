@@ -508,6 +508,61 @@ class SourcingTest extends TestCase
         $this->getJson("/api/shop/requests/{$request->reference}")->assertNotFound();
     }
 
+    /* ---------------------------------------------------------------- */
+    /* The seller's wallet                                              */
+    /* ---------------------------------------------------------------- */
+
+    public function test_a_payout_request_is_written_down_not_just_deducted(): void
+    {
+        $wallet = \App\Models\Wallet::create([
+            'vendor_id' => $this->vendor->id,
+            'balance'   => 50000,
+        ]);
+
+        Sanctum::actingAs($this->vendor->user);
+
+        $this->postJson('/api/withdraw', [
+            'amount'         => 20000,
+            'method'         => 'M-Pesa',
+            'account_number' => '0700000001',
+        ])->assertOk();
+
+        // The balance moved *and* the request exists. Previously only the
+        // first happened, so a seller's money left the wallet with nothing
+        // anywhere recording that a payout was owed.
+        $this->assertEquals(30000, $wallet->fresh()->balance);
+        $this->assertDatabaseHas('withdrawals', [
+            'vendor_id' => $this->vendor->id,
+            'amount'    => 20000,
+            'method'    => 'M-Pesa',
+            'status'    => 'pending',
+        ]);
+
+        $wallet_payload = $this->getJson('/api/vendor/wallet')->assertOk()->json();
+
+        $this->assertEquals(30000, $wallet_payload['balance']);
+        $this->assertCount(1, $wallet_payload['payouts']);
+    }
+
+    public function test_a_payout_cannot_overdraw_the_wallet(): void
+    {
+        $wallet = \App\Models\Wallet::create([
+            'vendor_id' => $this->vendor->id,
+            'balance'   => 5000,
+        ]);
+
+        Sanctum::actingAs($this->vendor->user);
+
+        $this->postJson('/api/withdraw', [
+            'amount'         => 9000,
+            'method'         => 'M-Pesa',
+            'account_number' => '0700000001',
+        ])->assertStatus(400);
+
+        $this->assertEquals(5000, $wallet->fresh()->balance);
+        $this->assertDatabaseCount('withdrawals', 0);
+    }
+
     public function test_applying_to_sell_creates_a_case_not_a_seller(): void
     {
         $response = $this->postJson('/api/shop/vendor-applications', [

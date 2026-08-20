@@ -1,288 +1,140 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
-import {
-  LogOut,
-  User,
-  Package,
-  Bell,
-  Settings,
-  Star,
-  Wallet,
-} from "lucide-react";
-import VendorHeader from "../dashboard/components/VendorHeader";
-import { api } from "@/lib/api";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 
-/* -------------------------------------------------------------------------- */
-/* 🌟 Vendor Settings Page — Persistent Cache + Background Refresh            */
-/* -------------------------------------------------------------------------- */
+import { BRAND } from "@/lib/brand";
+import { useAuth } from "@/lib/store/auth";
+import { Button } from "@/components/ui/Primitives";
+import { VerifiedBadge } from "@/components/sourcing/Trust";
+
+/**
+ * Store settings.
+ *
+ * A hub, not a screen full of controls: everything a seller can actually
+ * change lives on its own page, and this lists them.
+ *
+ * The previous version read a `token` key nothing writes any more and pushed
+ * the seller back to the shop when it was missing, cached the vendor in three
+ * places, and offered a "Push notifications" screen whose switches saved
+ * nothing and an "App preferences" tile that opened an alert. Those are gone —
+ * a control that does nothing is worse than no control.
+ */
 export default function VendorSettingsPage() {
-  const [showDialog, setShowDialog] = useState(false);
-  const [vendor, setVendor] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [loggingOut, setLoggingOut] = useState(false);
-  const router = useRouter();
+  const { user, logout } = useAuth();
+  const [confirming, setConfirming] = useState(false);
+  const vendor = user?.vendor;
 
-  const CACHE_KEY = "vendor_settings_cache";
-  const CACHE_TIME_KEY = `${CACHE_KEY}_time`;
-  const CACHE_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
-
-  /* -------------------------------------------------------------------------- */
-  /* ⚡ Load Cached Vendor Instantly + Silent Refresh                           */
-  /* -------------------------------------------------------------------------- */
-  useEffect(() => {
-    const now = Date.now();
-    const cached = localStorage.getItem(CACHE_KEY);
-    const cachedTime = localStorage.getItem(CACHE_TIME_KEY);
-
-    if (cached && cachedTime && now - parseInt(cachedTime) < CACHE_EXPIRY_MS) {
-      try {
-        setVendor(JSON.parse(cached));
-        setLoading(false);
-      } catch {}
-    }
-
-    fetchVendor(false);
-    const interval = setInterval(() => fetchVendor(false), 10 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  /* -------------------------------------------------------------------------- */
-  /* 📡 Fetch Vendor (with optional shimmer)                                   */
-  /* -------------------------------------------------------------------------- */
-  async function fetchVendor(showLoading = true) {
-    if (showLoading) setLoading(true);
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        router.push("/");
-        return;
-      }
-
-      const storedVendor = localStorage.getItem("vendor");
-      if (storedVendor) {
-        const parsed = JSON.parse(storedVendor);
-        setVendor(parsed);
-        localStorage.setItem(CACHE_KEY, JSON.stringify(parsed));
-        localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
-      } else {
-        const res = await api.get("/me");
-        const data = res.data.user?.vendor || res.data.vendor || res.data;
-        if (data) {
-          setVendor(data);
-          localStorage.setItem(CACHE_KEY, JSON.stringify(data));
-          localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
-        }
-      }
-    } catch (err) {
-      console.error("❌ Failed to fetch vendor:", err);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  /* -------------------------------------------------------------------------- */
-  /* 🚪 Logout Handler                                                         */
-  /* -------------------------------------------------------------------------- */
-  const handleLogout = async () => {
-    try {
-      setLoggingOut(true);
-      await api.post("/logout").catch(() => {});
-    } finally {
-      ["vendor", "token", CACHE_KEY, CACHE_TIME_KEY].forEach((k) =>
-        localStorage.removeItem(k)
-      );
-      alert("You have been logged out!");
-      router.push("/");
-    }
-  };
-
-  /* -------------------------------------------------------------------------- */
-  /* ✨ Shimmer Loader                                                          */
-  /* -------------------------------------------------------------------------- */
-  const SettingsShimmer = () => (
-    <div className="animate-pulse max-w-2xl mx-auto px-5 py-8">
-      <div className="h-6 w-40 bg-gray-200 rounded mb-4" />
-      {Array.from({ length: 6 }).map((_, i) => (
-        <div
-          key={i}
-          className="h-14 bg-white border border-gray-100 rounded-xl mb-3 shadow-sm"
-        />
-      ))}
-      <div className="h-12 bg-[#ede9fe] rounded-xl mt-6" />
-    </div>
-  );
-
-  /* -------------------------------------------------------------------------- */
-  /* 🧱 Render Page                                                            */
-  /* -------------------------------------------------------------------------- */
-  if (loading)
-    return (
-      <main className="min-h-screen bg-[#F9FAFB] font-poppins">
-        <VendorHeader vendor={vendor} />
-        <SettingsShimmer />
-      </main>
-    );
+  const groups: { title: string; items: { href: string; label: string; note: string }[] }[] = [
+    {
+      title: "Your store",
+      items: [
+        { href: "/vendor/settings/profile", label: "Store profile", note: "Name, logo, contact details and payout methods" },
+        { href: "/vendor/products", label: "Products", note: "Everything you have listed" },
+        { href: "/vendor/settings/wallet", label: "Wallet", note: "Earnings and payout requests" },
+      ],
+    },
+    {
+      title: "Selling on 2KONECT",
+      items: [
+        { href: "/sell/guidelines", label: "Seller guidelines", note: "What we expect from a listing" },
+        { href: "/sell/support", label: "Seller support", note: "Approval, listings, orders and payouts" },
+        { href: "/help/contact", label: "Contact us", note: "Talk to a person about your store" },
+      ],
+    },
+  ];
 
   return (
-    <main className="min-h-screen bg-[#F9FAFB] pb-24 font-poppins animate-fadeIn">
-      <VendorHeader vendor={vendor} />
+    <div className="space-y-4 p-4 lg:p-6">
+      <header>
+        <h1 className="text-[24px] font-black tracking-[-0.025em]">Store settings</h1>
+        <p className="text-[13px] text-[color:var(--color-ink-muted)]">
+          Everything about how your store appears and gets paid.
+        </p>
+      </header>
 
-      <div className="max-w-2xl mx-auto px-5 py-8">
-        {/* ==================== ACCOUNT SECTION ==================== */}
-        <Section title="Account">
-          <Tile icon={User} title="My Profile" href="/vendor/settings/profile" />
-          {/* /vendor/dashboard/products has never existed — the products
-              screen is /vendor/products. */}
-          <Tile icon={Package} title="My Products" href="/vendor/products" />
-          <Tile icon={Star} title="My Subscription" href="/vendor/settings/subscription" />
-          <Tile icon={Wallet} title="My Wallet" href="/vendor/settings/wallet" />
-        </Section>
-
-        {/* ==================== NOTIFICATIONS & APP ==================== */}
-        <Section title="Notifications & App">
-          <Tile icon={Bell} title="Push Notifications" href="/vendor/settings/notifications" />
-          <Tile
-            icon={Settings}
-            title="App Preferences"
-            onClick={() =>
-              alert("Coming soon — App Preferences under development.")
-            }
+      {/* ---- who this store is ---- */}
+      <section className="flex flex-wrap items-center gap-3 rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4">
+        {vendor?.logo ? (
+          <img
+            src={vendor.logo}
+            alt=""
+            className="h-12 w-12 shrink-0 rounded-full object-cover ring-1 ring-[color:var(--color-line)]"
           />
-        </Section>
+        ) : (
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[color:var(--color-brand-100)] text-[17px] font-black text-[color:var(--color-brand)]">
+            {(vendor?.business_name ?? user?.name ?? "?").charAt(0).toUpperCase()}
+          </span>
+        )}
 
-        {/* ==================== LOGOUT BUTTON ==================== */}
-        <button
-          onClick={() => setShowDialog(true)}
-          className="w-full bg-[#6d28d9] hover:bg-[#5b21b6] text-white font-semibold rounded-xl py-3 mt-8 transition flex items-center justify-center gap-2 shadow-sm"
-        >
-          <LogOut className="w-5 h-5" />
-          Logout
-        </button>
-      </div>
-
-      {/* ==================== LOGOUT CONFIRMATION DIALOG ==================== */}
-      {showDialog && (
-        <LogoutDialog
-          loading={loggingOut}
-          onClose={() => setShowDialog(false)}
-          onConfirm={handleLogout}
-        />
-      )}
-    </main>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/* 🎨 Section Component                                                       */
-/* -------------------------------------------------------------------------- */
-function Section({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="mb-10">
-      <h3 className="text-xs text-[#0F766E] font-semibold mb-3 tracking-widest uppercase">
-        {title}
-      </h3>
-      <div className="space-y-3">{children}</div>
-    </div>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/* 🧩 Tile Component                                                          */
-/* -------------------------------------------------------------------------- */
-function Tile({
-  icon: Icon,
-  title,
-  href,
-  onClick,
-}: {
-  icon: any;
-  title: string;
-  href?: string;
-  onClick?: () => void;
-}) {
-  const content = (
-    <div
-      onClick={onClick}
-      className="flex items-center justify-between bg-white rounded-xl border border-gray-100 shadow-sm px-5 py-3 hover:bg-gray-50 active:scale-[0.99] transition cursor-pointer"
-    >
-      <div className="flex items-center gap-3">
-        <div className="bg-[#ede9fe] p-2.5 rounded-full">
-          <Icon className="w-5 h-5 text-[#6d28d9]" />
+        <div className="min-w-0 flex-1">
+          <p className="clamp-1 text-[17px] font-black">{vendor?.business_name ?? user?.name}</p>
+          <p className="clamp-1 text-[12px] text-[color:var(--color-ink-muted)]">{user?.email}</p>
         </div>
-        <span className="font-medium text-gray-800 text-[15px]">{title}</span>
-      </div>
-      <span className="text-gray-400 text-lg font-bold leading-none">›</span>
-    </div>
-  );
 
-  return href ? (
-    <Link href={href} className="block">
-      {content}
-    </Link>
-  ) : (
-    content
+        <span className="flex flex-wrap items-center gap-1.5">
+          {vendor?.is_approved ? (
+            <VerifiedBadge label="Approved to sell" />
+          ) : (
+            <span className="rounded-[var(--radius-xs)] bg-[color:var(--color-warn-soft)] px-2 py-1 text-[11px] font-bold text-[color:var(--color-warn)]">
+              Awaiting approval
+            </span>
+          )}
+        </span>
+      </section>
+
+      {groups.map((group) => (
+        <section key={group.title}>
+          <h2 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-ink-faint)]">
+            {group.title}
+          </h2>
+          <ul className="overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)]">
+            {group.items.map((item) => (
+              <li key={item.href} className="border-b border-[color:var(--color-line)] last:border-0">
+                <Link
+                  href={item.href}
+                  prefetch={false}
+                  className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-[color:var(--color-surface-alt)]"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[14px] font-bold">{item.label}</span>
+                    <span className="block truncate text-[12px] text-[color:var(--color-ink-muted)]">
+                      {item.note}
+                    </span>
+                  </span>
+                  <ChevronIcon className="h-4 w-4 shrink-0 text-[color:var(--color-ink-faint)]" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+
+      <section className="rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4">
+        <p className="text-[13px] text-[color:var(--color-ink-muted)]">
+          Signed in to the {BRAND.name} seller console.
+        </p>
+
+        {confirming ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button variant="dark" onClick={logout}>Yes, sign out</Button>
+            <Button variant="ghost" onClick={() => setConfirming(false)}>Stay signed in</Button>
+          </div>
+        ) : (
+          <Button variant="secondary" className="mt-3" onClick={() => setConfirming(true)}>
+            Sign out
+          </Button>
+        )}
+      </section>
+    </div>
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* 🚪 Logout Dialog                                                           */
-/* -------------------------------------------------------------------------- */
-function LogoutDialog({
-  onClose,
-  onConfirm,
-  loading,
-}: {
-  onClose: () => void;
-  onConfirm: () => void;
-  loading: boolean;
-}) {
+function ChevronIcon({ className = "" }: { className?: string }) {
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4 backdrop-blur-sm">
-      <div className="bg-white rounded-3xl p-7 w-full max-w-sm shadow-2xl text-center animate-fadeIn">
-        <h2 className="text-lg font-semibold mb-6 text-gray-900 font-poppins">
-          Are you sure you want to logout?
-        </h2>
-
-        <button
-          onClick={onConfirm}
-          disabled={loading}
-          className="w-full bg-[#6d28d9] hover:bg-[#5b21b6] text-white font-semibold rounded-lg py-3 mb-3 transition disabled:opacity-60"
-        >
-          {loading ? "Logging out..." : "Logout"}
-        </button>
-
-        <button
-          onClick={onClose}
-          className="w-full border border-gray-300 rounded-lg py-3 hover:bg-gray-50 transition font-semibold text-gray-800"
-        >
-          Cancel
-        </button>
-      </div>
-    </div>
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"
+      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M9 6l6 6-6 6" />
+    </svg>
   );
-}
-
-/* -------------------------------------------------------------------------- */
-/* 🎬 Fade Animation (Global once)                                            */
-/* -------------------------------------------------------------------------- */
-if (typeof window !== "undefined" && !document.getElementById("fadein-style")) {
-  const style = document.createElement("style");
-  style.id = "fadein-style";
-  style.innerHTML = `
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    .animate-fadeIn { animation: fadeIn .3s ease-in-out; }
-  `;
-  document.head.appendChild(style);
 }
