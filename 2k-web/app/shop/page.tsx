@@ -39,17 +39,10 @@ function ShopContent() {
       ? `Arriving within ${maxDays} days`
       : "Shop everything";
 
-  const subheading = verified
-    ? "Businesses we have reviewed and approved."
-    : maxDays
-      ? "Everything we can get to you inside that window — local stock and fast imports together."
-      : "Every product on 2KONECT — in Tanzania now, or sourced from abroad.";
-
   return (
     <ListingView
       baseQuery={{ verified: verified || undefined, max_days: maxDays }}
       heading={heading}
-      subheading={subheading}
     />
   );
 }

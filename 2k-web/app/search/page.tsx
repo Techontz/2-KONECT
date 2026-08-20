@@ -51,7 +51,6 @@ function SearchContent() {
         vendor_id: vendorId,
       }}
       heading={heading}
-      subheading={term ? undefined : "Everything on 2KONECT, filtered your way."}
       emptyMessage={
         term
           ? `We couldn’t find anything matching “${term}”. Check the spelling, try a broader word — or ask us to source it.`

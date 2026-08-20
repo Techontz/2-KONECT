@@ -33,16 +33,12 @@ const SORTS = [
 export function ListingView({
   baseQuery,
   heading,
-  subheading,
   emptyMessage,
   /** Hide the availability toggle where the page itself already is one. */
-  lockAvailability = false,
 }: {
   baseQuery: ProductQuery;
   heading: string;
-  subheading?: string;
   emptyMessage?: string;
-  lockAvailability?: boolean;
 }) {
   // What the shopper typed, carried into the sourcing desk if nothing matches.
   const requestHref = baseQuery.q
@@ -156,7 +152,6 @@ export function ListingView({
   const panel = (
     <FilterPanel
       filters={filters}
-      lockAvailability={lockAvailability}
       availability={availability}
       origin={origin}
       setOrigin={setOrigin}
@@ -185,7 +180,7 @@ export function ListingView({
     return (
       <div className="shell py-4 pb-tabbar">
         <header className="mb-3">
-          <h1 className="text-[22px] font-black tracking-[-0.02em] sm:text-[28px]">{heading}</h1>
+          <h1 className="text-[17px] font-extrabold tracking-[-0.025em] text-[color:var(--color-brand)] sm:text-[20px]">{heading}</h1>
         </header>
 
         <div className="rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)]">
@@ -220,16 +215,22 @@ export function ListingView({
 
   return (
     <div className="shell py-4 pb-tabbar">
-      <header className="mb-3">
-        <h1 className="text-[22px] font-black tracking-[-0.02em] sm:text-[28px]">{heading}</h1>
-        {subheading ? (
-          <p className="mt-1 text-[14px] text-[color:var(--color-ink-muted)]">{subheading}</p>
-        ) : null}
-      </header>
+      {/* One compact line, and nothing else.
+          A listing page's job is to get to the grid. The page still needs
+          exactly one h1 for assistive technology and for search, but it does
+          not need a paragraph explaining the marketplace — the tabs directly
+          beneath say which half of it you are looking at, and every card
+          repeats the answer. The explanation lives on the homepage and in
+          /help, where somebody who wants it can find it. */}
+      <h1 className="mb-2.5 text-[17px] font-extrabold tracking-[-0.025em] text-[color:var(--color-brand)] sm:text-[20px]">
+        {heading}
+      </h1>
 
-      {/* The availability toggle sits above everything, on every width — it is
-          the primary way to read this catalogue, not a sidebar checkbox. */}
-      {!lockAvailability && filters?.availability ? (
+      {/* The tabs sit above everything, on every width and on every listing.
+          They are how this catalogue is read — All, what is already here, and
+          what we would bring in — and since the explanatory blocks came off
+          these pages they are also the only thing that has to say it. */}
+      {filters?.availability ? (
         <AvailabilityToggle
           options={filters.availability}
           value={availability}
@@ -433,7 +434,6 @@ function AvailabilityToggle({
 
 function FilterPanel({
   filters,
-  lockAvailability,
   availability,
   origin,
   setOrigin,
@@ -453,7 +453,6 @@ function FilterPanel({
   activeFilterCount,
 }: {
   filters: ListingFilters | null;
-  lockAvailability: boolean;
   availability: Availability | undefined;
   origin: string | undefined;
   setOrigin(value: string | undefined): void;
@@ -577,13 +576,11 @@ function FilterPanel({
         </Group>
       ) : null}
 
-      {/* On a phone the availability toggle lives at the top of the page, so
-          it is not repeated here; on a locked page it is not offered at all. */}
-      {lockAvailability ? null : (
-        <p className="text-[11px] leading-relaxed text-[color:var(--color-ink-faint)]">
-          Showing {availability === "import" ? "products sourced from abroad" : availability === "local" ? "products already in Tanzania" : "everything, wherever it is"}.
-        </p>
-      )}
+      {/* A one-line reminder of which tab is active, for anyone who has
+          scrolled the filter panel far enough that the tabs are off screen. */}
+      <p className="text-[11px] leading-relaxed text-[color:var(--color-ink-faint)]">
+        Showing {availability === "import" ? "products sourced from abroad" : availability === "local" ? "products already in Tanzania" : "everything, wherever it is"}.
+      </p>
     </div>
   );
 }

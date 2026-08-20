@@ -110,11 +110,6 @@ function CategoryContent() {
       <ListingView
         baseQuery={{ category_id: categoryId, subcategory_id: subcategoryId }}
         heading={activeSub?.name.trim() ?? detail?.category.name.trim() ?? "Products"}
-        subheading={
-          activeSub
-            ? `${activeSub.name.trim()} in ${detail?.category.name.trim()}`
-            : "Local stock and imported options, side by side."
-        }
       />
     </>
   );

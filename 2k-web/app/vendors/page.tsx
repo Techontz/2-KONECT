@@ -67,11 +67,6 @@ function VendorsContent() {
         <ListingView
           baseQuery={{ vendor_id: vendorId }}
           heading={vendor?.name ?? t("product.soldBy")}
-          subheading={
-            vendor?.member_since
-              ? t("product.sellingSince", { year: vendor.member_since })
-              : undefined
-          }
         />
       </div>
     );
