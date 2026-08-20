@@ -1,37 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 2KONECT — storefront
 
-## Getting Started
+The customer-facing marketplace and the seller console. Next.js 15 (App
+Router), React 19, Tailwind v4, talking to the Laravel API in `../d2k_backend`.
 
-First, run the development server:
+See the [repository README](../README.md) for what 2KONECT is and how to run
+both halves together.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # http://localhost:3000
+npm run typecheck  # tsc --noEmit
+npm run lint
+npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Configuration
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+`.env.local`, copied from `.env.example`:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Variable | Used by |
+|---|---|
+| `NEXT_PUBLIC_API_URL` | every request (`lib/api.ts`) |
+| `NEXT_PUBLIC_SITE_URL` | metadata, sitemap, `robots.txt` |
+| `NEXT_PUBLIC_FIREBASE_*` | Google sign-in (`lib/firebase.ts`) |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | the delivery-address picker |
 
-## Learn More
+Every one is a public client identifier. A feature whose key is missing simply
+does not render — no broken control, no error.
 
-To learn more about Next.js, take a look at the following resources:
+Use the machine's LAN address rather than `127.0.0.1` for `NEXT_PUBLIC_API_URL`
+if you want to open the site from a phone: `lib/api.ts` corrects a loopback
+host at runtime, but the value it starts from has to be reachable.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## How it is put together
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **One design system.** `app/globals.css` holds every colour, radius, shadow
+  and layout constant as a token. Components reference tokens; nothing
+  hard-codes a hex value. The ink ramp clears WCAG AA against every surface
+  defined there.
+- **One of each component.** One product card, one listing surface, one
+  availability badge. Variants are props, never copies — that is what keeps
+  the shop, the category page, search and deals from drifting apart.
+- **Availability is a first-class component family.** `components/sourcing/`
+  answers "where is it and when do I get it?" for the card, the product page,
+  the cart, the checkout and the order.
+- **Chrome is composed, not inherited.** Storefront routes render
+  `<SiteChrome>` themselves, so the seller console and auth screens can opt
+  out of the shop header and footer.
+- **Browsable signed-out.** Cart, wishlist and language live in browser
+  storage; authentication is asked for at checkout, not at the door.
 
-## Deploy on Vercel
+## Layout
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# direct2kariakoo-web
+```
+app/                 routes — storefront, account, seller console
+components/
+  brand/             the logo lockup
+  sourcing/          availability, buying options, order journey, trust
+  product/           card, gallery, shelf, listing, seller panel
+  layout/            header, category nav, mobile menu, tab bar, footer
+  ui/Primitives.tsx  buttons, fields, tags, empty and loading states
+lib/
+  brand.ts           name, logo paths, support details
+  shop.ts            the typed API client
+  types.ts           the API's shapes
+  store/             cart, auth, wishlist, location
+  i18n/              interface dictionary and long-form page copy
+```

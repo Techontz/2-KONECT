@@ -96,6 +96,10 @@ return [
     | MUST MATCH FRONTEND DOMAIN (.com)
     */
 
+    // Set SESSION_DOMAIN in the environment for whichever domain is actually
+    // serving. The fallback stays on the previous one deliberately: it is the
+    // domain the live sessions were issued for, and changing it here would sign
+    // out every admin the moment this deploys.
     'domain' => env('SESSION_DOMAIN', '.direct2kariakoo.com'),
 
     /*

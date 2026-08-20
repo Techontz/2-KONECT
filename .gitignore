@@ -1,5 +1,5 @@
 # =============================================================================
-# D2K — repository hygiene
+# 2KONECT — repository hygiene
 #
 # The rule: source code and the files genuinely needed to build or run the
 # project. Not build output, not dependencies, not secrets, not media, and not

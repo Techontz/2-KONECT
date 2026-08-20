@@ -9,7 +9,12 @@ return [
 
     'allowed_methods' => ['*'],
 
+    // The domains the storefront is served from in production. Both brands are
+    // listed while DNS moves: the previous one still resolves and dropping it
+    // here would break the live site the moment this deploys.
     'allowed_origins' => [
+        'https://2konect.com',
+        'https://www.2konect.com',
         'https://direct2kariakoo.com',
         'https://www.direct2kariakoo.com',
     ],

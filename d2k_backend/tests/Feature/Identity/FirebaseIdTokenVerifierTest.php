@@ -10,7 +10,7 @@ use Tests\TestCase;
 
 /**
  * The verifier is the only thing standing between a stranger's HTTP request
- * and a D2K account, so it is tested against real signatures rather than a
+ * and a 2KONECT account, so it is tested against real signatures rather than a
  * mock: a keypair is generated here, tokens are signed with it, and Google's
  * certificate endpoint is faked to publish the matching public half.
  *

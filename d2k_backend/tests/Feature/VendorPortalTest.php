@@ -126,7 +126,7 @@ class VendorPortalTest extends TestCase
     public function test_a_vendor_cannot_action_another_vendors_order(): void
     {
         $order = Order::create([
-            'reference' => 'D2K-TEST0001', 'user_id' => $this->customer->id,
+            'reference' => '2K-TEST0001', 'user_id' => $this->customer->id,
             'vendor_id' => $this->vendor->id, 'product_id' => $this->product->id,
             'quantity' => 1, 'price' => 50000, 'total' => 50000, 'status' => 'pending',
         ]);
@@ -202,7 +202,7 @@ class VendorPortalTest extends TestCase
     public function test_dashboard_reports_only_this_vendors_figures(): void
     {
         Order::create([
-            'reference' => 'D2K-TEST0002', 'user_id' => $this->customer->id,
+            'reference' => '2K-TEST0002', 'user_id' => $this->customer->id,
             'vendor_id' => $this->vendor->id, 'product_id' => $this->product->id,
             'quantity' => 2, 'price' => 50000, 'total' => 100000, 'status' => 'completed',
         ]);
@@ -213,7 +213,7 @@ class VendorPortalTest extends TestCase
             'name' => 'Rival Item', 'new_price' => 999999, 'stock' => 1,
         ]);
         Order::create([
-            'reference' => 'D2K-TEST0003', 'user_id' => $this->customer->id,
+            'reference' => '2K-TEST0003', 'user_id' => $this->customer->id,
             'vendor_id' => $this->rival->id, 'product_id' => $rivalProduct->id,
             'quantity' => 1, 'price' => 999999, 'total' => 999999, 'status' => 'completed',
         ]);
@@ -231,7 +231,7 @@ class VendorPortalTest extends TestCase
     public function test_cancelling_an_order_line_restores_stock(): void
     {
         $order = Order::create([
-            'reference' => 'D2K-TEST0004', 'user_id' => $this->customer->id,
+            'reference' => '2K-TEST0004', 'user_id' => $this->customer->id,
             'vendor_id' => $this->vendor->id, 'product_id' => $this->product->id,
             'quantity' => 3, 'price' => 50000, 'total' => 150000, 'status' => 'pending',
         ]);

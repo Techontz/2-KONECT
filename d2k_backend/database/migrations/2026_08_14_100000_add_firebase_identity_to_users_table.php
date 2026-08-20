@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Schema;
  *
  * Two columns only. `firebase_uid` is the Firebase UID — the
  * thing that stays stable even if the person changes their Google email — and
- * is unique so one Google account can never be attached to two D2K users.
+ * is unique so one Google account can never be attached to two 2KONECT users.
  * `avatar_url` is stored because Google returns one and the account screen
  * already has somewhere to show it.
  *
