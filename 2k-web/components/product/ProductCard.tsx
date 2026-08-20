@@ -94,12 +94,15 @@ export function ProductCard({
             ) : null}
           </div>
 
+          {/* Both controls are 44px under a thumb and step back down to the
+              tighter desktop size from sm up, where a pointer is precise and
+              a 44px disc over a 200px photograph is just weight. */}
           <button
             type="button"
             onClick={handleWishlist}
             aria-label={saved ? `Remove ${product.name} from your saved items` : `Save ${product.name}`}
             aria-pressed={saved}
-            className="absolute right-2 top-2 flex h-9 w-9 items-center justify-center rounded-full bg-white/92 text-[color:var(--color-ink)] shadow-[var(--shadow-card)] backdrop-blur transition-colors hover:bg-white"
+            className="absolute right-1.5 top-1.5 flex h-11 w-11 items-center justify-center rounded-full bg-white/92 text-[color:var(--color-ink)] shadow-[var(--shadow-card)] backdrop-blur transition-colors hover:bg-white sm:right-2 sm:top-2 sm:h-9 sm:w-9"
           >
             <HeartIcon
               className={`h-4 w-4 ${saved ? "text-[color:var(--color-sale)]" : ""}`}
@@ -112,7 +115,7 @@ export function ProductCard({
             onClick={handleAdd}
             disabled={!buyable}
             aria-label={`Add ${product.name} to cart`}
-            className="absolute bottom-2 right-2 flex h-10 w-10 items-center justify-center rounded-full bg-[color:var(--color-brand)] text-white shadow-[var(--shadow-brand)] transition-all hover:bg-[color:var(--color-brand-strong)] disabled:cursor-not-allowed disabled:bg-[color:var(--color-line-strong)] disabled:shadow-none"
+            className="absolute bottom-1.5 right-1.5 flex h-11 w-11 items-center justify-center rounded-full bg-[color:var(--color-brand)] text-white shadow-[var(--shadow-brand)] transition-all hover:bg-[color:var(--color-brand-strong)] disabled:cursor-not-allowed disabled:bg-[color:var(--color-line-strong)] disabled:shadow-none sm:bottom-2 sm:right-2 sm:h-10 sm:w-10"
           >
             {added ? <CheckIcon className="h-4 w-4" /> : <PlusIcon className="h-4 w-4" />}
           </button>
@@ -133,33 +136,43 @@ export function ProductCard({
         {sourcing ? <AvailabilityStrip sourcing={sourcing} /> : null}
 
         {/* ---- details ----
-            Ordered the way the reference orders it, and the way a shopper
-            actually reads a grid: what it is, how it has been rated, then the
-            price — set large and heavy, because in a five-across row the
-            price is the thing being compared, not the name. */}
-        <div className="flex flex-1 flex-col gap-1.5 p-2.5 sm:p-3">
-          <h3 className="clamp-2 min-h-[34px] text-[12.5px] font-medium leading-[17px] text-[color:var(--color-ink-soft)]">
+            Read in the order a shopper scans a grid: what it is, then what it
+            costs, then who is selling it.
+
+            Nothing in here reserves space for something that is not there.
+            Two earlier reserves — two lines of title whether or not the name
+            needed them, and a rating row for products that have no reviews —
+            put roughly 30px of nothing between the name and the price, which
+            is the single most important adjacency on the card. Both are gone:
+            the title takes one line or two as the name requires, and the
+            rating renders only when it exists.
+
+            Cards in a row still finish level, because the grid stretches them
+            and `mt-auto` on the seller line collects whatever slack there is
+            at the bottom of the card rather than in the middle of it. */}
+        <div className="flex flex-1 flex-col p-2.5 sm:p-3">
+          <h3 className="clamp-2 text-[12.5px] font-medium leading-[17px] text-[color:var(--color-ink-soft)]">
             {product.name}
           </h3>
 
-          {/* Reserved so every card in a row keeps the same baseline whether
-              or not the product has been reviewed. */}
-          <div className="min-h-[18px]">
-            <RatingPill rating={product.rating} />
+          {product.rating.count ? (
+            <div className="mt-1">
+              <RatingPill rating={product.rating} />
+            </div>
+          ) : null}
+
+          <div className="mt-1.5">
+            <PriceBlock price={product.price} size="md" />
           </div>
 
-          <PriceBlock price={product.price} size="md" />
-
-          <div className="mt-auto flex min-w-0 items-center gap-1 pt-0.5">
-            {product.vendor ? (
-              <>
-                <span className="clamp-1 text-[10.5px] text-[color:var(--color-ink-faint)]">
-                  {product.vendor.name}
-                </span>
-                {product.vendor.is_verified ? <VerifiedBadge size="sm" label="" className="px-1" /> : null}
-              </>
-            ) : null}
-          </div>
+          {product.vendor ? (
+            <div className="mt-auto flex min-w-0 items-center gap-1 pt-2">
+              <span className="clamp-1 text-[10.5px] text-[color:var(--color-ink-faint)]">
+                {product.vendor.name}
+              </span>
+              {product.vendor.is_verified ? <VerifiedBadge size="sm" label="" className="px-1" /> : null}
+            </div>
+          ) : null}
         </div>
       </Link>
     </article>
@@ -172,12 +185,11 @@ export function ProductCardSkeleton() {
     <div className="flex h-full flex-col overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)]">
       <div className="skeleton aspect-square w-full rounded-none" />
       <div className="skeleton h-[27px] w-full rounded-none border-y border-[color:var(--color-line)]" />
-      <div className="flex flex-col gap-2 p-3">
+      <div className="flex flex-col p-3">
         <div className="skeleton h-3 w-full rounded" />
-        <div className="skeleton h-3 w-2/3 rounded" />
-        <div className="skeleton h-4 w-1/2 rounded" />
-        <div className="skeleton h-3 w-16 rounded" />
-        <div className="skeleton h-3 w-24 rounded" />
+        <div className="skeleton mt-1 h-3 w-2/3 rounded" />
+        <div className="skeleton mt-2.5 h-4 w-1/2 rounded" />
+        <div className="skeleton mt-3 h-3 w-24 rounded" />
       </div>
     </div>
   );
