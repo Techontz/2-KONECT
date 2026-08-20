@@ -139,11 +139,13 @@ class OrderJourney
         return collect($path)->values()->map(function (string $step, int $index) use ($byStatus, $current) {
             $event = $byStatus->get($step);
 
+            // Position on the route is what decides the state, never the mere
+            // existence of an event: a note recorded against a later stop must
+            // not make the journey look further along than the order is.
             $state = match (true) {
-                $current !== false && $index <  $current => 'done',
+                $current !== false && $index <   $current => 'done',
                 $current !== false && $index === $current => 'current',
-                $event !== null                          => 'done',
-                default                                  => 'upcoming',
+                default                                   => 'upcoming',
             };
 
             return [

@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api\Shop;
 use App\Http\Controllers\Controller;
 use App\Models\DeliveryRequest;
 use App\Models\Order;
-use App\Models\OrderEvent;
 use App\Support\OrderJourney;
 use App\Support\Sourcing;
 use Illuminate\Http\Request;
@@ -110,16 +109,10 @@ class DeliveryRequestController extends Controller
             'status'    => 'requested',
         ]);
 
-        OrderEvent::create([
-            'reference'   => $data['order_reference'],
-            'order_id'    => $lines->first()->id,
-            'status'      => OrderJourney::LOCAL_WAREHOUSE,
-            'title'       => 'Delivery arranged',
-            'note'        => $data['mode'] === 'pickup'
-                ? 'Reserved for collection at ' . $data['pickup_point'] . '.'
-                : 'A 2KONECT rider will bring your package.',
-            'happened_at' => now(),
-        ]);
+        // Deliberately no order event: arranging delivery is not a stop on the
+        // journey, and recording one would draw the shipment as though it had
+        // already reached the warehouse. The order page shows the arrangement
+        // in its own block instead.
 
         return response()->json([
             'message' => 'Delivery requested.',

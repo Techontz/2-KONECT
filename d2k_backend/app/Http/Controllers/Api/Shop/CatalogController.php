@@ -317,6 +317,22 @@ class CatalogController extends Controller
 
     private function applyFilters(Builder $query, array $f): void
     {
+        // Query-string values arrive as strings. MySQL coerces a string to a
+        // number when it is compared to one; SQLite does not — it sorts every
+        // text value above every integer, so `14 <= '3'` is true there and a
+        // numeric filter silently matches everything. Cast at the boundary.
+        foreach (['min_price', 'max_price', 'rating'] as $key) {
+            if (isset($f[$key]) && $f[$key] !== '') {
+                $f[$key] = (float) $f[$key];
+            }
+        }
+
+        foreach (['category_id', 'subcategory_id', 'vendor_id', 'max_days'] as $key) {
+            if (isset($f[$key]) && $f[$key] !== '') {
+                $f[$key] = (int) $f[$key];
+            }
+        }
+
         $query
             ->when($f['category_id'] ?? null, fn ($q, $v) => $q->where('category_id', $v))
             ->when($f['subcategory_id'] ?? null, fn ($q, $v) => $q->where('subcategory_id', $v))
