@@ -37,7 +37,7 @@ node_modules/
 # seller dashboard), the Flutter seller screens, and Laravel's published vendor
 # views. None of them had ever been committed, which is why every /vendor/*
 # page on the live site answered 404.
-/d2k_backend/vendor/
+/2k_backend/vendor/
 **/Pods/
 .pub-cache/
 
@@ -78,16 +78,16 @@ DerivedData/
 **/xcuserdata/
 
 # ------------------------------------------------------------------ Laravel --
-/d2k_backend/storage/*.key
-/d2k_backend/storage/framework/cache/data/*
-/d2k_backend/storage/framework/sessions/*
-/d2k_backend/storage/framework/views/*
-/d2k_backend/storage/framework/testing/*
-/d2k_backend/storage/logs/*
-/d2k_backend/storage/app/public/*
-/d2k_backend/public/storage
-/d2k_backend/public/hot
-/d2k_backend/bootstrap/cache/*.php
+/2k_backend/storage/*.key
+/2k_backend/storage/framework/cache/data/*
+/2k_backend/storage/framework/sessions/*
+/2k_backend/storage/framework/views/*
+/2k_backend/storage/framework/testing/*
+/2k_backend/storage/logs/*
+/2k_backend/storage/app/public/*
+/2k_backend/public/storage
+/2k_backend/public/hot
+/2k_backend/bootstrap/cache/*.php
 !.gitkeep
 
 # --------------------------------------------------------- database & dumps --
