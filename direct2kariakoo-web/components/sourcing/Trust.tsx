@@ -50,13 +50,26 @@ export function VerifiedBadge({
   );
 }
 
-/** The platform's own storefront, marked as such. */
+/**
+ * The platform's own storefront, marked as such.
+ *
+ * 2KONECT sells alongside the sellers it hosts, and a shopper is entitled to
+ * know which they are buying from. Recognised by name rather than by a column,
+ * because "is this us?" is a fact about the brand, not about the vendor table.
+ */
+export function isOfficialSeller(name: string | null | undefined): boolean {
+  return typeof name === "string" && name.trim().toLowerCase() === BRAND.officialSeller.toLowerCase();
+}
+
 export function OfficialBadge({ className = "" }: { className?: string }) {
   return (
     <span
+      title={`Sold and fulfilled by ${BRAND.name}.`}
       className={`inline-flex items-center gap-1 rounded-[var(--radius-xs)] bg-[color:var(--color-brand)] px-1.5 py-[3px] text-[10px] font-bold uppercase tracking-wide text-white ${className}`}
     >
-      {BRAND.name}
+      {/* Just "Official": the seller's name is already beside it, and
+          repeating the brand twice in two centimetres reads as a stutter. */}
+      Official
     </span>
   );
 }

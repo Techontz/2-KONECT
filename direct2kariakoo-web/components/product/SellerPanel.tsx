@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { BRAND } from "@/lib/brand";
 import type { ProductDetail, ProductVendor } from "@/lib/types";
-import { VerifiedBadge } from "@/components/sourcing/Trust";
+import { isOfficialSeller, OfficialBadge, VerifiedBadge } from "@/components/sourcing/Trust";
 
 /**
  * Seller block on the product page: who is selling, and how to reach them.
@@ -51,11 +51,14 @@ export function SellerPanel({
           <span className="clamp-1 block text-sm font-bold group-hover:underline">{vendor.name}</span>
           {/* Approval only lets a shop trade; the badge means an
               administrator checked the business behind it. */}
-          {vendor.is_verified ? (
-            <VerifiedBadge size="sm" className="mt-0.5" />
-          ) : (
-            <span className="text-[11px] text-[color:var(--color-ink-faint)]">Approved seller</span>
-          )}
+          <span className="mt-0.5 flex flex-wrap items-center gap-1">
+            {isOfficialSeller(vendor.name) ? <OfficialBadge /> : null}
+            {vendor.is_verified ? (
+              <VerifiedBadge size="sm" />
+            ) : (
+              <span className="text-[11px] text-[color:var(--color-ink-faint)]">Approved seller</span>
+            )}
+          </span>
         </span>
 
         <span aria-hidden="true" className="shrink-0 text-[color:var(--color-ink-faint)]">›</span>
