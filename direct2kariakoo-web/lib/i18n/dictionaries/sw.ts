@@ -427,7 +427,7 @@ export const sw: Dictionary = {
 
   sell: {
     businessAddress: "Anwani ya biashara",
-    businessAddressHint: "Duka lako lilipo — mf. kibanda au jengo Kariakoo.",
+    businessAddressHint: "Duka au ghala lako lilipo — mtaa, eneo na jiji.",
     logo: "Nembo au picha ya duka",
     logoHint: "JPG au PNG, hadi MB 4.",
     licence: "Leseni ya biashara",

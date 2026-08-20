@@ -9,7 +9,6 @@ import type { ProductCard as ProductCardModel } from "@/lib/types";
 import { SiteChrome } from "@/components/layout/SiteChrome";
 import { ProductGrid } from "@/components/product/ProductShelf";
 import { Button, ButtonLink, EmptyState } from "@/components/ui/Primitives";
-import { useT } from "@/lib/i18n";
 
 /**
  * Wishlist.
@@ -27,7 +26,6 @@ export default function WishlistPage() {
 }
 
 function WishlistContent() {
-  const t = useT();
   const { isAuthenticated, ready, openAuthPrompt } = useAuth();
   const wishlist = useWishlist();
 
@@ -89,25 +87,25 @@ function WishlistContent() {
     return (
       <EmptyState
         icon={<HeartIcon className="h-9 w-9" />}
-        title={t("wishlist.empty")}
-        message={t("wishlist.emptyHint")}
-        action={<ButtonLink href="/" size="lg">{t("wishlist.browse")}</ButtonLink>}
+        title="Nothing saved yet"
+        message="Tap the heart on any product to keep it here for later — no account needed."
+        action={<ButtonLink href="/shop" size="lg">Browse products</ButtonLink>}
       />
     );
   }
 
   return (
-    <div className="shell py-4">
+    <div className="shell py-4 pb-tabbar">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-[22px] font-extrabold tracking-tight md:text-[26px]">
-          Wishlist <span className="text-[color:var(--color-ink-muted)]">({wishlist.count})</span>
+        <h1 className="text-[22px] font-black tracking-[-0.02em] md:text-[28px]">
+          Saved items <span className="text-[color:var(--color-ink-muted)]">({wishlist.count})</span>
         </h1>
 
         {!isAuthenticated && ready ? (
           <button
             type="button"
             onClick={openAuthPrompt}
-            className="text-[13px] font-bold text-[color:var(--color-action)] hover:underline"
+            className="text-[13px] font-bold text-[color:var(--color-brand)] hover:underline"
           >
             Sign in to save this across devices
           </button>
@@ -131,7 +129,10 @@ function toCard(product: Awaited<ReturnType<typeof shop.product>>["product"]): P
     in_stock: product.in_stock,
     category: product.category ?? undefined,
     subcategory: product.subcategory ?? undefined,
-    vendor: product.vendor ? { id: product.vendor.id, name: product.vendor.name } : undefined,
+    vendor: product.vendor
+      ? { id: product.vendor.id, name: product.vendor.name, is_verified: product.vendor.is_verified }
+      : undefined,
+    sourcing: product.sourcing,
     badges: {
       low_stock: product.stock > 0 && product.stock <= 5,
       out_of_stock: !product.in_stock,

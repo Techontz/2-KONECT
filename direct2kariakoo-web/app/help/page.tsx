@@ -61,13 +61,13 @@ export default function HelpPage() {
           <p className="mt-1 flex flex-wrap items-center gap-x-4 text-[13px] text-[color:var(--color-ink-muted)] sm:mt-2 sm:gap-y-1">
             <a
               href={`mailto:${BRAND.supportEmail}`}
-              className="block break-words py-3 font-semibold text-[color:var(--color-action)] hover:underline sm:py-0"
+              className="block break-words py-3 font-semibold text-[color:var(--color-brand)] hover:underline sm:py-0"
             >
               {BRAND.supportEmail}
             </a>
             <a
               href={`tel:${BRAND.supportPhone.replace(/\s/g, "")}`}
-              className="block py-3 font-semibold text-[color:var(--color-action)] hover:underline sm:py-0"
+              className="block py-3 font-semibold text-[color:var(--color-brand)] hover:underline sm:py-0"
             >
               {BRAND.supportPhone}
             </a>

@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import shop, { type ProductQuery } from "@/lib/shop";
 import { formatMoney } from "@/lib/format";
 import type { Availability, ListingFilters, ProductCard as ProductCardModel } from "@/lib/types";
-import { Button, EmptyState, Spinner } from "@/components/ui/Primitives";
+import { Button, EmptyState } from "@/components/ui/Primitives";
 import { ProductGrid } from "./ProductShelf";
 
 /**
@@ -97,7 +97,8 @@ export function ListingView({
 
   const load = useCallback(
     async (targetPage: number, append: boolean) => {
-      append ? setLoadingMore(true) : setLoading(true);
+      if (append) setLoadingMore(true);
+      else setLoading(true);
       setFailed(false);
 
       try {
@@ -148,7 +149,6 @@ export function ListingView({
       filters={filters}
       lockAvailability={lockAvailability}
       availability={availability}
-      setAvailability={setAvailability}
       origin={origin}
       setOrigin={setOrigin}
       subcategoryId={subcategoryId}
@@ -383,7 +383,6 @@ function FilterPanel({
   filters,
   lockAvailability,
   availability,
-  setAvailability,
   origin,
   setOrigin,
   subcategoryId,
@@ -404,7 +403,6 @@ function FilterPanel({
   filters: ListingFilters | null;
   lockAvailability: boolean;
   availability: Availability | undefined;
-  setAvailability(value: Availability | undefined): void;
   origin: string | undefined;
   setOrigin(value: string | undefined): void;
   subcategoryId: number | undefined;

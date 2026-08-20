@@ -422,7 +422,7 @@ export const fr: Dictionary = {
 
   sell: {
     businessAddress: "Adresse de l'entreprise",
-    businessAddressHint: "Où se trouve votre boutique — p. ex. un stand ou un immeuble à Kariakoo.",
+    businessAddressHint: "Où se trouve votre boutique ou entrepôt — rue, quartier et ville.",
     logo: "Logo ou photo de la boutique",
     logoHint: "JPG ou PNG, jusqu'à 4 Mo.",
     licence: "Licence commerciale",

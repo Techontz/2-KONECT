@@ -21,7 +21,7 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   isVendor: boolean;
   login(identifier: string, password: string): Promise<AuthUser>;
-  /** Exchanges a Google ID token for a normal D2K session. Customers only. */
+  /** Exchanges a Google ID token for a normal 2KONECT session. Customers only. */
   loginWithGoogle(idToken: string): Promise<AuthUser>;
   register(payload: RegisterPayload | FormData): Promise<AuthUser>;
   /** Creates the account without signing in — used by the customer sheet. */
@@ -89,15 +89,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // The axios interceptor fires this when a token turns out to be stale.
   useEffect(() => {
     const onUnauthenticated = () => setUser(null);
-    window.addEventListener("d2k:unauthenticated", onUnauthenticated);
-    return () => window.removeEventListener("d2k:unauthenticated", onUnauthenticated);
+    window.addEventListener("2konect:unauthenticated", onUnauthenticated);
+    return () => window.removeEventListener("2konect:unauthenticated", onUnauthenticated);
   }, []);
 
   const persist = useCallback((token: string, account: AuthUser) => {
     setToken(token);
     window.localStorage.setItem(USER_KEY, JSON.stringify(account));
     setUser(account);
-    window.dispatchEvent(new CustomEvent("d2k:authenticated"));
+    window.dispatchEvent(new CustomEvent("2konect:authenticated"));
   }, []);
 
   const login = useCallback(
@@ -158,7 +158,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     window.localStorage.removeItem(USER_KEY);
     setUser(null);
     setAuthPromptOpen(false);
-    window.dispatchEvent(new CustomEvent("d2k:signed-out"));
+    window.dispatchEvent(new CustomEvent("2konect:signed-out"));
 
     // A full navigation, not a client push: it guarantees no seller-scoped
     // data survives in memory on the way out.

@@ -7,6 +7,7 @@ import shop from "@/lib/shop";
 import { formatDate, formatMoney } from "@/lib/format";
 import type { Order } from "@/lib/types";
 import { useAuth } from "@/lib/store/auth";
+import { useHydrated } from "@/lib/useHydrated";
 import { SiteChrome } from "@/components/layout/SiteChrome";
 import { JourneyStrip } from "@/components/sourcing/JourneyTimeline";
 import { RouteLine } from "@/components/sourcing/Availability";
@@ -30,6 +31,7 @@ export default function OrdersPage() {
 
 function OrdersContent() {
   const { isAuthenticated, ready, requireAuth } = useAuth();
+  const hydrated = useHydrated();
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [filter, setFilter] = useState<"all" | "active" | "completed">("all");
@@ -41,7 +43,7 @@ function OrdersContent() {
     shop.orders().then(setOrders).catch(() => setFailed(true));
   }, [ready, isAuthenticated, requireAuth]);
 
-  if (ready && !isAuthenticated) {
+  if (hydrated && ready && !isAuthenticated) {
     return (
       <EmptyState
         title="Sign in to see your orders"

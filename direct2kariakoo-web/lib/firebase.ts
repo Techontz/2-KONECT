@@ -5,7 +5,7 @@ import { GoogleAuthProvider, getAuth, signInWithPopup, type Auth } from "firebas
  * Firebase Authentication for the storefront.
  *
  * Only Authentication is used, and only as an identity provider: Firebase says
- * who the shopper is, Laravel decides what that means for D2K and issues the
+ * who the shopper is, Laravel decides what that means for 2KONECT and issues the
  * Sanctum token the rest of the app already runs on. There is no second
  * session system.
  *
@@ -68,8 +68,8 @@ export async function signInWithGoogle(): Promise<string> {
 /**
  * Ends the Firebase half of the session.
  *
- * D2K's own session is the Sanctum token; this exists so that signing out of
- * D2K does not leave a Firebase session behind that would skip the account
+ * 2KONECT's own session is the Sanctum token; this exists so that signing out of
+ * 2KONECT does not leave a Firebase session behind that would skip the account
  * chooser on the next sign-in.
  */
 export async function signOutOfFirebase(): Promise<void> {

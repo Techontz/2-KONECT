@@ -201,7 +201,7 @@ function Field({
       <span className="mb-1 block text-[12px] font-semibold text-[color:var(--color-ink-muted)]">{label}</span>
       <input
         {...props}
-        className="h-11 w-full rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] px-3 text-sm outline-none transition-colors focus:border-[color:var(--color-action)]"
+        className="h-11 w-full rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] px-3 text-sm outline-none transition-colors focus:border-[color:var(--color-brand)]"
       />
     </label>
   );

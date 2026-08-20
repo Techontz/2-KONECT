@@ -315,7 +315,7 @@ export function LocationPicker({
               type="button"
               onClick={useCurrentLocation}
               disabled={locating || status !== "ready"}
-              className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-[var(--radius-pill)] px-4 text-[13px] font-bold text-[color:var(--color-action)] ring-1 ring-[color:var(--color-line)] hover:bg-[color:var(--color-action-soft)] disabled:opacity-50"
+              className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-[var(--radius-pill)] px-4 text-[13px] font-bold text-[color:var(--color-brand)] ring-1 ring-[color:var(--color-line)] hover:bg-[color:var(--color-brand-50)] disabled:opacity-50"
             >
               <TargetIcon className="h-4 w-4 shrink-0" />
               <span className="truncate">
@@ -415,7 +415,7 @@ export function LocationPicker({
               type="button"
               onClick={confirm}
               disabled={!resolved || status !== "ready"}
-              className="h-12 w-full shrink-0 rounded-[var(--radius-sm)] bg-[color:var(--color-action)] px-6 text-[14px] font-bold uppercase tracking-wide text-white transition-colors hover:bg-[color:var(--color-action-dark)] disabled:bg-[color:var(--color-line-strong)] sm:w-auto"
+              className="h-12 w-full shrink-0 rounded-[var(--radius-sm)] bg-[color:var(--color-brand)] px-6 text-[14px] font-bold uppercase tracking-wide text-white transition-colors hover:bg-[color:var(--color-brand-strong)] disabled:bg-[color:var(--color-line-strong)] sm:w-auto"
             >
               {t("map.confirm")}
             </button>

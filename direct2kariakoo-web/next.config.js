@@ -4,14 +4,16 @@ const withBundleAnalyzer = require("@next/bundle-analyzer")({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // This project has its own lockfile; without this Next walks up and picks
+  // the one in the home directory as the workspace root, which puts the build
+  // trace in the wrong place and warns on every build.
+  outputFileTracingRoot: __dirname,
+
   images: {
     unoptimized: true,
     remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "api.direct2kariakoo.com",
-        pathname: "/**",
-      },
+      { protocol: "https", hostname: "api.2konect.com", pathname: "/**" },
+      { protocol: "https", hostname: "2konect.com", pathname: "/**" },
     ],
   },
 

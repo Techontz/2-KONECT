@@ -147,7 +147,7 @@ export function AddressForm({
           <select
             value={values.region}
             onChange={(event) => set("region", event.target.value)}
-            className="h-11 w-full rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] bg-[color:var(--color-surface)] px-3 text-sm outline-none focus:border-[color:var(--color-action)]"
+            className="h-11 w-full rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] bg-[color:var(--color-surface)] px-3 text-sm outline-none focus:border-[color:var(--color-brand)]"
           >
             <option value="">{t("address.selectRegion")}</option>
             {TZ_REGIONS.map((region) => (
@@ -190,7 +190,7 @@ export function AddressForm({
           rows={2}
           maxLength={500}
           placeholder={t("address.notesPlaceholder")}
-          className="w-full resize-y rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] bg-[color:var(--color-surface)] px-3 py-2 text-sm outline-none focus:border-[color:var(--color-action)]"
+          className="w-full resize-y rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] bg-[color:var(--color-surface)] px-3 py-2 text-sm outline-none focus:border-[color:var(--color-brand)]"
         />
       </label>
 
@@ -200,7 +200,7 @@ export function AddressForm({
           checked={forceDefault ? true : values.is_default}
           disabled={forceDefault}
           onChange={(event) => set("is_default", event.target.checked)}
-          className="h-4 w-4 accent-[color:var(--color-action)]"
+          className="h-4 w-4 accent-[color:var(--color-brand)]"
         />
         <span className="text-[13px]">
           {forceDefault
@@ -244,7 +244,7 @@ function Field({
         {...input}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className={`h-11 w-full rounded-[var(--radius-sm)] border bg-[color:var(--color-surface)] px-3 text-sm outline-none focus:border-[color:var(--color-action)] ${
+        className={`h-11 w-full rounded-[var(--radius-sm)] border bg-[color:var(--color-surface)] px-3 text-sm outline-none focus:border-[color:var(--color-brand)] ${
           error ? "border-[color:var(--color-sale)]" : "border-[color:var(--color-line-strong)]"
         }`}
       />

@@ -124,7 +124,7 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
                 href={item.href}
                 className={`mb-0.5 flex min-h-11 items-center gap-2.5 rounded-[var(--radius-sm)] px-3 py-2 text-[13px] font-semibold transition-colors ${
                   active
-                    ? "bg-[color:var(--color-action-soft)] text-[color:var(--color-action)]"
+                    ? "bg-[color:var(--color-brand-50)] text-[color:var(--color-brand)]"
                     : "text-[color:var(--color-ink-muted)] hover:bg-[color:var(--color-surface-alt)]"
                 }`}
               >
@@ -178,7 +178,7 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
                 key={item.href}
                 href={item.href}
                 className={`flex min-h-[52px] flex-1 flex-col items-center justify-center gap-0.5 px-1 py-2 text-[10px] font-semibold ${
-                  active ? "text-[color:var(--color-action)]" : "text-[color:var(--color-ink-muted)]"
+                  active ? "text-[color:var(--color-brand)]" : "text-[color:var(--color-ink-muted)]"
                 }`}
               >
                 <span aria-hidden="true" className="text-base leading-none">{item.icon}</span>

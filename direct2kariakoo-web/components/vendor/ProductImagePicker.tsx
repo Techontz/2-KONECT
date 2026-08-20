@@ -104,14 +104,14 @@ export function ProductImagePicker({
             key={image.id}
             className={`group relative aspect-square overflow-hidden rounded-[var(--radius-sm)] bg-white ${
               index === 0
-                ? "ring-2 ring-[color:var(--color-action)]"
+                ? "ring-2 ring-[color:var(--color-brand)]"
                 : "ring-1 ring-[color:var(--color-line)]"
             }`}
           >
             <img src={image.preview} alt="" className="h-full w-full object-contain p-1" />
 
             {index === 0 ? (
-              <span className="absolute left-1 top-1 rounded-[var(--radius-xs)] bg-[color:var(--color-action)] px-1.5 py-[1px] text-[9px] font-black uppercase text-white">
+              <span className="absolute left-1 top-1 rounded-[var(--radius-xs)] bg-[color:var(--color-brand)] px-1.5 py-[1px] text-[9px] font-black uppercase text-white">
                 {t("productForm.primary")}
               </span>
             ) : (
@@ -164,7 +164,7 @@ export function ProductImagePicker({
           <button
             type="button"
             onClick={() => fileInput.current?.click()}
-            className="flex aspect-square flex-col items-center justify-center gap-1 rounded-[var(--radius-sm)] border-2 border-dashed border-[color:var(--color-line-strong)] text-[color:var(--color-ink-muted)] transition-colors hover:border-[color:var(--color-action)] hover:text-[color:var(--color-action)]"
+            className="flex aspect-square flex-col items-center justify-center gap-1 rounded-[var(--radius-sm)] border-2 border-dashed border-[color:var(--color-line-strong)] text-[color:var(--color-ink-muted)] transition-colors hover:border-[color:var(--color-brand)] hover:text-[color:var(--color-brand)]"
           >
             <span className="text-[22px] leading-none">+</span>
             <span className="text-[11px] font-bold">{t("productForm.addPhotos")}</span>

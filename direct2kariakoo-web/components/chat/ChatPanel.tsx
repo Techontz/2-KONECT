@@ -206,7 +206,7 @@ export function ChatPanel({
                 <div
                   className={`max-w-[80%] rounded-[var(--radius-md)] px-3 py-2 ${
                     message.mine
-                      ? "bg-[color:var(--color-action)] text-white"
+                      ? "bg-[color:var(--color-brand)] text-white"
                       : "bg-[color:var(--color-surface)] ring-1 ring-[color:var(--color-line)]"
                   }`}
                 >
@@ -245,7 +245,7 @@ export function ChatPanel({
               maxLength={2000}
               placeholder={t("chat.placeholder")}
               aria-label={t("chat.placeholder")}
-              className="max-h-28 min-h-[42px] flex-1 resize-y rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] px-3 py-2.5 text-sm outline-none focus:border-[color:var(--color-action)]"
+              className="max-h-28 min-h-[42px] flex-1 resize-y rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] px-3 py-2.5 text-sm outline-none focus:border-[color:var(--color-brand)]"
             />
             <Button type="submit" disabled={sending || !draft.trim()} className="shrink-0">
               {sending ? t("chat.sending") : t("chat.send")}

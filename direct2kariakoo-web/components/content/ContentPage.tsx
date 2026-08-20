@@ -14,7 +14,7 @@ export interface ContentSection {
 }
 
 /**
- * Shared layout for D2K's written pages — legal, help and company.
+ * Shared layout for 2KONECT's written pages — legal, help and company.
  *
  * One component so all of them stay consistent and, more importantly, so a
  * new page is a list of translated strings rather than another hand-built
@@ -89,7 +89,7 @@ export function ContentPage({
                 {BRAND.name} ·{" "}
                 <a
                   href={`mailto:${BRAND.supportEmail}`}
-                  className="break-words font-semibold text-[color:var(--color-action)] hover:underline"
+                  className="break-words font-semibold text-[color:var(--color-brand)] hover:underline"
                 >
                   {BRAND.supportEmail}
                 </a>{" "}

@@ -46,6 +46,15 @@ class ProductController extends Controller
             'old_price'      => 'nullable|numeric',
             'new_price'      => 'required|numeric',
             'stock'          => 'required|integer|min:0',
+            // Where the item actually is. Optional, so the Flutter app and any
+            // older client keep posting exactly what they always did and get
+            // the local default.
+            'availability'       => 'nullable|string|in:local,import',
+            'source_country'     => 'nullable|string|size:2',
+            'shipping_method'    => 'nullable|string|in:air,sea,road',
+            'lead_time_min_days' => 'nullable|integer|min:1|max:180',
+            'lead_time_max_days' => 'nullable|integer|min:1|max:180|gte:lead_time_min_days',
+            'fulfilment_location' => 'nullable|string|max:255',
         ];
 
         if ($request->hasFile('images')) {
@@ -82,7 +91,7 @@ class ProductController extends Controller
                 'old_price'      => $request->input('old_price'),
                 'new_price'      => $request->input('new_price'),
                 'stock'          => $request->input('stock', 0),
-            ]);
+            ] + $this->sourcingAttributes($request));
 
             foreach ($request->file('images') as $file) {
                 if ($file->isValid()) {
@@ -122,6 +131,45 @@ class ProductController extends Controller
                 'error'   => $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Sourcing columns, taken from the request only when they were sent.
+     *
+     * An omitted field must not blank an existing value on update, and a
+     * client that has never heard of sourcing must keep working — so this
+     * returns only the keys actually present.
+     */
+    private function sourcingAttributes(Request $request): array
+    {
+        $fields = [
+            'availability', 'source_country', 'shipping_method',
+            'lead_time_min_days', 'lead_time_max_days', 'fulfilment_location',
+        ];
+
+        $attributes = [];
+
+        foreach ($fields as $field) {
+            if (! $request->has($field)) {
+                continue;
+            }
+
+            $value = $request->input($field);
+            $attributes[$field] = $value === '' ? null : $value;
+        }
+
+        if (isset($attributes['source_country']) && $attributes['source_country'] !== null) {
+            $attributes['source_country'] = strtoupper($attributes['source_country']);
+        }
+
+        // A local listing has no international route; clearing it here stops a
+        // product that used to be imported from keeping a stale sea freight
+        // estimate after the seller moves the stock into the country.
+        if (($attributes['availability'] ?? null) === \App\Support\Sourcing::LOCAL) {
+            $attributes['shipping_method'] = null;
+        }
+
+        return $attributes;
     }
 
     /* -------------------------------------------------------------------------- */
@@ -194,6 +242,13 @@ class ProductController extends Controller
             'old_price'      => 'nullable|numeric',
             'new_price'      => 'sometimes|required|numeric',
             'stock'          => 'sometimes|required|integer|min:0',
+            'short_description' => 'nullable|string|max:300',
+            'availability'       => 'nullable|string|in:local,import',
+            'source_country'     => 'nullable|string|size:2',
+            'shipping_method'    => 'nullable|string|in:air,sea,road',
+            'lead_time_min_days' => 'nullable|integer|min:1|max:180',
+            'lead_time_max_days' => 'nullable|integer|min:1|max:180|gte:lead_time_min_days',
+            'fulfilment_location' => 'nullable|string|max:255',
         ];
 
         if ($request->hasFile('images')) {
@@ -213,8 +268,9 @@ class ProductController extends Controller
         DB::beginTransaction();
         try {
             $product->update($request->only([
-                'name', 'category_id', 'subcategory_id', 'description', 'old_price', 'new_price', 'stock'
-            ]));
+                'name', 'category_id', 'subcategory_id', 'description',
+                'short_description', 'old_price', 'new_price', 'stock',
+            ]) + $this->sourcingAttributes($request));
 
             // Existing photos are production data and are only removed when the
             // seller explicitly asks. Previously *any* upload wiped the whole

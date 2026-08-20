@@ -20,7 +20,9 @@ interface WishlistContextValue {
   remove(productId: number): Promise<void>;
 }
 
-const STORAGE_KEY = "d2k.wishlist.v1";
+const STORAGE_KEY = "2konect.wishlist.v1";
+/** The pre-rename key, read once so saved items survive the rebrand. */
+const LEGACY_STORAGE_KEY = "d2k.wishlist.v1";
 const WishlistContext = createContext<WishlistContextValue | null>(null);
 
 export function WishlistProvider({ children }: { children: React.ReactNode }) {
@@ -30,7 +32,10 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
+      const raw =
+        window.localStorage.getItem(STORAGE_KEY) ??
+        window.localStorage.getItem(LEGACY_STORAGE_KEY);
+      window.localStorage.removeItem(LEGACY_STORAGE_KEY);
       if (raw) setIds(JSON.parse(raw));
     } catch {
       window.localStorage.removeItem(STORAGE_KEY);

@@ -418,7 +418,7 @@ export const zh: Dictionary = {
 
   sell: {
     businessAddress: "经营地址",
-    businessAddressHint: "您的店铺位置 — 例如 Kariakoo 的摊位或楼宇。",
+    businessAddressHint: "您的店铺或仓库位置 —— 街道、区域与城市。",
     logo: "店铺标志或照片",
     logoHint: "JPG 或 PNG，最大 4 MB。",
     licence: "营业执照",

@@ -2,15 +2,17 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+
 import { BRAND } from "@/lib/brand";
 import shop from "@/lib/shop";
 import { useAuth } from "@/lib/store/auth";
+import { useHydrated } from "@/lib/useHydrated";
 import { useWishlist } from "@/lib/store/wishlist";
 import { SiteChrome } from "@/components/layout/SiteChrome";
+import { Logo } from "@/components/brand/Logo";
 import { Button, EmptyState } from "@/components/ui/Primitives";
-import { useT } from "@/lib/i18n";
 
-/** Account hub — profile summary and links to the rest of the account area. */
+/** Account hub — a summary, then everything the account can reach. */
 export default function AccountPage() {
   return (
     <SiteChrome>
@@ -20,121 +22,181 @@ export default function AccountPage() {
 }
 
 function AccountContent() {
-  const t = useT();
   const { user, isAuthenticated, ready, logout, requireAuth } = useAuth();
+  const hydrated = useHydrated();
   const wishlist = useWishlist();
+
   const [orderCount, setOrderCount] = useState<number | null>(null);
+  const [activeCount, setActiveCount] = useState<number | null>(null);
+  const [requestCount, setRequestCount] = useState<number | null>(null);
 
   useEffect(() => {
     if (!ready) return;
     if (!isAuthenticated) { void requireAuth(); return; }
 
-    shop.orders().then((orders) => setOrderCount(orders.length)).catch(() => setOrderCount(0));
+    shop
+      .orders()
+      .then((orders) => {
+        setOrderCount(orders.length);
+        setActiveCount(
+          orders.filter((order) => !["completed", "cancelled", "refunded"].includes(order.status)).length,
+        );
+      })
+      .catch(() => { setOrderCount(0); setActiveCount(0); });
+
+    shop.myRequests().then((rows) => setRequestCount(rows.length)).catch(() => setRequestCount(0));
   }, [ready, isAuthenticated, requireAuth]);
 
-  if (ready && !isAuthenticated) {
+  if (hydrated && ready && !isAuthenticated) {
     return (
       <EmptyState
-        title={t("account.signInTitle")}
-        message={t("account.signInHint")}
-        action={<Button size="lg" onClick={() => void requireAuth()}>{t("account.signInAction")}</Button>}
+        title="Sign in to your account"
+        message="Your orders, saved items, addresses and sourcing requests all live here."
+        action={<Button size="lg" onClick={() => void requireAuth()}>Sign in</Button>}
       />
     );
   }
 
+  const sections: { title: string; links: { href: string; label: string; note: string }[] }[] = [
+    {
+      title: "Orders & delivery",
+      links: [
+        { href: "/account/orders", label: "My orders", note: "Track every order, step by step" },
+        { href: "/account/deliveries", label: "Deliveries", note: "2KONECT Rides jobs and collections" },
+        { href: "/track", label: "Track by reference", note: "Look up an order number" },
+      ],
+    },
+    {
+      title: "Sourcing",
+      links: [
+        { href: "/account/requests", label: "My requests", note: "Products we are sourcing for you" },
+        { href: "/request", label: "Request a product", note: "Ask us to find something new" },
+      ],
+    },
+    {
+      title: "Your details",
+      links: [
+        { href: "/account/addresses", label: "Addresses", note: "Where your orders are delivered" },
+        { href: "/wishlist", label: "Saved items", note: "Products you kept for later" },
+        { href: "/account/messages", label: "Messages", note: "Conversations with sellers" },
+      ],
+    },
+  ];
+
   return (
-    <div className="shell py-4">
-      <section className="mb-4 overflow-hidden rounded-[var(--radius-md)] bg-[color:var(--color-brand)]">
+    <div className="shell py-4 pb-tabbar">
+      {/* ---- who you are ---- */}
+      <section className="brand-ground mb-4 overflow-hidden rounded-[var(--radius-md)]">
         <div className="flex flex-wrap items-center gap-4 p-5">
-          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[color:var(--color-brand-ink)] text-xl font-black text-[color:var(--color-brand)]">
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white/15 text-xl font-black text-white">
             {user?.name?.charAt(0).toUpperCase() ?? "?"}
           </span>
-          <div className="min-w-0">
-            <p className="text-[20px] font-black leading-tight">{user?.name}</p>
-            <p className="clamp-1 text-[13px] opacity-70">{user?.email}</p>
+          <div className="min-w-0 flex-1">
+            <p className="text-[20px] font-black leading-tight text-white">{user?.name}</p>
+            <p className="clamp-1 text-[13px] text-white/70">{user?.email}</p>
           </div>
+          <Logo tone="dark" size="sm" showWordmark={false} className="hidden sm:flex" />
         </div>
       </section>
 
-      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <StatTile label={t("account.orders")} value={orderCount === null ? "—" : String(orderCount)} href="/account/orders" />
-        <StatTile label={t("account.wishlist")} value={String(wishlist.count)} href="/wishlist" />
-        <StatTile label={t("account.cart")} value={t("account.view")} href="/cart" />
+      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatTile label="Active orders" value={activeCount} href="/account/orders" accent />
+        <StatTile label="All orders" value={orderCount} href="/account/orders" />
+        <StatTile label="Requests" value={requestCount} href="/account/requests" />
+        <StatTile label="Saved" value={wishlist.count} href="/wishlist" />
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2">
-        <section className="rounded-[var(--radius-md)] bg-[color:var(--color-surface)] p-2">
-          <h2 className="px-2 py-2 text-[13px] font-extrabold uppercase tracking-wide text-[color:var(--color-ink-faint)]">
-            {t("account.shopping")}
-          </h2>
-          <MenuRow href="/account/orders" icon="📦" label={t("account.myOrders")} hint={t("account.myOrdersHint")} />
-          <MenuRow href="/wishlist" icon="❤️" label={t("account.myWishlist")} hint={t("wishlist.itemCount", { count: wishlist.count })} />
-          <MenuRow href="/account/addresses" icon="📍" label={t("account.addresses")} hint={t("account.addressesHint")} />
-          <MenuRow href="/account/messages" icon="💬" label={t("chat.inbox")} hint={t("chat.inboxEmptyHint")} />
-        </section>
+      <div className="grid gap-4 md:grid-cols-3">
+        {sections.map((section) => (
+          <section key={section.title}>
+            <h2 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-ink-faint)]">
+              {section.title}
+            </h2>
+            <ul className="overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)]">
+              {section.links.map((link) => (
+                <li key={link.href} className="border-b border-[color:var(--color-line)] last:border-0">
+                  <Link
+                    href={link.href}
+                    prefetch={false}
+                    className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-[color:var(--color-surface-alt)]"
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[14px] font-bold">{link.label}</span>
+                      <span className="block truncate text-[12px] text-[color:var(--color-ink-muted)]">
+                        {link.note}
+                      </span>
+                    </span>
+                    <ChevronIcon className="h-4 w-4 shrink-0 text-[color:var(--color-ink-faint)]" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+      </div>
 
-        <section className="rounded-[var(--radius-md)] bg-[color:var(--color-surface)] p-2">
-          <h2 className="px-2 py-2 text-[13px] font-extrabold uppercase tracking-wide text-[color:var(--color-ink-faint)]">
-            {BRAND.short}
-          </h2>
-          {user?.role === "vendor" ? (
-            <MenuRow href="/vendor/dashboard" icon="🏪" label={t("account.sellerDashboard")} hint={t("account.sellerDashboardHint")} />
-          ) : (
-            <MenuRow href="/sell" icon="🏪" label={t("header.sellOn", { brand: BRAND.short })} hint={t("account.startStore")} />
-          )}
-          <MenuRow href="/help" icon="💬" label={t("account.help")} hint={t("account.helpHint")} />
-          <MenuRow href="/legal/privacy" icon="🔒" label={t("account.privacy")} />
+      {/* ---- selling ---- */}
+      <section className="mt-5 rounded-[var(--radius-md)] border border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)] p-4">
+        <p className="text-[15px] font-black">
+          {user?.role === "vendor" ? "You sell with us" : `Sell with ${BRAND.name}`}
+        </p>
+        <p className="mt-0.5 text-[13px] text-[color:var(--color-ink-muted)]">
+          {user?.role === "vendor"
+            ? "Manage your products, stock and orders in the seller console."
+            : "Reach buyers across Tanzania on a marketplace where sellers are reviewed."}
+        </p>
+        <Link
+          href={user?.role === "vendor" ? "/vendor/dashboard" : "/sell"}
+          prefetch={false}
+          className="mt-3 inline-flex h-11 items-center rounded-[var(--radius-sm)] bg-[color:var(--color-brand)] px-5 text-[14px] font-bold text-white"
+        >
+          {user?.role === "vendor" ? "Open seller console" : "Apply to sell"}
+        </Link>
+      </section>
 
-          <button
-            type="button"
-            onClick={logout}
-            className="flex w-full items-center gap-3 rounded-[var(--radius-sm)] px-3 py-3 text-left transition-colors hover:bg-[color:var(--color-surface-alt)]"
-          >
-            <span aria-hidden="true">🚪</span>
-            <span className="text-sm font-semibold text-[color:var(--color-sale)]">{t("account.logout")}</span>
-          </button>
-        </section>
+      <div className="mt-5">
+        <Button variant="secondary" onClick={logout}>Sign out</Button>
       </div>
     </div>
   );
 }
 
-function StatTile({ label, value, href }: { label: string; value: string; href: string }) {
-  return (
-    <Link
-      href={href}
-      className="rounded-[var(--radius-md)] bg-[color:var(--color-surface)] p-4 transition-shadow hover:shadow-[var(--shadow-hover)]"
-    >
-      <p className="text-[22px] font-black leading-none">{value}</p>
-      <p className="mt-1 text-[12px] text-[color:var(--color-ink-muted)]">{label}</p>
-    </Link>
-  );
-}
-
-function MenuRow({
-  href,
-  icon,
+function StatTile({
   label,
-  hint,
+  value,
+  href,
+  accent = false,
 }: {
-  href: string;
-  icon: string;
   label: string;
-  hint?: string;
+  value: number | null;
+  href: string;
+  accent?: boolean;
 }) {
   return (
     <Link
       href={href}
-      className="flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-3 transition-colors hover:bg-[color:var(--color-surface-alt)]"
+      prefetch={false}
+      className={`rounded-[var(--radius-md)] border p-4 transition-colors ${
+        accent
+          ? "border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)] hover:bg-[color:var(--color-brand-100)]"
+          : "border-[color:var(--color-line)] bg-[color:var(--color-surface)] hover:border-[color:var(--color-line-strong)]"
+      }`}
     >
-      <span aria-hidden="true">{icon}</span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-sm font-semibold">{label}</span>
-        {hint ? (
-          <span className="clamp-1 block text-[11px] text-[color:var(--color-ink-muted)]">{hint}</span>
-        ) : null}
+      <span className={`block text-[26px] font-black leading-none ${accent ? "text-[color:var(--color-brand)]" : ""}`}>
+        {value === null ? "—" : value}
       </span>
-      <span aria-hidden="true" className="shrink-0 text-[color:var(--color-ink-faint)]">›</span>
+      <span className="mt-1 block text-[12px] font-semibold text-[color:var(--color-ink-muted)]">
+        {label}
+      </span>
     </Link>
+  );
+}
+
+function ChevronIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8"
+      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M9 6l6 6-6 6" />
+    </svg>
   );
 }

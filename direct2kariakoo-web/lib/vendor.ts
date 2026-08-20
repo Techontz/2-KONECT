@@ -41,6 +41,11 @@ export interface VendorOrder {
   id: number;
   reference: string;
   status: string;
+  status_label: string;
+  /** Whether this line ships locally or has to be brought in. */
+  fulfilment_type: "local" | "import";
+  /** The next stop on this line's route, or null when it is closed. */
+  next_status: { value: string; label: string } | null;
   quantity: number;
   price: number;
   total: number;
@@ -109,6 +114,13 @@ export const vendorApi = {
     images: File[];
     /** Structured properties keyed by attribute id. */
     attributes?: Record<number, string>;
+    /** Where the stock is, and how long it takes to reach the buyer. */
+    availability?: "local" | "import";
+    source_country?: string;
+    shipping_method?: string;
+    lead_time_min_days?: number;
+    lead_time_max_days?: number;
+    fulfilment_location?: string;
   }) {
     const form = new FormData();
     form.append("name", fields.name);
@@ -119,6 +131,15 @@ export const vendorApi = {
     form.append("new_price", String(fields.new_price));
     if (fields.old_price) form.append("old_price", String(fields.old_price));
     form.append("stock", String(fields.stock));
+
+    for (const key of [
+      "availability", "source_country", "shipping_method",
+      "lead_time_min_days", "lead_time_max_days", "fulfilment_location",
+    ] as const) {
+      const value = fields[key];
+      if (value !== undefined && value !== "") form.append(key, String(value));
+    }
+
     // Images are appended in the seller's chosen order; the first becomes the
     // one shoppers see on cards.
     fields.images.forEach((file) => form.append("images[]", file));
@@ -145,11 +166,18 @@ export const vendorApi = {
       category_id: number;
       subcategory_id: number;
       description: string;
+      short_description: string;
       new_price: number;
       old_price: number;
       stock: number;
       images: File[];
       remove_images: boolean;
+      availability: "local" | "import";
+      source_country: string;
+      shipping_method: string;
+      lead_time_min_days: number;
+      lead_time_max_days: number;
+      fulfilment_location: string;
     }>
   ) {
     const form = new FormData();

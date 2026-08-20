@@ -48,8 +48,37 @@ function resolveBaseURL(): string {
 
 const baseURL = resolveBaseURL();
 
-export const TOKEN_KEY = "d2k.token";
-export const USER_KEY = "d2k.user";
+export const TOKEN_KEY = "2konect.token";
+export const USER_KEY = "2konect.user";
+
+/**
+ * The pre-rename keys.
+ *
+ * Read once at startup and migrated across, so the rebrand does not sign out
+ * everybody who was already logged in.
+ */
+const LEGACY_KEYS: Record<string, string> = {
+  "d2k.token": TOKEN_KEY,
+  "d2k.user": USER_KEY,
+};
+
+function migrateLegacyStorage() {
+  if (typeof window === "undefined") return;
+
+  for (const [old, current] of Object.entries(LEGACY_KEYS)) {
+    try {
+      const value = window.localStorage.getItem(old);
+      if (value !== null && window.localStorage.getItem(current) === null) {
+        window.localStorage.setItem(current, value);
+      }
+      window.localStorage.removeItem(old);
+    } catch {
+      // Private browsing can refuse storage; the session simply is not carried.
+    }
+  }
+}
+
+migrateLegacyStorage();
 
 export const api = axios.create({
   baseURL,
@@ -86,7 +115,7 @@ api.interceptors.response.use(
       // The credential is stale — drop it so the UI renders as a guest.
       window.localStorage.removeItem(TOKEN_KEY);
       window.localStorage.removeItem(USER_KEY);
-      window.dispatchEvent(new CustomEvent("d2k:unauthenticated"));
+      window.dispatchEvent(new CustomEvent("2konect:unauthenticated"));
     }
     return Promise.reject(error);
   }

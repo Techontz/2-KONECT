@@ -91,7 +91,7 @@ function ProductsContent() {
           onChange={(event) => setTerm(event.target.value)}
           placeholder="Search your products…"
           aria-label="Search your products"
-          className="h-9 min-w-[200px] flex-1 rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] px-3 text-[13px] outline-none focus:border-[color:var(--color-action)]"
+          className="h-9 min-w-[200px] flex-1 rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] px-3 text-[13px] outline-none focus:border-[color:var(--color-brand)]"
         />
 
         {([["", "All"], ["low", "Low stock"], ["out", "Sold out"]] as const).map(([value, label]) => (
@@ -101,7 +101,7 @@ function ProductsContent() {
             onClick={() => setStockFilter(value)}
             className={`h-9 rounded-[var(--radius-sm)] border px-3 text-[13px] font-semibold transition-colors ${
               stockFilter === value
-                ? "border-[color:var(--color-action)] bg-[color:var(--color-action-soft)] text-[color:var(--color-action)]"
+                ? "border-[color:var(--color-brand)] bg-[color:var(--color-brand-50)] text-[color:var(--color-brand)]"
                 : "border-[color:var(--color-line-strong)]"
             }`}
           >

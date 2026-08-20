@@ -9,6 +9,7 @@ import shop from "@/lib/shop";
 import { formatDate, formatMoney } from "@/lib/format";
 import type { Order } from "@/lib/types";
 import { useAuth } from "@/lib/store/auth";
+import { useHydrated } from "@/lib/useHydrated";
 import { SiteChrome } from "@/components/layout/SiteChrome";
 import { JourneyTimeline } from "@/components/sourcing/JourneyTimeline";
 import { AvailabilityBadge, RouteLine } from "@/components/sourcing/Availability";
@@ -41,6 +42,8 @@ function OrderDetail() {
 
   const { isAuthenticated, ready, requireAuth } = useAuth();
 
+  const hydrated = useHydrated();
+
   const [order, setOrder] = useState<Order | null>(null);
   const [missing, setMissing] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -57,7 +60,7 @@ function OrderDetail() {
     load();
   }, [ready, isAuthenticated, requireAuth, load]);
 
-  if (ready && !isAuthenticated) {
+  if (hydrated && ready && !isAuthenticated) {
     return (
       <EmptyState
         title="Sign in to track this order"

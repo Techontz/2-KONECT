@@ -140,7 +140,7 @@ export function ProductGallery({
           {magnifiable && hovering ? (
             <span
               aria-hidden="true"
-              className="pointer-events-none absolute border-2 border-[color:var(--color-action)]"
+              className="pointer-events-none absolute border-2 border-[color:var(--color-brand)]"
               style={{
                 width: lens,
                 height: lens,
@@ -199,7 +199,7 @@ export function ProductGallery({
               aria-current={index === activeIndex}
               className={`h-16 w-16 shrink-0 overflow-hidden rounded-[var(--radius-sm)] bg-white transition-all ${
                 index === activeIndex
-                  ? "ring-2 ring-[color:var(--color-action)]"
+                  ? "ring-2 ring-[color:var(--color-brand)]"
                   : "ring-1 ring-[color:var(--color-line)] hover:ring-[color:var(--color-line-strong)]"
               }`}
             >

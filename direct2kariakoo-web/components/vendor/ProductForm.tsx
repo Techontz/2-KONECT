@@ -12,6 +12,25 @@ import { ProductImagePicker, type PickedImage } from "./ProductImagePicker";
 import type { SellerAttribute } from "@/lib/vendor";
 
 /**
+ * Countries the marketplace sources from, mirroring App\Support\Sourcing.
+ * Kept short on purpose: an accurate list of routes we actually run beats a
+ * complete list of every country on earth.
+ */
+const COUNTRIES = [
+  { code: "TZ", name: "Tanzania", flag: "🇹🇿" },
+  { code: "KE", name: "Kenya", flag: "🇰🇪" },
+  { code: "UG", name: "Uganda", flag: "🇺🇬" },
+  { code: "RW", name: "Rwanda", flag: "🇷🇼" },
+  { code: "CN", name: "China", flag: "🇨🇳" },
+  { code: "AE", name: "UAE", flag: "🇦🇪" },
+  { code: "TR", name: "Türkiye", flag: "🇹🇷" },
+  { code: "IN", name: "India", flag: "🇮🇳" },
+  { code: "GB", name: "United Kingdom", flag: "🇬🇧" },
+  { code: "US", name: "United States", flag: "🇺🇸" },
+  { code: "ZA", name: "South Africa", flag: "🇿🇦" },
+];
+
+/**
  * Shared create/edit form for a vendor's product.
  *
  * On edit, newly chosen photos are *added* to the gallery. Existing photos are
@@ -37,6 +56,14 @@ export function ProductForm({ product }: { product?: ProductDetail }) {
     new_price: product?.price.current ?? 0,
     old_price: product?.price.was ?? 0,
     stock: product?.stock ?? 0,
+    // Where this stock is. Defaults to local, which is what a seller holding
+    // goods in Tanzania means and what every existing listing already is.
+    availability: (product?.sourcing?.type ?? "local") as "local" | "import",
+    source_country: product?.sourcing?.origin?.code ?? "TZ",
+    shipping_method: product?.sourcing?.shipping_method?.code ?? "",
+    lead_time_min_days: product?.sourcing?.lead_time.min ?? 1,
+    lead_time_max_days: product?.sourcing?.lead_time.max ?? 3,
+    fulfilment_location: product?.sourcing?.fulfilment_location ?? "",
   });
 
   const [images, setImages] = useState<PickedImage[]>([]);
@@ -91,6 +118,13 @@ export function ProductForm({ product }: { product?: ProductDetail }) {
           new_price: form.new_price,
           old_price: form.old_price || undefined,
           stock: form.stock,
+          short_description: form.short_description || undefined,
+          availability: form.availability,
+          source_country: form.source_country || undefined,
+          shipping_method: form.availability === "import" ? form.shipping_method || undefined : undefined,
+          lead_time_min_days: form.lead_time_min_days || undefined,
+          lead_time_max_days: form.lead_time_max_days || undefined,
+          fulfilment_location: form.fulfilment_location || undefined,
           images: images.length ? images.map((image) => image.file) : undefined,
           remove_images: replaceExisting,
         });
@@ -104,6 +138,12 @@ export function ProductForm({ product }: { product?: ProductDetail }) {
           new_price: form.new_price,
           old_price: form.old_price || undefined,
           stock: form.stock,
+          availability: form.availability,
+          source_country: form.source_country || undefined,
+          shipping_method: form.availability === "import" ? form.shipping_method || undefined : undefined,
+          lead_time_min_days: form.lead_time_min_days || undefined,
+          lead_time_max_days: form.lead_time_max_days || undefined,
+          fulfilment_location: form.fulfilment_location || undefined,
           images: images.map((image) => image.file),
           attributes: attributeValues,
         });
@@ -185,10 +225,131 @@ export function ProductForm({ product }: { product?: ProductDetail }) {
                 onChange={(event) => update("description", event.target.value)}
                 rows={5}
                 placeholder="Size, colour, condition, what's included…"
-                className="w-full resize-y rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] px-3 py-2.5 text-sm outline-none focus:border-[color:var(--color-action)]"
+                className="w-full resize-y rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] px-3 py-2.5 text-sm outline-none focus:border-[color:var(--color-brand)]"
               />
             </label>
           </div>
+        </section>
+
+        {/* Where the stock is. On 2KONECT this decides how the listing is
+            filed, priced against, and what arrival date a buyer is promised —
+            so it is a required decision, not an advanced setting. */}
+        <section className="rounded-[var(--radius-md)] bg-[color:var(--color-surface)] p-4">
+          <h2 className="text-[15px] font-extrabold">Availability &amp; delivery</h2>
+          <p className="mt-0.5 text-[12px] text-[color:var(--color-ink-muted)]">
+            Is this in Tanzania now, or do you bring it in when someone orders?
+          </p>
+
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            {([
+              {
+                value: "local" as const,
+                title: "🇹🇿 In Tanzania",
+                note: "You hold the stock and ship it locally.",
+              },
+              {
+                value: "import" as const,
+                title: "🌍 From abroad",
+                note: "Sourced on order and imported for the buyer.",
+              },
+            ]).map((option) => {
+              const active = form.availability === option.value;
+
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => {
+                    update("availability", option.value);
+                    // Move the promise with the choice, so a listing never
+                    // keeps a one-day estimate after becoming an import.
+                    if (option.value === "local") {
+                      update("lead_time_min_days", 1);
+                      update("lead_time_max_days", 3);
+                      update("source_country", "TZ");
+                      update("shipping_method", "");
+                    } else {
+                      update("lead_time_min_days", 7);
+                      update("lead_time_max_days", 14);
+                      if (form.source_country === "TZ") update("source_country", "CN");
+                      update("shipping_method", "air");
+                    }
+                  }}
+                  aria-pressed={active}
+                  className={`rounded-[var(--radius-md)] border-2 p-3 text-left transition-colors ${
+                    active
+                      ? "border-[color:var(--color-brand)] bg-[color:var(--color-brand-50)]"
+                      : "border-[color:var(--color-line)] hover:border-[color:var(--color-line-strong)]"
+                  }`}
+                >
+                  <span className="block text-[13px] font-extrabold">{option.title}</span>
+                  <span className="mt-0.5 block text-[12px] text-[color:var(--color-ink-muted)]">
+                    {option.note}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <SelectField
+              label="Ships from"
+              value={form.source_country}
+              onChange={(event) => update("source_country", event.target.value)}
+            >
+              {COUNTRIES.map((country) => (
+                <option key={country.code} value={country.code}>
+                  {country.flag} {country.name}
+                </option>
+              ))}
+            </SelectField>
+
+            {form.availability === "import" ? (
+              <SelectField
+                label="How does it travel?"
+                value={form.shipping_method}
+                onChange={(event) => update("shipping_method", event.target.value)}
+              >
+                <option value="">Not sure yet</option>
+                <option value="air">Air freight (fastest)</option>
+                <option value="sea">Sea freight (cheapest)</option>
+                <option value="road">Road freight</option>
+              </SelectField>
+            ) : (
+              <Field
+                label="Ships out of"
+                value={form.fulfilment_location}
+                onChange={(event) => update("fulfilment_location", event.target.value)}
+                placeholder="Your warehouse or shop, e.g. Dar es Salaam"
+              />
+            )}
+
+            <Field
+              label="Delivery from (days)"
+              type="number"
+              min={1}
+              value={form.lead_time_min_days}
+              onChange={(event) => update("lead_time_min_days", Number(event.target.value))}
+            />
+            <Field
+              label="Delivery to (days)"
+              type="number"
+              min={1}
+              value={form.lead_time_max_days}
+              onChange={(event) => update("lead_time_max_days", Number(event.target.value))}
+            />
+          </div>
+
+          <p className="mt-2 rounded-[var(--radius-sm)] bg-[color:var(--color-surface-alt)] px-3 py-2 text-[12px] text-[color:var(--color-ink-muted)]">
+            Buyers see this as{" "}
+            <span className="font-bold text-[color:var(--color-ink)]">
+              {form.availability === "local" ? "Available in Tanzania" : "Order from abroad"} ·{" "}
+              {form.lead_time_min_days === form.lead_time_max_days
+                ? `${form.lead_time_max_days} days`
+                : `${form.lead_time_min_days}–${form.lead_time_max_days} days`}
+            </span>
+            . Promise a window you can keep.
+          </p>
         </section>
 
         <section className="rounded-[var(--radius-md)] bg-[color:var(--color-surface)] p-4">
@@ -252,7 +413,7 @@ export function ProductForm({ product }: { product?: ProductDetail }) {
                       onChange={(event) =>
                         setAttributeValues((current) => ({ ...current, [attribute.id]: event.target.value }))
                       }
-                      className="h-11 w-full rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] bg-white px-3 text-sm outline-none focus:border-[color:var(--color-action)]"
+                      className="h-11 w-full rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] bg-white px-3 text-sm outline-none focus:border-[color:var(--color-brand)]"
                     >
                       <option value="">—</option>
                       {attribute.options.map((option) => (
@@ -267,7 +428,7 @@ export function ProductForm({ product }: { product?: ProductDetail }) {
                         setAttributeValues((current) => ({ ...current, [attribute.id]: event.target.value }))
                       }
                       maxLength={255}
-                      className="h-11 w-full rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] px-3 text-sm outline-none focus:border-[color:var(--color-action)]"
+                      className="h-11 w-full rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] px-3 text-sm outline-none focus:border-[color:var(--color-brand)]"
                     />
                   )}
                 </label>
@@ -338,7 +499,7 @@ function Field({
       </span>
       <input
         {...props}
-        className="h-11 w-full rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] px-3 text-sm outline-none focus:border-[color:var(--color-action)]"
+        className="h-11 w-full rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] px-3 text-sm outline-none focus:border-[color:var(--color-brand)]"
       />
     </label>
   );
@@ -356,7 +517,7 @@ function SelectField({
       </span>
       <select
         {...props}
-        className="h-11 w-full rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] bg-white px-2 text-sm outline-none focus:border-[color:var(--color-action)] disabled:opacity-50"
+        className="h-11 w-full rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] bg-white px-2 text-sm outline-none focus:border-[color:var(--color-brand)] disabled:opacity-50"
       >
         {children}
       </select>

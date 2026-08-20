@@ -21,18 +21,16 @@ const TABS = [
   { value: "cancelled", label: "Cancelled" },
 ] as const;
 
-const NEXT_STATUS: Record<string, { value: string; label: string }> = {
-  pending: { value: "processing", label: "Start preparing" },
-  processing: { value: "shipped", label: "Mark shipped" },
-  shipped: { value: "completed", label: "Mark delivered" },
-};
-
-const STATUS_TONE: Record<string, "success" | "warn" | "action" | "sale" | "neutral"> = {
+/**
+ * The next stage comes from the API, not from a table here: an imported line
+ * travels through customs and a warehouse that a local one never sees, and
+ * duplicating that route in the console is how the two drift apart.
+ */
+const STATUS_TONE: Record<string, "success" | "warn" | "brand" | "sale" | "neutral"> = {
   completed: "success",
-  shipped: "action",
-  processing: "action",
   pending: "warn",
   cancelled: "sale",
+  refunded: "sale",
 };
 
 export default function VendorOrdersPage() {
@@ -116,7 +114,7 @@ export default function VendorOrdersPage() {
       ) : (
         <div className="space-y-2">
           {orders.map((order) => {
-            const next = NEXT_STATUS[order.status];
+            const next = order.next_status;
 
             return (
               <article key={order.id} className="rounded-[var(--radius-md)] bg-[color:var(--color-surface)] p-4">
@@ -127,7 +125,14 @@ export default function VendorOrdersPage() {
                       {formatDate(order.placed_at)}
                     </p>
                   </div>
-                  <Tag tone={STATUS_TONE[order.status] ?? "neutral"}>{order.status}</Tag>
+                  <span className="flex flex-wrap items-center gap-1.5">
+                    <Tag tone={order.fulfilment_type === "import" ? "import" : "local"}>
+                      {order.fulfilment_type === "import" ? "🌍 Import" : "🇹🇿 Local"}
+                    </Tag>
+                    <Tag tone={STATUS_TONE[order.status] ?? "brand"}>
+                      {order.status_label ?? order.status}
+                    </Tag>
+                  </span>
                 </div>
 
                 <div className="mt-3 flex gap-3">
@@ -155,7 +160,7 @@ export default function VendorOrdersPage() {
                     <div className="flex gap-2">
                       <dt className="shrink-0 text-[color:var(--color-ink-muted)]">Phone</dt>
                       <dd>
-                        <a href={`tel:${order.customer.phone}`} className="font-semibold text-[color:var(--color-action)] hover:underline">
+                        <a href={`tel:${order.customer.phone}`} className="font-semibold text-[color:var(--color-brand)] hover:underline">
                           {order.customer.phone}
                         </a>
                       </dd>

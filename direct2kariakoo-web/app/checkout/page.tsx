@@ -10,6 +10,7 @@ import { formatMoney } from "@/lib/format";
 import shop from "@/lib/shop";
 import type { Address as AddressType } from "@/lib/types";
 import { useAuth } from "@/lib/store/auth";
+import { useHydrated } from "@/lib/useHydrated";
 import { lineSourcing, unitPrice, useCart, keyOf } from "@/lib/store/cart";
 import { useLocation } from "@/lib/store/location";
 import { LocationPicker } from "@/components/location/LocationPicker";
@@ -41,6 +42,7 @@ export default function CheckoutPage() {
 
 function CheckoutContent() {
   const { user, isAuthenticated, ready, requireAuth } = useAuth();
+  const hydrated = useHydrated();
   const cart = useCart();
   const router = useRouter();
   const { location: pinned, setLocation } = useLocation();
@@ -126,7 +128,7 @@ function CheckoutContent() {
     );
   }
 
-  if (ready && !isAuthenticated) {
+  if (hydrated && ready && !isAuthenticated) {
     return (
       <EmptyState
         title="Sign in to place your order"
@@ -478,6 +480,9 @@ function PaymentOption({
         checked={checked}
         disabled={unavailable}
         onChange={onSelect}
+        // The one live method is fixed rather than chosen, so it is a
+        // read-only control instead of a checkbox React will warn about.
+        readOnly={!onSelect}
         className="mt-0.5 h-4 w-4 shrink-0 accent-[color:var(--color-brand)]"
       />
       <span className="min-w-0 flex-1">

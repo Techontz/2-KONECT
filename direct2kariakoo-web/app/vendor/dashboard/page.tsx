@@ -143,7 +143,7 @@ export default function VendorDashboardPage() {
         <section className="rounded-[var(--radius-md)] bg-[color:var(--color-surface)] p-4">
           <div className="mb-3 flex items-center justify-between gap-3">
             <h2 className="text-[15px] font-extrabold">Restock soon</h2>
-            <Link href="/vendor/products?stock=low" className="text-[12px] font-bold text-[color:var(--color-action)] hover:underline">
+            <Link href="/vendor/products?stock=low" className="text-[12px] font-bold text-[color:var(--color-brand)] hover:underline">
               {t("common.viewAll")}
             </Link>
           </div>
@@ -234,7 +234,7 @@ function SalesTrend({ trend }: { trend: { date: string; total: number }[] }) {
           <span
             key={point.date}
             title={`${point.date}: ${formatMoney(point.total)}`}
-            className="flex-1 rounded-t-[2px] bg-[color:var(--color-action)] transition-opacity hover:opacity-70"
+            className="flex-1 rounded-t-[2px] bg-[color:var(--color-brand)] transition-opacity hover:opacity-70"
             style={{
               // A floor of 2% keeps zero-sale days visible as a baseline tick
               // instead of vanishing and making the axis look broken.

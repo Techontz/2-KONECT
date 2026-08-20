@@ -22,7 +22,9 @@ export interface DeliveryLocation {
   region?: string | null;
 }
 
-const STORAGE_KEY = "d2k.location";
+const STORAGE_KEY = "2konect.location";
+/** The pre-rename key, read once so a saved location survives the rebrand. */
+const LEGACY_STORAGE_KEY = "d2k.location";
 
 /** Dar es Salaam city centre — where the map opens when nothing better is known. */
 export const DEFAULT_CENTER = { lat: -6.8161, lng: 39.2803 };
@@ -43,7 +45,10 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
+      const raw =
+        window.localStorage.getItem(STORAGE_KEY) ??
+        window.localStorage.getItem(LEGACY_STORAGE_KEY);
+      window.localStorage.removeItem(LEGACY_STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as DeliveryLocation;
         // Guard against a half-written or outdated shape rather than letting

@@ -110,7 +110,7 @@ function MessagesContent() {
                   <span className="flex items-center gap-2">
                     <span className="clamp-1 text-[14px] font-extrabold">{thread.name}</span>
                     {thread.unread > 0 ? (
-                      <span className="shrink-0 rounded-full bg-[color:var(--color-action)] px-1.5 py-[1px] text-[10px] font-black text-white">
+                      <span className="shrink-0 rounded-full bg-[color:var(--color-brand)] px-1.5 py-[1px] text-[10px] font-black text-white">
                         {thread.unread}
                       </span>
                     ) : null}

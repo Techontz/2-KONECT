@@ -428,7 +428,7 @@ export const en = {
 
   sell: {
     businessAddress: "Business address",
-    businessAddressHint: "Where your shop is — e.g. a stall or building in Kariakoo.",
+    businessAddressHint: "Where your shop or warehouse is — street, area and city.",
     logo: "Shop logo or photo",
     logoHint: "A JPG or PNG, up to 4 MB.",
     licence: "Business licence",

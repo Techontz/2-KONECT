@@ -161,14 +161,14 @@ function AddressesContent() {
               key={address.id}
               className={`rounded-[var(--radius-md)] bg-[color:var(--color-surface)] p-4 ${
                 address.is_default
-                  ? "ring-2 ring-[color:var(--color-action)]"
+                  ? "ring-2 ring-[color:var(--color-brand)]"
                   : "ring-1 ring-[color:var(--color-line)]"
               }`}
             >
               <div className="mb-2 flex flex-wrap items-center gap-2">
                 <p className="min-w-0 flex-1 clamp-1 text-[15px] font-extrabold">{address.full_name}</p>
                 {address.is_default ? (
-                  <span className="shrink-0 rounded-full bg-[color:var(--color-action)] px-2 py-[3px] text-[10px] font-black uppercase tracking-wide text-white">
+                  <span className="shrink-0 rounded-full bg-[color:var(--color-brand)] px-2 py-[3px] text-[10px] font-black uppercase tracking-wide text-white">
                     {t("address.default")}
                   </span>
                 ) : null}

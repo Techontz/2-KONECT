@@ -142,6 +142,13 @@ class VendorController extends Controller
                 'id'         => $order->id,
                 'reference'  => $order->reference,
                 'status'     => $order->status,
+                'status_label' => \App\Support\OrderJourney::label($order->status),
+                // Which route this line takes, and what moving it forward
+                // means next — decided here rather than re-derived in the
+                // console from a list of status strings it would have to keep
+                // in step with the backend.
+                'fulfilment_type' => $order->fulfilment_type ?? \App\Support\Sourcing::LOCAL,
+                'next_status' => $this->nextStage($order),
                 'quantity'   => (int) $order->quantity,
                 'price'      => (float) $order->price,
                 'total'      => (float) $order->total,
@@ -224,6 +231,25 @@ class VendorController extends Controller
     }
 
     /* ---------------------------------------------------------------- */
+
+    /**
+     * The next stop on this line's own route.
+     *
+     * A local delivery skips the import stops entirely, so "next" is read off
+     * the right path rather than hard-coded into the seller console.
+     */
+    private function nextStage(Order $order): ?array
+    {
+        if (! \App\Support\OrderJourney::isOpen($order->status)) {
+            return null;
+        }
+
+        $path  = \App\Support\OrderJourney::path($order->fulfilment_type ?? \App\Support\Sourcing::LOCAL);
+        $index = array_search($order->status, $path, true);
+        $next  = $index === false ? null : ($path[$index + 1] ?? null);
+
+        return $next ? ['value' => $next, 'label' => \App\Support\OrderJourney::label($next)] : null;
+    }
 
     /** Daily revenue for the last 30 days, gap-filled. */
     private function salesTrend(int $vendorId): array

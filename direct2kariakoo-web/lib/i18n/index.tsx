@@ -13,7 +13,7 @@ export type { PageCopy, PageKey, PageSection, PageTopic } from "./pages";
 
 const DICTIONARIES: Record<LanguageCode, Dictionary> = { en, sw, fr, zh };
 
-export const LANGUAGE_KEY = "d2k.language";
+export const LANGUAGE_KEY = "2konect.language";
 
 /** Dot-path into the dictionary, e.g. `"cart.empty"`. */
 type Section = keyof Dictionary;
