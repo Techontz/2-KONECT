@@ -29,9 +29,16 @@ npm run build
 Every one is a public client identifier. A feature whose key is missing simply
 does not render — no broken control, no error.
 
-Use the machine's LAN address rather than `127.0.0.1` for `NEXT_PUBLIC_API_URL`
-if you want to open the site from a phone: `lib/api.ts` corrects a loopback
-host at runtime, but the value it starts from has to be reachable.
+`NEXT_PUBLIC_API_URL` is `http://127.0.0.1:8001/api`. The API listens on 8001,
+not 8000, because 8000 belongs to another project on this machine. `npm run dev`
+needs no override of any kind. Keep the loopback host: `lib/api.ts` rewrites it
+to whatever host the page was opened from, so the same value works from the
+laptop and from a phone on the same Wi-Fi — serve the API with
+`--host=0.0.0.0` for the phone case.
+
+Analytics, when the measurement id is set, **sends a `page_view` on every page
+load with no consent gate**. See "Before this goes live" in the root README —
+leaving the id unset switches the whole thing off.
 
 ## How it is put together
 

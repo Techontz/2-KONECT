@@ -57,8 +57,11 @@ cd 2k_backend
 composer install
 cp .env.example .env && php artisan key:generate   # first run only
 php artisan migrate
-php artisan serve --port=8000
+php artisan serve --port=8001
 ```
+
+Port 8001, not 8000: on this machine 8000 belongs to another project. Serve on
+`--host=0.0.0.0` as well if you want to open the storefront from a phone.
 
 `FILESYSTEM_PUBLIC_ROOT` in `.env` must point at this project's
 `storage/app/public`, and `public/storage` must be a symlink to the same
@@ -72,8 +75,10 @@ npm install
 npm run dev
 ```
 
-`NEXT_PUBLIC_API_URL` in `.env.local` points at the API. Use the machine's LAN
-address rather than `127.0.0.1` if you want to open the site from a phone.
+`NEXT_PUBLIC_API_URL` in `.env.local` points at the API and is already set to
+`http://127.0.0.1:8001/api`. No build-time override is needed. `lib/api.ts`
+rewrites a loopback host to whatever host the page was opened from, so the same
+value works from the laptop and from a phone on the same Wi-Fi.
 
 ### Admin
 
@@ -165,6 +170,36 @@ orders kept working through the transformation.
   is only ever shown as done because the order actually passed it.
 - **Approval creates sellers, not registration.** An application lands in the
   admin queue; approving it is what creates the vendor record.
+
+## Before this goes live
+
+Three things cannot be done from this repository. Each needs somebody signed in
+to a provider's console, and none of them is configured by the code below.
+
+**1. Authorise the production domain for Firebase.** In the Firebase console for
+project `konect-83a21` → Authentication → Settings → Authorized domains, add
+`2konect.com` (and any other origin the storefront is served from). Until that
+is done, Google sign-in in production fails with `auth/unauthorized-domain`.
+The button reports it as a configuration problem rather than as user error, but
+nobody can sign in with Google.
+
+**2. Enable the Google provider on `konect-83a21`.** Authentication →
+Sign-in method → Google → Enable, with a support email set. Verified locally
+against the project's own auth handler; the provider switch itself is console
+state, not code.
+
+**3. Decide about analytics consent.** Firebase Analytics is wired up and
+**fires a `page_view` to `G-GDLZW1PNYG` on every page load, with no consent gate
+in front of it**. That is deliberate and it is a launch decision, not an
+oversight: for visitors in Tanzania it is the ordinary arrangement, but the same
+build served to anyone in the EEA/UK needs consent before those events are sent.
+Two ways to settle it, in rising order of effort:
+
+- Leave `NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID` unset in production. Nothing is
+  loaded, nothing is sent, and no other behaviour changes — `lib/firebase.ts`
+  checks for it before importing the module at all.
+- Keep it, and put a consent banner in front of `startAnalytics()`
+  (`components/analytics/FirebaseAnalytics.tsx` is the single call site).
 
 ## Not done here
 

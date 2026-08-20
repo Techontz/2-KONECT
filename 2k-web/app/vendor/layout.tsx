@@ -73,6 +73,36 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
     );
   }
 
+  // Signed in as a seller, but this account has no store record behind it.
+  //
+  // A handful of older accounts were marked as sellers before a store row was
+  // required, so every console endpoint answers 403 for them. That is a missing
+  // *profile*, not a bad session — telling them to sign in again sends them
+  // round a loop that cannot end, and so does "apply to sell", because /sell
+  // recognises the vendor role and points straight back here. Only support can
+  // resolve it, so that is what this offers.
+  //
+  // Deliberately `=== null`, which is what a confirmed /me answer looks like.
+  // An older cached account object with no vendor key at all is `undefined` and
+  // falls through to the console as before, so a real seller is never locked
+  // out by a stale cache.
+  if (user?.role === "vendor" && user.vendor === null) {
+    return (
+      <div className="min-h-screen bg-[color:var(--color-canvas)]">
+        <EmptyState
+          title="Your seller profile isn't set up yet"
+          message={`Your account is registered as a seller, but it has no store attached — so there are no products, orders or payouts to show. Our team can finish the setup for you; it usually takes one working day once you have been in touch.`}
+          action={
+            <div className="flex flex-wrap justify-center gap-2">
+              <ButtonLink href="/help/contact" size="lg">Contact {BRAND.name}</ButtonLink>
+              <ButtonLink href="/" size="lg" variant="secondary">{t("seller.backToShop")}</ButtonLink>
+            </div>
+          }
+        />
+      </div>
+    );
+  }
+
   if (user?.role !== "vendor") {
     return (
       <div className="min-h-screen bg-[color:var(--color-canvas)]">

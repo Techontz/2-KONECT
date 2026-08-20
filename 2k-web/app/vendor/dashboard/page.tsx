@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { BRAND } from "@/lib/brand";
 import { formatMoney } from "@/lib/format";
+import { isForbidden } from "@/lib/api";
 import vendorApi, { type VendorDashboard } from "@/lib/vendor";
 import { Button, ButtonLink, EmptyState, Skeleton } from "@/components/ui/Primitives";
 import { SellerStatusBanner } from "@/components/vendor/SellerStatusBanner";
@@ -18,13 +20,30 @@ import { useT } from "@/lib/i18n";
 export default function VendorDashboardPage() {
   const t = useT();
   const [data, setData] = useState<VendorDashboard | null>(null);
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState<"none" | "no-store" | "error">("none");
 
   useEffect(() => {
-    vendorApi.dashboard().then(setData).catch(() => setFailed(true));
+    vendorApi
+      .dashboard()
+      .then(setData)
+      // 403 here means the account has no store record, which the console shell
+      // normally catches first. It is answered separately anyway, because
+      // "refresh or sign in again" is wrong advice for it: the session is fine,
+      // and no amount of signing in will conjure a store.
+      .catch((error) => setFailed(isForbidden(error) ? "no-store" : "error"));
   }, []);
 
-  if (failed) {
+  if (failed === "no-store") {
+    return (
+      <EmptyState
+        title="Your seller profile isn't set up yet"
+        message="Your account is registered as a seller, but no store is attached to it yet, so there is nothing to report on. Our team can finish the setup for you."
+        action={<ButtonLink href="/help/contact">Contact {BRAND.name}</ButtonLink>}
+      />
+    );
+  }
+
+  if (failed === "error") {
     return (
       <EmptyState
         title="We couldn't load your dashboard"

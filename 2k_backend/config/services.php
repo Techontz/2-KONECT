@@ -14,7 +14,12 @@ return [
 
         // Older Firebase projects whose tokens are still arriving from clients
         // that have not been rebuilt yet — today, the published Flutter app.
-        // Comma-separated; remove an id once nothing in the wild mints it.
+        // Comma-separated.
+        //
+        // Remove the legacy Firebase project ID after the updated Flutter
+        // application using konect-83a21 has been released and existing users
+        // have migrated. Until then this is load-bearing: dropping it signs
+        // every mobile Google user out.
         'legacy_project_ids' => array_filter(explode(',', (string) env('FIREBASE_LEGACY_PROJECT_IDS', ''))),
     ],
 

@@ -28,7 +28,10 @@ use RuntimeException;
  * old one and posts its tokens to this same endpoint. Both are our projects,
  * both are named explicitly in configuration, and `iss` and `aud` must agree
  * with each other — so this widens which of our own apps can sign in, not who.
- * Drop FIREBASE_LEGACY_PROJECT_IDS once the mobile release has rolled over.
+ *
+ * Remove the legacy Firebase project ID (FIREBASE_LEGACY_PROJECT_IDS) after the
+ * updated Flutter application using konect-83a21 has been released and existing
+ * users have migrated. It is load-bearing until then.
  *
  * A client-supplied email, uid, name or role is never trusted; only the claims
  * inside a token that passed all of the above are believed.

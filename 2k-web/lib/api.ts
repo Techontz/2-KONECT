@@ -121,6 +121,17 @@ api.interceptors.response.use(
   }
 );
 
+/**
+ * True when the server refused the request outright.
+ *
+ * A 403 from a seller endpoint means the account lacks a store record — a
+ * missing profile, not a broken session — and callers need to say something
+ * different for it than for a network failure.
+ */
+export function isForbidden(error: unknown): boolean {
+  return (error as { response?: { status?: number } })?.response?.status === 403;
+}
+
 /** Pull a human-readable message out of a Laravel error response. */
 export function apiError(error: unknown, fallback = "Something went wrong."): string {
   const response = (error as { response?: { data?: Record<string, unknown> } })?.response;
