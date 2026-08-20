@@ -14,14 +14,14 @@ use RuntimeException;
  * so the safer architecture is the one where the server holds no Firebase
  * secret at all — nothing to leak, nothing to rotate, nothing to keep out of
  * git. (A service account is only required to *mint* tokens or call the Admin
- * API, neither of which D2K does.)
+ * API, neither of which 2KONECT does.)
  *
  * What is checked, per Google's published requirements for ID tokens:
  *   - RS256 signature against the current securetoken certificates
  *   - `iss` is https://securetoken.google.com/<project-id>
  *   - `aud` is <project-id>
  *   - `exp` / `iat` are sane (enforced by the JWT decoder)
- *   - `sub` is non-empty — it becomes the D2K firebase_uid
+ *   - `sub` is non-empty — it becomes the 2KONECT firebase_uid
  *
  * A client-supplied email, uid, name or role is never trusted; only the claims
  * inside a token that passed all of the above are believed.
@@ -72,7 +72,7 @@ class FirebaseIdTokenVerifier
             throw new RuntimeException('That Google account has no email address.');
         }
 
-        // An unverified email must never be used to find an existing D2K
+        // An unverified email must never be used to find an existing 2KONECT
         // account: it would let someone claim an address they do not own.
         if (! $this->isTrue($claims['email_verified'] ?? false)) {
             throw new RuntimeException('Please verify your email with Google first.');

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { BRAND } from "@/lib/brand";
+import { Logo } from "@/components/brand/Logo";
 import { useAuth } from "@/lib/store/auth";
 import { Button, ButtonLink, EmptyState } from "@/components/ui/Primitives";
 import { useT } from "@/lib/i18n";
@@ -77,7 +78,7 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
       <div className="min-h-screen bg-[color:var(--color-canvas)]">
         <EmptyState
           title="This isn't a seller account"
-          message={`You're signed in as a shopper. Apply to sell on ${BRAND.short} to get a seller console.`}
+          message={`You're signed in as a shopper. Apply to sell with ${BRAND.name} to get a seller console.`}
           action={
             <div className="flex flex-wrap justify-center gap-2">
               <ButtonLink href="/sell" size="lg">Become a seller</ButtonLink>
@@ -96,11 +97,8 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
         {/* The wordmark goes to the console's own home. For a signed-in seller
             "/" is redirected straight back here, so linking there would just
             look broken. */}
-        <Link href="/vendor/dashboard" className="flex items-baseline gap-1 border-b border-[color:var(--color-line)] px-4 py-4">
-          <span className="text-[17px] font-black leading-none tracking-tight">
-            {BRAND.wordmark.lead}
-            <span className="opacity-60">{BRAND.wordmark.tail}</span>
-          </span>
+        <Link href="/vendor/dashboard" className="flex items-center border-b border-[color:var(--color-line)] px-4 py-4">
+          <Logo size="md" />
         </Link>
 
         <div className="px-4 py-3">
@@ -148,7 +146,8 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* ---- mobile top bar ---- */}
-        <header className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-4 py-3 lg:hidden">
+        <header className="sticky top-0 z-40 flex items-center gap-3 border-b border-[color:var(--color-line)] bg-[color:var(--color-surface)] px-4 py-3 lg:hidden">
+          <Logo size="sm" showWordmark={false} />
           <span className="min-w-0 flex-1 truncate text-[15px] font-black tracking-tight">
             {user?.vendor?.business_name ?? user?.name}
           </span>
@@ -157,7 +156,7 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
               className={`shrink-0 whitespace-nowrap rounded-[var(--radius-pill)] px-2 py-1 text-[10px] font-bold ${
                 user.vendor.is_approved
                   ? "bg-[color:var(--color-success-soft)] text-[color:var(--color-success)]"
-                  : "bg-[color:var(--color-brand)] text-[color:var(--color-brand-ink)]"
+                  : "bg-[color:var(--color-warn-soft)] text-[color:var(--color-warn)]"
               }`}
             >
               {user.vendor.is_approved ? t("seller.verified") : t("seller.statusPending")}

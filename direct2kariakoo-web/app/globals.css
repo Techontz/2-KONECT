@@ -177,6 +177,19 @@ h1, h2, h3, h4 {
   .crumb { min-height: 0; }
 }
 
+/* A small text control — an inline link, a "cancel" button — grown to a size
+   a thumb can actually hit. Only on touch widths: the extra height is dead
+   space under a pointer, and it would push apart rows designed around the
+   text's own line box. */
+.tap {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+@media (min-width: 640px) {
+  .tap { min-height: 0; }
+}
+
 /* --------------------------------------------------------------------------
    Surfaces
    -------------------------------------------------------------------------- */

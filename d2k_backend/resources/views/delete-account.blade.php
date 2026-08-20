@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Delete Account - Direct2Kariakoo</title>
+    <title>Delete Account - 2KONECT</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -25,13 +25,13 @@
 <body>
     <h1>Delete Your Account</h1>
     <p>
-        If you wish to delete your Direct2Kariakoo account and associated data, please follow the instructions below.
+        If you wish to delete your 2KONECT account and associated data, please follow the instructions below.
     </p>
 
     <div class="box">
         <h3>Steps:</h3>
         <ol>
-            <li>Email us at <a href="mailto:support@direct2kariakoo.com">support@direct2kariakoo.com</a></li>
+            <li>Email us at <a href="mailto:support@2konect.com">support@2konect.com</a></li>
             <li>Use the subject line: <strong>Delete My Account</strong></li>
             <li>Include your registered email and phone number in the message.</li>
         </ol>
@@ -43,7 +43,7 @@
 
     <p>
         For any questions, contact us at 
-        <a href="mailto:support@direct2kariakoo.com">support@direct2kariakoo.com</a>.
+        <a href="mailto:support@2konect.com">support@2konect.com</a>.
     </p>
 </body>
 </html>

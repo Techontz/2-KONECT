@@ -111,7 +111,7 @@ export default function VendorSettingsPage() {
           className="h-14 bg-white border border-gray-100 rounded-xl mb-3 shadow-sm"
         />
       ))}
-      <div className="h-12 bg-yellow-200 rounded-xl mt-6" />
+      <div className="h-12 bg-[#ede9fe] rounded-xl mt-6" />
     </div>
   );
 
@@ -156,7 +156,7 @@ export default function VendorSettingsPage() {
         {/* ==================== LOGOUT BUTTON ==================== */}
         <button
           onClick={() => setShowDialog(true)}
-          className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-semibold rounded-xl py-3 mt-8 transition flex items-center justify-center gap-2 shadow-sm"
+          className="w-full bg-[#6d28d9] hover:bg-[#5b21b6] text-white font-semibold rounded-xl py-3 mt-8 transition flex items-center justify-center gap-2 shadow-sm"
         >
           <LogOut className="w-5 h-5" />
           Logout
@@ -215,8 +215,8 @@ function Tile({
       className="flex items-center justify-between bg-white rounded-xl border border-gray-100 shadow-sm px-5 py-3 hover:bg-gray-50 active:scale-[0.99] transition cursor-pointer"
     >
       <div className="flex items-center gap-3">
-        <div className="bg-yellow-100 p-2.5 rounded-full">
-          <Icon className="w-5 h-5 text-yellow-600" />
+        <div className="bg-[#ede9fe] p-2.5 rounded-full">
+          <Icon className="w-5 h-5 text-[#6d28d9]" />
         </div>
         <span className="font-medium text-gray-800 text-[15px]">{title}</span>
       </div>
@@ -255,7 +255,7 @@ function LogoutDialog({
         <button
           onClick={onConfirm}
           disabled={loading}
-          className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-semibold rounded-lg py-3 mb-3 transition disabled:opacity-60"
+          className="w-full bg-[#6d28d9] hover:bg-[#5b21b6] text-white font-semibold rounded-lg py-3 mb-3 transition disabled:opacity-60"
         >
           {loading ? "Logging out..." : "Logout"}
         </button>

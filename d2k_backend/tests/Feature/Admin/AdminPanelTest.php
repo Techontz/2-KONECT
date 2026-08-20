@@ -46,21 +46,21 @@ class AdminPanelTest extends TestCase
         ]);
     }
 
-    public function test_the_login_screen_renders_with_d2k_branding(): void
+    public function test_the_login_screen_renders_with_2konect_branding(): void
     {
         $response = $this->get('/admin/login');
 
         $response->assertOk();
 
         // The layout override and the card, not Filament's stock centred box.
-        $response->assertSee('d2k-auth-shell', escape: false);
-        $response->assertSee('d2k-brand-rail', escape: false);
-        $response->assertSee('d2k-auth-card', escape: false);
+        $response->assertSee('k-auth-shell', escape: false);
+        $response->assertSee('k-brand-rail', escape: false);
+        $response->assertSee('k-auth-card', escape: false);
         $response->assertSee('Welcome back');
-        $response->assertSee('Direct2Kariakoo Admin Centre');
+        $response->assertSee('2KONECT Admin Centre');
 
         // The theme stylesheet is actually referenced by the page.
-        $response->assertSee('d2k-admin.css', escape: false);
+        $response->assertSee('2konect-admin.css', escape: false);
 
         $response->assertDontSee('Direct to Courier', escape: false);
         $response->assertDontSee('direct2courier', escape: false);
@@ -171,7 +171,7 @@ class AdminPanelTest extends TestCase
         $response = $this->actingAs($this->admin())->get('/admin');
 
         $response->assertOk();
-        $response->assertSee('Direct2Kariakoo');
+        $response->assertSee('2KONECT');
         $response->assertDontSee('Direct to Courier', escape: false);
 
         // The panel chrome itself, not just a bare page.
@@ -179,7 +179,7 @@ class AdminPanelTest extends TestCase
         $response->assertSee('fi-topbar', escape: false);
 
         // The theme is applied to the panel, not only to the login screen.
-        $response->assertSee('d2k-admin.css', escape: false);
+        $response->assertSee('2konect-admin.css', escape: false);
     }
 
     /**

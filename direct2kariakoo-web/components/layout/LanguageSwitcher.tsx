@@ -13,7 +13,16 @@ import { LANGUAGES, languageMeta, useLanguage } from "@/lib/i18n";
  * `tone` picks contrast for the surface it sits on: the deep utility strip on
  * a desktop, or a white bar in the footer and the mobile menu.
  */
-export function LanguageSwitcher({ tone = "light" }: { tone?: "light" | "dark" }) {
+export function LanguageSwitcher({
+  tone = "light",
+  compact = false,
+}: {
+  /** Contrast for the surface it sits on. */
+  tone?: "light" | "dark";
+  /** Drop the touch-sized hit area. Only for the desktop utility strip, which
+      is 36px tall and never seen by a thumb. */
+  compact?: boolean;
+}) {
   const { language, setLanguage, t } = useLanguage();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -46,10 +55,12 @@ export function LanguageSwitcher({ tone = "light" }: { tone?: "light" | "dark" }
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={t("language.label")}
-        className={`flex items-center justify-center gap-1 rounded-[var(--radius-sm)] px-1.5 py-1 text-[12px] font-semibold ${
+        className={`flex items-center justify-center gap-1 rounded-[var(--radius-sm)] px-2 py-1 text-[12px] font-semibold ${
+          compact ? "" : "min-h-11 min-w-11"
+        } ${
           tone === "dark"
             ? "text-white hover:bg-white/10"
-            : "min-h-11 min-w-11 text-[color:var(--color-ink)] hover:bg-[color:var(--color-surface-alt)] md:min-w-0 md:px-2"
+            : "text-[color:var(--color-ink)] hover:bg-[color:var(--color-surface-alt)]"
         }`}
       >
         <span aria-hidden="true" className="text-[15px] leading-none">{current.flag}</span>

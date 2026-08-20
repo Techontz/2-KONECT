@@ -1,5 +1,5 @@
 /*
- * Direct2Kariakoo — admin panel behaviour.
+ * 2KONECT — admin panel behaviour.
  *
  * Filament stores the sidebar's open state as `$persist(true)`, which is right
  * on a desktop where the sidebar is a permanent column. On a phone the same

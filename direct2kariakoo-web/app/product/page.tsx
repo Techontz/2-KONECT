@@ -382,7 +382,7 @@ function BuyColumn({
             <Link
               href={`/category?id=${product.category.id}`}
               prefetch={false}
-              className="text-[12px] text-[color:var(--color-ink-muted)] hover:text-[color:var(--color-brand)]"
+              className="tap text-[12px] text-[color:var(--color-ink-muted)] hover:text-[color:var(--color-brand)]"
             >
               in {product.category.name.trim()}
             </Link>

@@ -166,7 +166,7 @@ export default function DeliveriesPage() {
                         <button
                           type="button"
                           onClick={() => cancel(request.reference)}
-                          className="text-[12px] font-bold text-[color:var(--color-ink-muted)] hover:text-[color:var(--color-sale)] hover:underline"
+                          className="tap text-[12px] font-bold text-[color:var(--color-ink-muted)] hover:text-[color:var(--color-sale)] hover:underline"
                         >
                           Cancel
                         </button>

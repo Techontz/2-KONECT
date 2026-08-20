@@ -160,7 +160,7 @@ export default function VendorBottomNav() {
             <div
               className={`p-2 rounded-full relative flex items-center justify-center ${
                 isActive
-                  ? "bg-gradient-to-br from-yellow-400 to-green-500 text-black shadow-md"
+                  ? "bg-gradient-to-br from-[#7c3aed] to-[#5b21b6] text-white shadow-md"
                   : "text-gray-600"
               }`}
             >

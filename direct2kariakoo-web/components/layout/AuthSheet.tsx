@@ -6,6 +6,7 @@ import { useT } from "@/lib/i18n";
 import { apiError } from "@/lib/api";
 import { useAuth } from "@/lib/store/auth";
 import { Button } from "@/components/ui/Primitives";
+import { Logo } from "@/components/brand/Logo";
 import { GoogleButton } from "@/components/auth/GoogleButton";
 
 /**
@@ -116,13 +117,10 @@ export function AuthSheet() {
           </svg>
         </button>
 
-        <div className="bg-[color:var(--color-brand)] px-6 py-7 text-center">
-          <p className="text-[22px] font-black leading-none tracking-tight text-[color:var(--color-brand-ink)]">
-            {BRAND.wordmark.lead}
-            <span className="opacity-70">{BRAND.wordmark.tail}</span>
-          </p>
-          <p className="mt-2 text-sm font-semibold text-[color:var(--color-brand-ink)]">
-            {mode === "login" ? t("auth.welcomeBack") : t("auth.join", { brand: BRAND.short })}
+        <div className="brand-ground px-6 py-7 text-center">
+          <Logo tone="dark" size="lg" className="justify-center" />
+          <p className="mt-2.5 text-sm font-semibold text-white/80">
+            {mode === "login" ? t("auth.welcomeBack") : t("auth.join", { brand: BRAND.name })}
           </p>
         </div>
 
@@ -135,7 +133,7 @@ export function AuthSheet() {
                 onClick={() => { setMode(value); setError(null); setNotice(null); }}
                 className={`rounded-[var(--radius-xs)] py-2 text-sm font-bold transition-colors ${
                   mode === value
-                    ? "bg-[color:var(--color-ink)] text-white"
+                    ? "bg-[color:var(--color-brand)] text-white"
                     : "text-[color:var(--color-ink-muted)] hover:bg-[color:var(--color-surface-alt)]"
                 }`}
               >
@@ -170,7 +168,7 @@ export function AuthSheet() {
             ) : null}
 
             {error ? (
-              <p role="alert" className="rounded-[var(--radius-sm)] bg-red-50 px-3 py-2 text-[13px] text-[color:var(--color-sale)]">
+              <p role="alert" className="rounded-[var(--radius-sm)] bg-[color:var(--color-danger-soft)] px-3 py-2 text-[13px] font-semibold text-[color:var(--color-danger)]">
                 {error}
               </p>
             ) : null}

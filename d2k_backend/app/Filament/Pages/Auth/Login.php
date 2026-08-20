@@ -9,7 +9,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Pages\Auth\Login as BaseLogin;
 
 /**
- * Direct2Kariakoo admin sign-in.
+ * 2KONECT admin sign-in.
  *
  * Extends Filament's own login page rather than replacing it, so the
  * authentication, throttling, session handling and error messages are all
@@ -60,7 +60,7 @@ class Login extends BaseLogin
     {
         return TextInput::make('email')
             ->label('Email address')
-            ->placeholder('you@direct2kariakoo.com')
+            ->placeholder('you@2konect.com')
             ->email()
             ->required()
             // Named rather than bare, so password managers offer the

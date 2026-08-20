@@ -191,7 +191,7 @@ function RequestCard({ request, onCancel }: { request: SourcingRequest; onCancel
         <button
           type="button"
           onClick={onCancel}
-          className="mt-3 text-[12px] font-bold text-[color:var(--color-ink-muted)] hover:text-[color:var(--color-sale)] hover:underline"
+          className="tap mt-1 text-[12px] font-bold text-[color:var(--color-ink-muted)] hover:text-[color:var(--color-sale)] hover:underline"
         >
           Withdraw this request
         </button>

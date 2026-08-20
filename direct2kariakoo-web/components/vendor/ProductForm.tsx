@@ -465,7 +465,7 @@ export function ProductForm({ product }: { product?: ProductDetail }) {
 
         <section className="rounded-[var(--radius-md)] bg-[color:var(--color-surface)] p-4">
           {error ? (
-            <p role="alert" className="mb-3 rounded-[var(--radius-sm)] bg-red-50 px-3 py-2 text-[13px] text-[color:var(--color-sale)]">
+            <p role="alert" className="mb-3 rounded-[var(--radius-sm)] bg-[color:var(--color-danger-soft)] px-3 py-2 text-[13px] font-semibold text-[color:var(--color-danger)]">
               {error}
             </p>
           ) : null}

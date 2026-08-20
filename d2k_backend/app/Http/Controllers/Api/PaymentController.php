@@ -33,7 +33,7 @@ class PaymentController extends Controller
         $user = $request->user();
         $externalId = (string) Str::uuid();
         // Human-quotable order number shared by every line in this checkout.
-        $reference = 'D2K-' . strtoupper(Str::random(8));
+        $reference = '2K-' . strtoupper(Str::random(8));
 
         DB::beginTransaction();
 

@@ -302,9 +302,9 @@ export default function VendorProfilePage() {
             />
             <label className="absolute bottom-0 right-0 bg-white p-2 rounded-full cursor-pointer shadow-sm hover:bg-gray-100 transition">
               {isUploading ? (
-                <Loader2 className="w-4 h-4 animate-spin text-yellow-500" />
+                <Loader2 className="w-4 h-4 animate-spin text-[#6d28d9]" />
               ) : (
-                <Camera className="w-4 h-4 text-yellow-600" />
+                <Camera className="w-4 h-4 text-[#6d28d9]" />
               )}
               <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
             </label>
@@ -317,17 +317,17 @@ export default function VendorProfilePage() {
 
         {/* Vendor Info */}
         <ProfileCard
-          icon={<Store className="w-5 h-5 text-yellow-600" />}
+          icon={<Store className="w-5 h-5 text-[#6d28d9]" />}
           title="Business Name"
           subtitle={vendor?.business_name || "-"}
         />
         <ProfileCard
-          icon={<Mail className="w-5 h-5 text-yellow-600" />}
+          icon={<Mail className="w-5 h-5 text-[#6d28d9]" />}
           title="Email"
           subtitle={user?.email || vendor?.email || "-"}
         />
         <EditableRow
-          icon={<Phone className="w-5 h-5 text-yellow-600" />}
+          icon={<Phone className="w-5 h-5 text-[#6d28d9]" />}
           label="Phone"
           value={phone}
           editing={editingPhone}
@@ -335,13 +335,13 @@ export default function VendorProfilePage() {
           onSave={(v: string) => handleUpdate("phone", v)}
         />
         <ProfileCard
-          icon={<MapPin className="w-5 h-5 text-yellow-600" />}
+          icon={<MapPin className="w-5 h-5 text-[#6d28d9]" />}
           title="Business Address"
           subtitle={location || "-"}
           action={
             <button
               onClick={() => alert("Map picker coming soon")}
-              className="text-yellow-600 hover:text-yellow-700"
+              className="text-[#6d28d9] hover:text-[#5b21b6]"
             >
               <Edit2 size={16} />
             </button>
@@ -352,12 +352,12 @@ export default function VendorProfilePage() {
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <CreditCard className="w-5 h-5 text-yellow-600" />
+              <CreditCard className="w-5 h-5 text-[#6d28d9]" />
               <h4 className="text-sm font-medium text-gray-800">Payment Options</h4>
             </div>
             <button
               onClick={() => openPaymentModal()}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-yellow-500 hover:bg-yellow-600 text-sm font-semibold text-black transition"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#6d28d9] hover:bg-[#5b21b6] text-sm font-semibold text-white transition"
             >
               <Plus size={14} /> Add
             </button>
@@ -378,13 +378,13 @@ export default function VendorProfilePage() {
                 <div className="flex gap-3 items-center">
                   <button
                     onClick={() => openPaymentModal(opt)}
-                    className="text-yellow-600 hover:text-yellow-700"
+                    className="text-[#6d28d9] hover:text-[#5b21b6]"
                   >
                     <Edit2 size={15} />
                   </button>
                   <button
                     onClick={() => handleDeletePayment(opt.id)}
-                    className="text-red-500 hover:text-red-700"
+                    className="text-[#c62828] hover:text-[#8e1f1f]"
                   >
                     <Trash2 size={15} />
                   </button>
@@ -422,7 +422,7 @@ export default function VendorProfilePage() {
                   setPaymentForm((p) => ({ ...p, type_id: id, method_id: "" }));
                   fetchPaymentMethods(id);
                 }}
-                className="w-full border border-gray-200 rounded-xl p-2.5 bg-gray-50 focus:ring-2 focus:ring-yellow-400"
+                className="w-full border border-gray-200 rounded-xl p-2.5 bg-gray-50 focus:ring-2 focus:ring-[#a78bfa]"
               >
                 <option value="">Select Type</option>
                 {paymentTypes.map((t: any) => (
@@ -438,7 +438,7 @@ export default function VendorProfilePage() {
                   setPaymentForm((p) => ({ ...p, method_id: e.target.value }))
                 }
                 disabled={!paymentForm.type_id}
-                className="w-full border border-gray-200 rounded-xl p-2.5 bg-gray-50 focus:ring-2 focus:ring-yellow-400 disabled:opacity-50"
+                className="w-full border border-gray-200 rounded-xl p-2.5 bg-gray-50 focus:ring-2 focus:ring-[#a78bfa] disabled:opacity-50"
               >
                 <option value="">Select Method</option>
                 {paymentMethods.map((m: any) => (
@@ -453,7 +453,7 @@ export default function VendorProfilePage() {
                 placeholder="Enter account / phone number"
                 value={paymentForm.account}
                 onChange={(e) => setPaymentForm((p) => ({ ...p, account: e.target.value }))}
-                className="w-full border border-gray-200 rounded-xl p-2.5 bg-gray-50 focus:ring-2 focus:ring-yellow-400"
+                className="w-full border border-gray-200 rounded-xl p-2.5 bg-gray-50 focus:ring-2 focus:ring-[#a78bfa]"
               />
             </div>
 
@@ -467,7 +467,7 @@ export default function VendorProfilePage() {
               <button
                 onClick={handleSavePayment}
                 disabled={savingPayment}
-                className="px-5 py-2 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold rounded-xl transition disabled:opacity-60"
+                className="px-5 py-2 bg-[#6d28d9] hover:bg-[#5b21b6] text-white font-semibold rounded-xl transition disabled:opacity-60"
               >
                 {savingPayment ? (
                   <Loader2 className="w-4 h-4 animate-spin inline-block" />
@@ -524,14 +524,14 @@ function EditableRow({ icon, label, value, editing, setEditing, onSave }: any) {
               <input
                 value={val}
                 onChange={(e) => setVal(e.target.value)}
-                className="border border-gray-200 rounded-lg px-2 py-1 text-sm w-44 bg-gray-50 focus:ring-2 focus:ring-yellow-400"
+                className="border border-gray-200 rounded-lg px-2 py-1 text-sm w-44 bg-gray-50 focus:ring-2 focus:ring-[#a78bfa]"
               />
               <button
                 onClick={() => {
                   onSave(val);
                   setEditing(false);
                 }}
-                className="p-1 rounded-md bg-yellow-500 text-black font-semibold"
+                className="p-1 rounded-md bg-[#6d28d9] text-white font-semibold"
               >
                 <Check size={14} />
               </button>
@@ -544,7 +544,7 @@ function EditableRow({ icon, label, value, editing, setEditing, onSave }: any) {
       {!editing && (
         <button
           onClick={() => setEditing(true)}
-          className="text-yellow-600 hover:text-yellow-700 transition"
+          className="text-[#6d28d9] hover:text-[#5b21b6] transition"
         >
           <Edit2 size={16} />
         </button>

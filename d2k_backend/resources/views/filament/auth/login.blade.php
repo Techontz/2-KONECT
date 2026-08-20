@@ -7,10 +7,10 @@
     heading, supporting copy and footer are ours.
 --}}
 <x-filament-panels::page.simple>
-    <header class="d2k-card-head">
-        <span class="d2k-card-mark" aria-hidden="true">D2K</span>
-        <h1 class="d2k-card-title">Welcome back</h1>
-        <p class="d2k-card-sub">Sign in to the Direct2Kariakoo Admin Centre.</p>
+    <header class="k-card-head">
+        <img class="k-card-mark" src="{{ asset('img/2konect-mark.png') }}" alt="" width="40" height="40">
+        <h1 class="k-card-title">Welcome back</h1>
+        <p class="k-card-sub">Sign in to the 2KONECT Admin Centre.</p>
     </header>
 
     {{ \Filament\Support\Facades\FilamentView::renderHook(\Filament\View\PanelsRenderHook::AUTH_LOGIN_FORM_BEFORE, scopes: $this->getRenderHookScopes()) }}
@@ -26,8 +26,8 @@
 
     {{ \Filament\Support\Facades\FilamentView::renderHook(\Filament\View\PanelsRenderHook::AUTH_LOGIN_FORM_AFTER, scopes: $this->getRenderHookScopes()) }}
 
-    <p class="d2k-card-foot">
-        This is a restricted area for Direct2Kariakoo staff.<br>
+    <p class="k-card-foot">
+        This is a restricted area for 2KONECT staff.<br>
         Trouble signing in? Contact your system administrator.
     </p>
 </x-filament-panels::page.simple>

@@ -87,7 +87,7 @@ class GoogleAuthController extends Controller
             }
 
             return ['user' => User::create([
-                'name'              => $profile['name'] !== '' ? $profile['name'] : 'D2K Shopper',
+                'name'              => $profile['name'] !== '' ? $profile['name'] : '2KONECT Shopper',
                 'email'             => $profile['email'],
                 'firebase_uid'         => $profile['uid'],
                 'avatar_url'        => $profile['picture'],

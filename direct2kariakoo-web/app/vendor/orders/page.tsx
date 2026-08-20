@@ -97,7 +97,7 @@ export default function VendorOrdersPage() {
       </div>
 
       {error ? (
-        <p role="alert" className="rounded-[var(--radius-sm)] bg-red-50 px-3 py-2 text-[13px] text-[color:var(--color-sale)]">
+        <p role="alert" className="rounded-[var(--radius-sm)] bg-[color:var(--color-danger-soft)] px-3 py-2 text-[13px] font-semibold text-[color:var(--color-danger)]">
           {error}
         </p>
       ) : null}

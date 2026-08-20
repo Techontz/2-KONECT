@@ -1,12 +1,12 @@
 {{--
-    Direct2Kariakoo — layout for the panel's authentication pages.
+    2KONECT — layout for the panel's authentication pages.
 
     Overrides Filament's simple layout to place a branded rail beside the form.
     It still delegates to `layout.base`, so every stylesheet, script, Livewire
     binding and render hook Filament expects is untouched — only the
     composition around the slot changes.
 
-    The rail is hidden below `lg` (see d2k-admin.css); a compact wordmark takes
+    The rail is hidden below `lg` (see k-admin.css); a compact wordmark takes
     its place so a phone gets the brand without the decoration.
 --}}
 @php
@@ -22,16 +22,16 @@
         'subheading' => null,
     ])
 
-    <div class="fi-simple-layout d2k-auth-shell">
-        <aside class="d2k-brand-rail" aria-hidden="true">
-            <p class="d2k-wordmark">direct<span>2kariakoo</span></p>
+    <div class="fi-simple-layout k-auth-shell">
+        <aside class="k-brand-rail" aria-hidden="true">
+            <p class="k-wordmark">2<span>KONECT</span></p>
 
             <div>
-                <p class="d2k-rail-eyebrow">Admin Centre</p>
-                <h2 class="d2k-rail-title">The control room for Tanzania&rsquo;s marketplace.</h2>
-                <p class="d2k-rail-copy">
-                    Approve sellers, verify stores, manage the catalogue and keep orders
-                    moving &mdash; all from one place.
+                <p class="k-rail-eyebrow">Admin Centre</p>
+                <h2 class="k-rail-title">The control room for 2KONECT.</h2>
+                <p class="k-rail-copy">
+                    Approve sellers, source what shoppers ask for, move imports through
+                    customs and keep every order tracked &mdash; from one place.
                 </p>
 
                 {{-- `$livewire` is the page component; `$this` inside a Blade
@@ -45,23 +45,23 @@
                         : [];
                 @endphp
 
-                <dl class="d2k-rail-stats">
+                <dl class="k-rail-stats">
                     @foreach ($brandStats as $stat)
                         <div>
-                            <dd class="d2k-rail-stat-value">{{ $stat['value'] }}</dd>
-                            <dt class="d2k-rail-stat-label">{{ $stat['label'] }}</dt>
+                            <dd class="k-rail-stat-value">{{ $stat['value'] }}</dd>
+                            <dt class="k-rail-stat-label">{{ $stat['label'] }}</dt>
                         </div>
                     @endforeach
                 </dl>
             </div>
 
-            <p class="d2k-rail-foot">Direct2Kariakoo &middot; Dar es Salaam, Tanzania</p>
+            <p class="k-rail-foot">2KONECT &middot; Dar es Salaam, Tanzania</p>
         </aside>
 
-        <div class="fi-simple-main-ctn d2k-auth-form-side">
-            <main class="fi-simple-main d2k-auth-card">
-                <div class="d2k-mobile-brand">
-                    <p class="d2k-wordmark">direct<span>2kariakoo</span></p>
+        <div class="fi-simple-main-ctn k-auth-form-side">
+            <main class="fi-simple-main k-auth-card">
+                <div class="k-mobile-brand">
+                    <p class="k-wordmark">2<span>KONECT</span></p>
                 </div>
 
                 {{ $slot }}

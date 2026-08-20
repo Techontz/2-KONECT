@@ -101,7 +101,7 @@ export function Header({ onOpenMenu }: { onOpenMenu?(): void }) {
             <Link href="/help" prefetch={false} className="opacity-90 hover:opacity-100">
               Help
             </Link>
-            <LanguageSwitcher tone="dark" />
+            <LanguageSwitcher tone="dark" compact />
           </span>
         </div>
       </div>

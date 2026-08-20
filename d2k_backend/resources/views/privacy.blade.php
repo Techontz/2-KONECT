@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Privacy Policy - Direct2Kariakoo</title>
+    <title>Privacy Policy - 2KONECT</title>
     <style>
         body {
             font-family: "Segoe UI", Arial, sans-serif;
@@ -51,7 +51,7 @@
     </header>
 
     <div class="container">
-        <p>Direct2Kariakoo ("we", "our", or "us") operates the Direct2Kariakoo mobile application and website.</p>
+        <p>2KONECT ("we", "our", or "us") operates the 2KONECT mobile application and website.</p>
 
         <h2>1. Information We Collect</h2>
         <ul>
@@ -74,11 +74,11 @@
         <p>You may request access, correction, or deletion of your personal data at any time by contacting us.</p>
 
         <h2>5. Contact Us</h2>
-        <p>Email: <a href="mailto:support@direct2kariakoo.com">support@direct2kariakoo.com</a></p>
+        <p>Email: <a href="mailto:support@2konect.com">support@2konect.com</a></p>
     </div>
 
     <footer>
-        © {{ date('Y') }} Direct2Kariakoo. All rights reserved.
+        © {{ date('Y') }} 2KONECT. All rights reserved.
     </footer>
 </body>
 </html>

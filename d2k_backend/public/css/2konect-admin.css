@@ -1,5 +1,5 @@
 /*
- * Direct2Kariakoo — admin theme.
+ * 2KONECT — admin theme.
  *
  * Loaded on every panel page through FilamentAsset, so the login screen and
  * the dashboard share one set of tokens. It layers on top of Filament's own
@@ -9,13 +9,15 @@
  */
 
 :root {
-    --d2k-yellow: #fee500;
-    --d2k-yellow-dark: #f5d500;
-    --d2k-ink: #101010;
-    --d2k-canvas: #f4f4f6;
-    --d2k-line: #e6e6e9;
-    --d2k-action: #3866df;
-    --d2k-radius: 14px;
+    --k-purple: #6d28d9;
+    --k-purple-dark: #5b21b6;
+    --k-purple-deep: #2e1065;
+    --k-purple-soft: #ede9fe;
+    --k-ink: #0c0a18;
+    --k-canvas: #f7f7fb;
+    --k-line: #e9e8ef;
+    --k-action: #6d28d9;
+    --k-radius: 14px;
 }
 
 /* ==========================================================================
@@ -24,25 +26,25 @@
 
 /* The layout Blade deliberately emits no Tailwind display utilities here, so
    these rules own the composition regardless of stylesheet order. */
-.d2k-auth-shell {
+.k-auth-shell {
     display: flex;
     flex-direction: column;
     align-items: center;
     min-height: 100vh;
-    background: var(--d2k-canvas);
+    background: var(--k-canvas);
 }
 
 @media (min-width: 1024px) {
     /* Brand rail on the left, the form on the right. Below lg the rail is
        hidden entirely rather than squeezed — see the mobile block. */
-    .d2k-auth-shell {
+    .k-auth-shell {
         display: grid;
         grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
         align-items: stretch;
     }
 }
 
-.d2k-auth-form-side {
+.k-auth-form-side {
     display: flex;
     flex: 1 1 auto;
     width: 100%;
@@ -50,11 +52,13 @@
     justify-content: center;
 }
 
-.d2k-brand-rail {
+.k-brand-rail {
     display: none;
     position: relative;
     overflow: hidden;
-    background: var(--d2k-ink);
+    background:
+        radial-gradient(120% 130% at 8% 0%, rgba(167, 139, 250, 0.30) 0%, rgba(167, 139, 250, 0) 55%),
+        linear-gradient(155deg, var(--k-purple-deep) 0%, var(--k-purple) 100%);
     color: #fff;
     padding: 3.5rem 4rem;
     flex-direction: column;
@@ -62,20 +66,20 @@
 }
 
 @media (min-width: 1024px) {
-    .d2k-brand-rail { display: flex; }
+    .k-brand-rail { display: flex; }
 }
 
 /* Halftone dots — the storefront's texture, drawn in CSS so the login stays
    a single lightweight request. */
-.d2k-brand-rail::before {
+.k-brand-rail::before {
     content: "";
     position: absolute;
     inset: 0;
-    background-image: radial-gradient(rgba(254, 229, 0, 0.16) 1.6px, transparent 1.7px);
+    background-image: radial-gradient(rgba(255, 255, 255, 0.16) 1.6px, transparent 1.7px);
     background-size: 22px 22px;
 }
 
-.d2k-brand-rail::after {
+.k-brand-rail::after {
     content: "";
     position: absolute;
     right: -12rem;
@@ -83,35 +87,35 @@
     width: 34rem;
     height: 34rem;
     border-radius: 9999px;
-    border: 2.75rem solid rgba(254, 229, 0, 0.09);
+    border: 2.75rem solid rgba(255, 255, 255, 0.08);
 }
 
-.d2k-brand-rail > * { position: relative; }
+.k-brand-rail > * { position: relative; }
 
-.d2k-wordmark {
+.k-wordmark {
     font-size: 1.75rem;
     font-weight: 900;
     letter-spacing: -0.02em;
     line-height: 1;
 }
-.d2k-wordmark span { color: var(--d2k-yellow); }
+.k-wordmark span { color: #c4b5fd; }
 
-.d2k-rail-eyebrow {
+.k-rail-eyebrow {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
     margin-bottom: 1.25rem;
     padding: 0.3rem 0.75rem;
     border-radius: 9999px;
-    background: rgba(254, 229, 0, 0.14);
-    color: var(--d2k-yellow);
+    background: rgba(255, 255, 255, 0.14);
+    color: #ddd6fe;
     font-size: 0.68rem;
     font-weight: 800;
     letter-spacing: 0.14em;
     text-transform: uppercase;
 }
 
-.d2k-rail-title {
+.k-rail-title {
     font-size: clamp(2rem, 3vw, 2.75rem);
     font-weight: 900;
     line-height: 1.08;
@@ -119,7 +123,7 @@
     max-width: 18ch;
 }
 
-.d2k-rail-copy {
+.k-rail-copy {
     margin-top: 1rem;
     max-width: 42ch;
     font-size: 0.95rem;
@@ -127,19 +131,19 @@
     color: rgba(255, 255, 255, 0.66);
 }
 
-.d2k-rail-stats {
+.k-rail-stats {
     display: flex;
     flex-wrap: wrap;
     gap: 2.5rem;
     margin-top: 2.5rem;
 }
-.d2k-rail-stat-value {
+.k-rail-stat-value {
     font-size: 1.5rem;
     font-weight: 900;
-    color: var(--d2k-yellow);
+    color: #ffffff;
     line-height: 1;
 }
-.d2k-rail-stat-label {
+.k-rail-stat-label {
     margin-top: 0.3rem;
     font-size: 0.72rem;
     letter-spacing: 0.1em;
@@ -147,53 +151,53 @@
     color: rgba(255, 255, 255, 0.5);
 }
 
-.d2k-rail-foot {
+.k-rail-foot {
     font-size: 0.75rem;
     color: rgba(255, 255, 255, 0.4);
 }
 
 /* ---- the form side ---- */
 
-.d2k-auth-form-side { padding: 1.5rem; }
+.k-auth-form-side { padding: 1.5rem; }
 
 @media (min-width: 1024px) {
-    .d2k-auth-form-side { padding: 3rem; }
+    .k-auth-form-side { padding: 3rem; }
 }
 
-.d2k-auth-card {
+.k-auth-card {
     width: 100%;
     max-width: 27rem;
-    border-radius: var(--d2k-radius);
+    border-radius: var(--k-radius);
     padding: 2rem 1.75rem;
     background: #fff;
-    border: 1px solid var(--d2k-line);
+    border: 1px solid var(--k-line);
     box-shadow: 0 1px 2px rgba(16, 16, 16, 0.04), 0 12px 32px -12px rgba(16, 16, 16, 0.12);
-    animation: d2k-rise 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: k-rise 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @media (min-width: 640px) {
-    .d2k-auth-card { padding: 2.5rem 2.25rem; }
+    .k-auth-card { padding: 2.5rem 2.25rem; }
 }
 
-@keyframes d2k-rise {
+@keyframes k-rise {
     from { opacity: 0; transform: translateY(10px); }
     to   { opacity: 1; transform: none; }
 }
 
 /* Respect a reduced-motion preference rather than animating regardless. */
 @media (prefers-reduced-motion: reduce) {
-    .d2k-auth-card { animation: none; }
+    .k-auth-card { animation: none; }
 }
 
 /* Filament's own centred header — brand logo plus page heading — is replaced
    by the card header below, so it is removed rather than shown twice. */
 .fi-simple-header,
-.d2k-auth-card .fi-logo,
-.d2k-auth-card > .fi-simple-header { display: none; }
+.k-auth-card .fi-logo,
+.k-auth-card > .fi-simple-header { display: none; }
 
-.d2k-card-head { margin-bottom: 1.5rem; }
+.k-card-head { margin-bottom: 1.5rem; }
 
-.d2k-card-mark {
+.k-card-mark {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -201,30 +205,31 @@
     height: 2.75rem;
     margin-bottom: 1rem;
     border-radius: 12px;
-    background: var(--d2k-yellow);
-    color: var(--d2k-ink);
-    font-weight: 900;
+    /* Now an image of the official mark rather than three letters, so the
+       plate is transparent and the artwork carries the brand. */
+    background: transparent;
+    object-fit: contain;
     font-size: 0.95rem;
     letter-spacing: -0.02em;
 }
 
-.d2k-card-title {
+.k-card-title {
     font-size: 1.4rem;
     font-weight: 900;
     letter-spacing: -0.02em;
-    color: var(--d2k-ink);
+    color: var(--k-ink);
 }
 
-.d2k-card-sub {
+.k-card-sub {
     margin-top: 0.3rem;
     font-size: 0.875rem;
     color: #6b6b6b;
 }
 
-.d2k-card-foot {
+.k-card-foot {
     margin-top: 1.5rem;
     padding-top: 1.25rem;
-    border-top: 1px solid var(--d2k-line);
+    border-top: 1px solid var(--k-line);
     font-size: 0.75rem;
     line-height: 1.6;
     color: #9a9a9a;
@@ -232,18 +237,18 @@
 }
 
 /* Shown only where the brand rail is not: the phone and tablet header. */
-.d2k-mobile-brand {
+.k-mobile-brand {
     text-align: center;
     margin-bottom: 1.5rem;
 }
 @media (min-width: 1024px) {
-    .d2k-mobile-brand { display: none; }
+    .k-mobile-brand { display: none; }
 }
-.d2k-mobile-brand .d2k-wordmark {
+.k-mobile-brand .k-wordmark {
     font-size: 1.5rem;
-    color: var(--d2k-ink);
+    color: var(--k-ink);
 }
-.d2k-mobile-brand .d2k-wordmark span { color: #8a7a00; }
+.k-mobile-brand .k-wordmark span { color: #8a7a00; }
 
 /* ==========================================================================
    2. Inputs and actions — shared by login and every resource form
@@ -252,12 +257,12 @@
 .fi-input-wrp {
     border-radius: 10px !important;
     box-shadow: none !important;
-    --tw-ring-color: var(--d2k-line) !important;
+    --tw-ring-color: var(--k-line) !important;
     transition: box-shadow 0.15s ease, --tw-ring-color 0.15s ease;
 }
 
 .fi-input-wrp:focus-within {
-    --tw-ring-color: var(--d2k-action) !important;
+    --tw-ring-color: var(--k-action) !important;
     --tw-ring-offset-width: 0 !important;
     box-shadow: 0 0 0 3px rgba(56, 102, 223, 0.14) !important;
 }
@@ -268,7 +273,7 @@
 
 /* Sellers and staff sign in from phones. A 36px control is fiddly with a
    thumb, so inputs on the auth card match the button's touch target. */
-.d2k-auth-card .fi-input {
+.k-auth-card .fi-input {
     min-height: 2.75rem;
 }
 
@@ -278,9 +283,9 @@
 
 /* Primary actions carry the brand rather than Filament's amber default. */
 .fi-btn.fi-color-primary,
-.d2k-auth-card .fi-btn[type="submit"] {
-    background: var(--d2k-ink) !important;
-    color: var(--d2k-yellow) !important;
+.k-auth-card .fi-btn[type="submit"] {
+    background: var(--k-purple) !important;
+    color: #ffffff !important;
     border-radius: 10px !important;
     font-weight: 700 !important;
     box-shadow: none !important;
@@ -288,23 +293,23 @@
 }
 
 .fi-btn.fi-color-primary:hover,
-.d2k-auth-card .fi-btn[type="submit"]:hover {
-    background: #262626 !important;
+.k-auth-card .fi-btn[type="submit"]:hover {
+    background: var(--k-purple-dark) !important;
 }
 
 .fi-btn.fi-color-primary:active,
-.d2k-auth-card .fi-btn[type="submit"]:active {
+.k-auth-card .fi-btn[type="submit"]:active {
     transform: translateY(1px);
 }
 
 /* Keyboard focus must stay obvious — the hover style alone is not enough. */
 .fi-btn:focus-visible,
 .fi-link:focus-visible {
-    outline: 2px solid var(--d2k-action);
+    outline: 2px solid var(--k-action);
     outline-offset: 2px;
 }
 
-.d2k-auth-card .fi-btn[type="submit"] {
+.k-auth-card .fi-btn[type="submit"] {
     height: 2.85rem;
 }
 
@@ -315,21 +320,21 @@
 .fi-sidebar-header,
 .fi-topbar > nav {
     box-shadow: none !important;
-    border-bottom: 1px solid var(--d2k-line);
+    border-bottom: 1px solid var(--k-line);
 }
 
 .fi-sidebar-nav-groups .fi-sidebar-item-active .fi-sidebar-item-button {
-    background: var(--d2k-ink) !important;
+    background: var(--k-purple-soft) !important;
 }
 .fi-sidebar-nav-groups .fi-sidebar-item-active .fi-sidebar-item-label,
 .fi-sidebar-nav-groups .fi-sidebar-item-active .fi-sidebar-item-icon {
-    color: var(--d2k-yellow) !important;
+    color: var(--k-purple) !important;
 }
 
 .fi-section,
 .fi-wi-stats-overview-stat,
 .fi-ta-ctn {
-    border-radius: var(--d2k-radius) !important;
+    border-radius: var(--k-radius) !important;
 }
 
 .fi-wi-stats-overview-stat {
@@ -337,15 +342,16 @@
 }
 
 /* The brand logo in the sidebar. */
-.d2k-sidebar-mark {
+.k-sidebar-mark {
     display: inline-flex;
-    align-items: baseline;
+    align-items: center;
+    gap: 0.45rem;
     font-size: 1.15rem;
     font-weight: 900;
     letter-spacing: -0.02em;
-    color: var(--d2k-ink);
+    color: var(--k-ink);
 }
-.d2k-sidebar-mark span { color: #b39f00; }
+.k-sidebar-mark span { color: var(--k-purple); }
 
-.dark .d2k-sidebar-mark { color: #fff; }
-.dark .d2k-sidebar-mark span { color: var(--d2k-yellow); }
+.dark .k-sidebar-mark { color: #fff; }
+.dark .k-sidebar-mark span { color: #c4b5fd; }

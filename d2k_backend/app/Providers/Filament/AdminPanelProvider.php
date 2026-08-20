@@ -33,10 +33,10 @@ class AdminPanelProvider extends PanelProvider
             // different presentation.
             ->login(\App\Filament\Pages\Auth\Login::class)
             ->colors([
-                // D2K yellow is a brand surface, not a legible action colour,
-                // so the accent stays a readable slate/blue and the yellow is
-                // applied through the theme stylesheet where it belongs.
-                'primary' => Color::Zinc,
+                // The 2KONECT purple is legible as an action colour, so unlike
+                // the previous brand's yellow it can be the panel's primary
+                // directly rather than being confined to the stylesheet.
+                'primary' => Color::hex('#6d28d9'),
                 'warning' => Color::Amber,
                 'success' => Color::Emerald,
                 'danger'  => Color::Rose,
@@ -49,7 +49,7 @@ class AdminPanelProvider extends PanelProvider
             ->darkMode(false)
             ->brandLogo(fn () => view('filament.brand-logo'))
             ->brandLogoHeight('1.75rem')
-            ->favicon(asset('favicon.svg'))
+            ->favicon(asset('favicon.ico'))
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
@@ -65,7 +65,7 @@ class AdminPanelProvider extends PanelProvider
                 \App\Filament\Widgets\PendingVendors::class,
                 \App\Filament\Widgets\LowStockProducts::class,
             ])
-            ->brandName('Direct2Kariakoo')
+            ->brandName('2KONECT')
             // Grouped so the sidebar reads as an operations centre rather than
             // an alphabetical list of database tables. These names must match
             // the $navigationGroup on each resource — the previous list named
@@ -75,6 +75,9 @@ class AdminPanelProvider extends PanelProvider
                 'Catalogue',
                 'Sellers',
                 'Orders & customers',
+                // Sourcing requests and seller applications: the two queues a
+                // person actually works through every day.
+                'Sourcing',
                 'Storefront',
                 'Settings',
             ])
@@ -97,7 +100,7 @@ class AdminPanelProvider extends PanelProvider
     }
 
     /**
-     * Load the D2K stylesheet on every panel page.
+     * Load the 2KONECT stylesheet on every panel page.
      *
      * Registered as a Filament asset rather than injected into a view, so the
      * login screen, dashboard and every resource all receive it, and Filament
@@ -106,8 +109,8 @@ class AdminPanelProvider extends PanelProvider
     public function boot(): void
     {
         FilamentAsset::register([
-            Css::make('d2k-admin', asset('css/d2k-admin.css')),
-            Js::make('d2k-admin', asset('js/d2k-admin.js')),
+            Css::make('2konect-admin', asset('css/2konect-admin.css')),
+            Js::make('2konect-admin', asset('js/2konect-admin.js')),
         ]);
     }
 }

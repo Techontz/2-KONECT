@@ -109,7 +109,7 @@ export function HowImportsWork() {
         <Link
           href="/shop/abroad"
           prefetch={false}
-          className="text-[13px] font-bold text-[color:var(--color-brand)] hover:underline"
+          className="tap text-[13px] font-bold text-[color:var(--color-brand)] hover:underline"
         >
           Browse imported products →
         </Link>
