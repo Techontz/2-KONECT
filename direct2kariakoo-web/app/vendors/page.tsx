@@ -9,6 +9,7 @@ import { usePageContent, useT } from "@/lib/i18n";
 import { SiteChrome } from "@/components/layout/SiteChrome";
 import { ListingView } from "@/components/product/ListingView";
 import { EmptyState, Skeleton } from "@/components/ui/Primitives";
+import { VerifiedBadge } from "@/components/sourcing/Trust";
 
 /**
  * Seller directory.
@@ -78,7 +79,7 @@ function VendorsContent() {
 
   // ---- the directory ----
   return (
-    <div className="shell py-4">
+    <div className="shell py-4 pb-tabbar">
       <nav className="mb-3 flex items-center gap-1 text-[12px] text-[color:var(--color-ink-muted)]">
         <Link href="/" className="crumb hover:underline">{t("common.home")}</Link>
         <span aria-hidden="true">›</span>
@@ -86,7 +87,7 @@ function VendorsContent() {
       </nav>
 
       <header className="mb-4">
-        <h1 className="text-[24px] font-black leading-tight md:text-[28px]">{copy.title}</h1>
+        <h1 className="text-[24px] font-black tracking-[-0.025em] md:text-[30px]">{copy.title}</h1>
         {copy.intro ? (
           <p className="mt-1 max-w-2xl text-[14px] text-[color:var(--color-ink-muted)]">{copy.intro}</p>
         ) : null}
@@ -105,7 +106,7 @@ function VendorsContent() {
               <Link
                 href={`/vendors?id=${vendor.id}`}
                 prefetch={false}
-                className="flex h-full items-center gap-3 rounded-[var(--radius-md)] bg-[color:var(--color-surface)] p-4 ring-1 ring-[color:var(--color-line)] transition-shadow hover:shadow-[var(--shadow-hover)]"
+                className="flex h-full items-center gap-3 rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 transition-all hover:border-[color:var(--color-brand-200)] hover:shadow-[var(--shadow-card)]"
               >
                 <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[color:var(--color-surface-alt)] text-[17px] font-black">
                   {vendor.logo ? (
@@ -119,14 +120,7 @@ function VendorsContent() {
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-1.5">
                     <span className="clamp-1 text-[15px] font-extrabold">{vendor.name}</span>
-                    {vendor.is_verified ? (
-                      <span
-                        title={t("product.verifiedSeller")}
-                        className="shrink-0 text-[12px] font-black text-[color:var(--color-success)]"
-                      >
-                        ✓
-                      </span>
-                    ) : null}
+                    {vendor.is_verified ? <VerifiedBadge size="sm" label="" className="shrink-0 px-1" /> : null}
                   </span>
                   <span className="block text-[12px] text-[color:var(--color-ink-muted)]">
                     {vendor.product_count.toLocaleString()} {copy.productsLabel}

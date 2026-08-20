@@ -17,16 +17,20 @@ export default function HelpPage() {
 
   return (
     <SiteChrome>
-      <div className="shell py-4">
+      <div className="shell py-4 pb-tabbar">
         <nav className="mb-3 flex items-center gap-1 text-[12px] text-[color:var(--color-ink-muted)]">
           <Link href="/" className="crumb hover:underline">{t("common.home")}</Link>
           <span aria-hidden="true">›</span>
           <span className="font-semibold text-[color:var(--color-ink)]">{copy.title}</span>
         </nav>
 
-        <header className="mb-5 overflow-hidden rounded-[var(--radius-md)] bg-[color:var(--color-brand)] p-6 md:p-8">
-          <h1 className="text-[26px] font-black leading-tight md:text-[32px]">{copy.title}</h1>
-          {copy.intro ? <p className="mt-2 max-w-xl text-[14px] opacity-80">{copy.intro}</p> : null}
+        <header className="brand-ground mb-5 overflow-hidden rounded-[var(--radius-md)] p-6 md:p-8">
+          <h1 className="text-[26px] font-black leading-tight tracking-[-0.025em] text-white md:text-[32px]">
+            {copy.title}
+          </h1>
+          {copy.intro ? (
+            <p className="mt-2 max-w-xl text-[14px] text-white/80">{copy.intro}</p>
+          ) : null}
         </header>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -35,7 +39,7 @@ export default function HelpPage() {
               key={topic.href + topic.name}
               href={topic.href}
               prefetch={false}
-              className="group rounded-[var(--radius-md)] bg-[color:var(--color-surface)] p-4 ring-1 ring-[color:var(--color-line)] transition-shadow hover:shadow-[var(--shadow-hover)]"
+              className="group rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 transition-all hover:border-[color:var(--color-brand-200)] hover:shadow-[var(--shadow-card)]"
             >
               <p className="flex items-center gap-2 text-[15px] font-extrabold">
                 {topic.name}

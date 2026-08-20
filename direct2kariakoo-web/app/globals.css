@@ -26,11 +26,15 @@
   --color-brand-50:  #f5f3ff;
   --color-brand-ink: #ffffff;      /* text on brand purple                  */
 
-  /* --- Ink -------------------------------------------------------------- */
+  /* --- Ink ---------------------------------------------------------------
+     A four-step ramp, every step of which clears WCAG AA (4.5:1) against
+     every surface in this file — including the tinted ones. The previous
+     faintest grey was 2.8:1 on white, which is a suggestion of text rather
+     than text, and it was carrying real labels. */
   --color-ink: #0c0a18;
   --color-ink-soft: #3a3550;
-  --color-ink-muted: #6b6880;
-  --color-ink-faint: #9b98ab;
+  --color-ink-muted: #575369;
+  --color-ink-faint: #6b6879;
 
   /* --- Surfaces --------------------------------------------------------- */
   --color-canvas: #f7f7fb;         /* page background                       */
@@ -52,7 +56,7 @@
 
   /* --- Semantic --------------------------------------------------------- */
   --color-sale: #d81f45;
-  --color-sale-soft: #fdecef;
+  --color-sale-soft: #fef2f4;
   --color-success: #0f7a52;
   --color-success-soft: #e6f6ef;
   --color-warn: #a45309;

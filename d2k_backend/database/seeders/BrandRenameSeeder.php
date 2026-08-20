@@ -47,6 +47,13 @@ class BrandRenameSeeder extends Seeder
                 $vendor->is_verified = true;
                 $vendor->verification_status = 'verified';
                 $vendor->verified_at ??= now();
+
+                // And it wears the 2KONECT mark rather than whatever stock
+                // placeholder the development account was left with.
+                $logo = 'vendor_logos/2konect-official.png';
+                if (\Illuminate\Support\Facades\Storage::disk('public')->exists($logo)) {
+                    $vendor->logo = $logo;
+                }
             }
 
             $vendor->save();

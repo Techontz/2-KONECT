@@ -369,7 +369,9 @@ function AvailabilityToggle({
               {segment.icon ? <span aria-hidden="true">{segment.icon}</span> : null}
               <span className="truncate">{segment.label}</span>
             </span>
-            <span className="text-[10px] font-semibold opacity-70">
+            {/* Not `opacity`: fading the segment's own colour drops the count
+                below the contrast floor on the tinted background. */}
+            <span className="text-[10px] font-semibold text-[color:var(--color-ink-faint)]">
               {segment.count.toLocaleString()}
             </span>
           </button>
@@ -467,7 +469,7 @@ function FilterPanel({
                 onClick={() => setOrigin(origin === country.code ? undefined : country.code)}
               >
                 <span aria-hidden="true">{country.flag}</span> {country.name}
-                <span className="opacity-55">{country.count}</span>
+                <span className="text-[color:var(--color-ink-faint)]">{country.count}</span>
               </Chip>
             ))}
           </div>
