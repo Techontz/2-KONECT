@@ -45,10 +45,43 @@ function TransitIcon({ sourcing, className }: { sourcing: Sourcing; className?: 
 }
 
 /**
- * The card badge.
+ * The strip across the top of a product card's details block.
  *
- * Small, but it is the thing that has to read at a glance in a grid of
- * twenty: a flag, three words, and the number of days.
+ * Where it is and when it lands, on one tinted full-width row directly under
+ * the photograph. It is deliberately the loudest thing in the block after the
+ * price: in a grid of twenty otherwise identical listings, this is the field
+ * that changes the decision.
+ */
+export function AvailabilityStrip({
+  sourcing,
+  className = "",
+}: {
+  sourcing: Sourcing;
+  className?: string;
+}) {
+  const t = tone(sourcing);
+
+  return (
+    <p
+      className={`flex items-center gap-1.5 border-b ${t.line} ${t.soft} px-2.5 py-1.5 text-[11px] font-bold leading-none ${t.text} ${className}`}
+    >
+      <span aria-hidden="true" className="text-[12px] leading-none">
+        {sourcing.is_local ? sourcing.destination?.flag ?? "🇹🇿" : "🌍"}
+      </span>
+      <span className="truncate">{sourcing.label}</span>
+      <span aria-hidden="true" className="opacity-40">·</span>
+      <span className="shrink-0 whitespace-nowrap font-semibold">
+        {sourcing.lead_time.label}
+      </span>
+    </p>
+  );
+}
+
+/**
+ * The compact badge.
+ *
+ * Used where the strip would be too heavy — a cart line, an order item — and
+ * the surrounding row already carries its own structure.
  */
 export function AvailabilityBadge({
   sourcing,

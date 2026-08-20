@@ -107,6 +107,7 @@ _quarantine/
 
 # -------------------------------------------------------- old project copies --
 DOCS/
+# The previous deployment copy, if it is ever restored alongside the project.
 DIRECT2KARIAKOO BACKEND/
 *.zip
 *.tar

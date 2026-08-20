@@ -8,10 +8,13 @@
 export const BRAND = {
   /** Full display name. */
   name: "2KONECT",
-  /** Short form used where space is tight (mobile header, tab title). */
+  /**
+   * Short form used where space is tight (a tab title, a dense badge).
+   *
+   * Never a substitute for the name in prose: the brand is 2KONECT, and
+   * "KONECT" on its own is a different word.
+   */
   short: "2K",
-  /** Wordmark split so the header can render the two halves differently. */
-  wordmark: { lead: "2", tail: "KONECT" },
   tagline: "Connect to what you need.",
   /** One line explaining what the marketplace actually does. */
   promise:

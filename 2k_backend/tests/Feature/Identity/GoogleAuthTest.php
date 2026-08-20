@@ -12,7 +12,7 @@ use Tests\TestCase;
 /**
  * Google sign-in is for customers and only customers.
  *
- * The verifier itself is swapped for a stub: these tests are about what D2K
+ * The verifier itself is swapped for a stub: these tests are about what 2KONECT
  * does with a *verified* Google identity. That the token really is Google's is
  * the verifier's job, and it is asserted separately below.
  */

@@ -1,7 +1,7 @@
 # 2KONECT — storefront
 
 The customer-facing marketplace and the seller console. Next.js 15 (App
-Router), React 19, Tailwind v4, talking to the Laravel API in `../d2k_backend`.
+Router), React 19, Tailwind v4, talking to the Laravel API in `../2k_backend`.
 
 See the [repository README](../README.md) for what 2KONECT is and how to run
 both halves together.

@@ -5,6 +5,11 @@ import { BRAND } from "@/lib/brand";
 /**
  * The 2KONECT lockup: the official mark plus the wordmark.
  *
+ * The wordmark is set in a single colour on purpose. Splitting it — a dark
+ * "2" against a purple "KONECT" — reads as a brand called KONECT with a
+ * numeral stuck on the front, which is not the name. One weight, one colour,
+ * one word.
+ *
  * One component so the header, footer, auth screens and the seller console all
  * render the same thing at the same proportions. `tone` picks the artwork that
  * has contrast against the surface it is placed on, rather than each caller
@@ -25,13 +30,13 @@ export function Logo({
   const mark = tone === "dark" ? BRAND.logo.white : BRAND.logo.purple;
 
   const dimensions = {
-    sm: { box: "h-6 w-6", text: "text-[15px]" },
-    md: { box: "h-8 w-8", text: "text-[19px]" },
-    lg: { box: "h-11 w-11", text: "text-[26px]" },
+    sm: { box: "h-6 w-6", text: "text-[15px]", gap: "gap-1.5" },
+    md: { box: "h-8 w-8", text: "text-[19px]", gap: "gap-2" },
+    lg: { box: "h-11 w-11", text: "text-[26px]", gap: "gap-2.5" },
   }[size];
 
   return (
-    <span className={`inline-flex items-center gap-2 ${className}`}>
+    <span className={`inline-flex items-center ${dimensions.gap} ${className}`}>
       {/* Decorative: the wordmark beside it carries the name, and when the
           wordmark is hidden the surrounding link is labelled instead. */}
       <img
@@ -42,14 +47,11 @@ export function Logo({
       />
       {showWordmark ? (
         <span
-          className={`${dimensions.text} font-black leading-none tracking-[-0.03em] ${
+          className={`${dimensions.text} font-black leading-none tracking-[-0.035em] ${
             tone === "dark" ? "text-white" : "text-[color:var(--color-ink)]"
           }`}
         >
-          {BRAND.wordmark.lead}
-          <span className={tone === "dark" ? "text-[color:var(--color-brand-200)]" : "text-[color:var(--color-brand)]"}>
-            {BRAND.wordmark.tail}
-          </span>
+          {BRAND.name}
         </span>
       ) : null}
     </span>

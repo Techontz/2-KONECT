@@ -8,17 +8,19 @@ tracked the whole way in.
 
 ```
 2KONECT MARKET/
-├── direct2kariakoo-web/   Next.js 15 storefront and seller console
-├── d2k_backend/           Laravel 12 API and Filament admin panel
-├── d2k_mobile/            Flutter app (unchanged — reads the same API)
-└── DOCS/                  Brand artwork and reference recordings
+├── 2k-web/         Next.js 15 storefront and seller console
+├── 2k_backend/     Laravel 12 API and Filament admin panel
+├── d2k_mobile/     Flutter app (unchanged — reads the same API)
+└── DOCS/           Brand artwork and reference recordings
 ```
 
-> The `direct2kariakoo-web` and `d2k_backend` directory names are pre-rename
-> and are kept as they are on purpose: the backend's `.env` and its
-> `public/storage` symlink hold absolute paths into them, and the Flutter app
-> and deployment scripts were built against them. Nothing a shopper can see
-> carries the old name.
+> Two absolute paths point into `2k_backend` and have to move with it if it is
+> ever renamed again: `FILESYSTEM_PUBLIC_ROOT` in `.env`, and the
+> `public/storage` symlink. Get either wrong and every product photograph
+> 404s while the rest of the site looks perfectly healthy.
+>
+> `d2k_mobile` keeps its name: the Flutter app is a separate piece of work and
+> its build configuration was written against that path.
 
 ---
 
@@ -51,7 +53,7 @@ MySQL.
 ### API
 
 ```bash
-cd d2k_backend
+cd 2k_backend
 composer install
 cp .env.example .env && php artisan key:generate   # first run only
 php artisan migrate
@@ -65,7 +67,7 @@ place, or product photography 404s.
 ### Storefront
 
 ```bash
-cd direct2kariakoo-web
+cd 2k-web
 npm install
 npm run dev
 ```
@@ -105,10 +107,10 @@ php artisan db:seed --class=BrandRenameSeeder
 ## Checks
 
 ```bash
-cd d2k_backend        && php artisan test     # 129 tests
-cd direct2kariakoo-web && npm run typecheck   # tsc --noEmit
-cd direct2kariakoo-web && npm run lint
-cd direct2kariakoo-web && npm run build
+cd 2k_backend && php artisan test     # 129 tests
+cd 2k-web     && npm run typecheck   # tsc --noEmit
+cd 2k-web     && npm run lint
+cd 2k-web     && npm run build
 ```
 
 ---

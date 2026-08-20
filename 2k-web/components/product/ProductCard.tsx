@@ -7,7 +7,7 @@ import { useCart } from "@/lib/store/cart";
 import { useWishlist } from "@/lib/store/wishlist";
 import type { ProductCard as ProductCardModel } from "@/lib/types";
 import { PriceBlock, RatingPill, Tag } from "@/components/ui/Primitives";
-import { AvailabilityBadge, DeliveryEstimate } from "@/components/sourcing/Availability";
+import { AvailabilityStrip } from "@/components/sourcing/Availability";
 import { VerifiedBadge } from "@/components/sourcing/Trust";
 
 /**
@@ -124,12 +124,14 @@ export function ProductCard({
           ) : null}
         </div>
 
-        {/* ---- details ---- */}
-        <div className="flex flex-1 flex-col gap-1.5 border-t border-[color:var(--color-line)] p-2.5 sm:p-3">
-          {/* Where it is, first — the thing that separates two otherwise
-              identical listings on this marketplace. */}
-          {sourcing ? <AvailabilityBadge sourcing={sourcing} size="sm" className="self-start" /> : null}
+        {/* ---- where it is, and when ----
+            A full-width tinted strip rather than a small pill: this is the
+            field that decides between two otherwise identical listings, so it
+            gets the width of the card. */}
+        {sourcing ? <AvailabilityStrip sourcing={sourcing} /> : null}
 
+        {/* ---- details ---- */}
+        <div className="flex flex-1 flex-col gap-1.5 p-2.5 sm:p-3">
           <h3 className="clamp-2 min-h-[34px] text-[13px] leading-[17px] text-[color:var(--color-ink)]">
             {product.name}
           </h3>
@@ -141,18 +143,14 @@ export function ProductCard({
             <RatingPill rating={product.rating} />
           </div>
 
-          <div className="mt-auto flex flex-col gap-1 pt-1">
-            {sourcing ? <DeliveryEstimate sourcing={sourcing} size="sm" /> : null}
-
-            {product.vendor ? (
-              <span className="flex min-w-0 items-center gap-1">
-                <span className="clamp-1 text-[10px] text-[color:var(--color-ink-faint)]">
-                  {product.vendor.name}
-                </span>
-                {product.vendor.is_verified ? <VerifiedBadge size="sm" label="" className="px-1" /> : null}
+          {product.vendor ? (
+            <span className="mt-auto flex min-w-0 items-center gap-1 pt-1">
+              <span className="clamp-1 text-[10px] text-[color:var(--color-ink-faint)]">
+                {product.vendor.name}
               </span>
-            ) : null}
-          </div>
+              {product.vendor.is_verified ? <VerifiedBadge size="sm" label="" className="px-1" /> : null}
+            </span>
+          ) : null}
         </div>
       </Link>
     </article>
@@ -164,11 +162,12 @@ export function ProductCardSkeleton() {
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)]">
       <div className="skeleton aspect-square w-full rounded-none" />
-      <div className="flex flex-col gap-2 border-t border-[color:var(--color-line)] p-3">
-        <div className="skeleton h-3.5 w-20 rounded" />
+      <div className="skeleton h-[27px] w-full rounded-none border-y border-[color:var(--color-line)]" />
+      <div className="flex flex-col gap-2 p-3">
         <div className="skeleton h-3 w-full rounded" />
         <div className="skeleton h-3 w-2/3 rounded" />
         <div className="skeleton h-4 w-1/2 rounded" />
+        <div className="skeleton h-3 w-16 rounded" />
         <div className="skeleton h-3 w-24 rounded" />
       </div>
     </div>
