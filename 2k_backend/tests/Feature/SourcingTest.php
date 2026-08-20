@@ -418,6 +418,12 @@ class SourcingTest extends TestCase
         $this->assertFalse($order['can_request_delivery'], 'a second job must not be openable');
         $this->assertSame('pickup', $order['delivery_request']['mode']);
         $this->assertEquals(0, $order['delivery_request']['fee']);
+        // The order page prints this; it used to be absent from this payload
+        // and present in the deliveries list, so the same job read two ways.
+        $this->assertSame('Requested', $order['delivery_request']['status_label']);
+
+        $listed = $this->getJson('/api/shop/deliveries')->assertOk()->json('requests.0');
+        $this->assertSame($order['delivery_request'], $listed);
     }
 
     public function test_one_shopper_cannot_arrange_delivery_for_another(): void

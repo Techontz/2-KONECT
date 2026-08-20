@@ -116,7 +116,7 @@ class DeliveryRequestController extends Controller
 
         return response()->json([
             'message' => 'Delivery requested.',
-            'request' => $this->present($delivery),
+            'request' => $delivery->payload(),
         ], 201);
     }
 
@@ -125,7 +125,7 @@ class DeliveryRequestController extends Controller
         $requests = DeliveryRequest::where('user_id', $request->user()->id)
             ->orderByDesc('id')
             ->get()
-            ->map(fn ($row) => $this->present($row));
+            ->map(fn ($row) => $row->payload());
 
         return response()->json(['requests' => $requests]);
     }
@@ -166,33 +166,5 @@ class DeliveryRequestController extends Controller
         } while (DeliveryRequest::where('reference', $reference)->exists());
 
         return $reference;
-    }
-
-    private function present(DeliveryRequest $row): array
-    {
-        return [
-            'reference'        => $row->reference,
-            'order_reference'  => $row->order_reference,
-            'mode'             => $row->mode,
-            'status'           => $row->status,
-            'status_label'     => match ($row->status) {
-                'requested'   => 'Requested',
-                'scheduled'   => 'Scheduled',
-                'in_progress' => 'On the way',
-                'delivered'   => 'Delivered',
-                'cancelled'   => 'Cancelled',
-                default       => ucfirst($row->status),
-            },
-            'recipient_name'   => $row->recipient_name,
-            'recipient_phone'  => $row->recipient_phone,
-            'address'          => $row->address,
-            'pickup_point'     => $row->pickup_point,
-            'preferred_date'   => $row->preferred_date?->toDateString(),
-            'preferred_window' => $row->preferred_window,
-            'fee'              => (float) $row->fee,
-            'courier_name'     => $row->courier_name,
-            'courier_phone'    => $row->courier_phone,
-            'created_at'       => $row->created_at?->toIso8601String(),
-        ];
     }
 }

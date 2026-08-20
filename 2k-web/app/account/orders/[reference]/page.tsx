@@ -293,12 +293,18 @@ function OrderDetail() {
                     ? `Collect from ${order.delivery_request.pickup_point}`
                     : `Delivery to ${order.delivery_request.address}`}
                 </p>
+                {/* Whatever the buyer actually asked for — a day, a window,
+                    or neither. Falling back to "we will confirm" when they had
+                    given us a preference reads as though it was ignored. */}
                 <p className="mt-0.5 text-[12px] text-[color:var(--color-ink-muted)]">
-                  {order.delivery_request.preferred_date
-                    ? `${formatDate(order.delivery_request.preferred_date)}${
-                        order.delivery_request.preferred_window ? ` · ${order.delivery_request.preferred_window}` : ""
-                      }`
-                    : "We will confirm a time with you."}
+                  {[
+                    order.delivery_request.preferred_date
+                      ? formatDate(order.delivery_request.preferred_date)
+                      : null,
+                    order.delivery_request.preferred_window,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ") || "We will confirm a time with you."}
                 </p>
                 {order.delivery_request.courier_name ? (
                   <p className="mt-1 text-[12px]">

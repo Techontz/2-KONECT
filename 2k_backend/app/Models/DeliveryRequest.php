@@ -31,4 +31,45 @@ class DeliveryRequest extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    /** How this status reads to the person waiting for the package. */
+    public function statusLabel(): string
+    {
+        return match ($this->status) {
+            'requested'   => 'Requested',
+            'scheduled'   => 'Scheduled',
+            'in_progress' => 'On the way',
+            'delivered'   => 'Delivered',
+            'cancelled'   => 'Cancelled',
+            default       => ucfirst(str_replace('_', ' ', $this->status)),
+        };
+    }
+
+    /**
+     * The shape every surface renders.
+     *
+     * Defined once: the order page and the deliveries list were building this
+     * separately, and the order page's copy was missing `status_label`, so it
+     * printed "2KONECT Rides · undefined" beside a real delivery.
+     */
+    public function payload(): array
+    {
+        return [
+            'reference'        => $this->reference,
+            'order_reference'  => $this->order_reference,
+            'mode'             => $this->mode,
+            'status'           => $this->status,
+            'status_label'     => $this->statusLabel(),
+            'recipient_name'   => $this->recipient_name,
+            'recipient_phone'  => $this->recipient_phone,
+            'address'          => $this->address,
+            'pickup_point'     => $this->pickup_point,
+            'preferred_date'   => $this->preferred_date?->toDateString(),
+            'preferred_window' => $this->preferred_window,
+            'fee'              => (float) $this->fee,
+            'courier_name'     => $this->courier_name,
+            'courier_phone'    => $this->courier_phone,
+            'created_at'       => $this->created_at?->toIso8601String(),
+        ];
+    }
 }

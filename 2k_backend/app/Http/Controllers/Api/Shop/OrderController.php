@@ -268,32 +268,21 @@ class OrderController extends Controller
         return $reference;
     }
 
-    /** The last-mile job attached to this order, if one has been asked for. */
+    /**
+     * The last-mile job attached to this order, if one has been asked for.
+     *
+     * Shaped by the model rather than here: this page and the deliveries list
+     * were building the same object separately, and this copy was missing
+     * `status_label`, so the order page printed "2KONECT Rides · undefined"
+     * beside a real delivery.
+     */
     private function deliveryRequestPayload(string $reference): ?array
     {
-        $request = DeliveryRequest::where('order_reference', $reference)
+        return DeliveryRequest::where('order_reference', $reference)
             ->whereNotIn('status', ['cancelled'])
             ->latest('id')
-            ->first();
-
-        if (! $request) {
-            return null;
-        }
-
-        return [
-            'reference'        => $request->reference,
-            'mode'             => $request->mode,
-            'status'           => $request->status,
-            'recipient_name'   => $request->recipient_name,
-            'recipient_phone'  => $request->recipient_phone,
-            'address'          => $request->address,
-            'pickup_point'     => $request->pickup_point,
-            'preferred_date'   => $request->preferred_date?->toDateString(),
-            'preferred_window' => $request->preferred_window,
-            'fee'              => (float) $request->fee,
-            'courier_name'     => $request->courier_name,
-            'courier_phone'    => $request->courier_phone,
-        ];
+            ->first()
+            ?->payload();
     }
 
     private function groupToPayload(string $reference, array $ids): array
