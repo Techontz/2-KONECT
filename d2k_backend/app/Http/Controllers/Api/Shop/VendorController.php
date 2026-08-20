@@ -178,8 +178,12 @@ class VendorController extends Controller
             return response()->json(['message' => 'This account is not a seller account.'], 403);
         }
 
+        // The original four remain, plus the stops an imported line makes on
+        // its way in. A seller shipping locally never sees the extra ones.
         $data = $request->validate([
-            'status' => 'required|in:processing,shipped,completed,cancelled',
+            'status'   => 'required|in:processing,dispatched,in_transit,arrived_tz,customs,local_warehouse,shipped,out_for_delivery,completed,cancelled',
+            'note'     => 'nullable|string|max:200',
+            'location' => 'nullable|string|max:120',
         ]);
 
         // Scoping by vendor_id is the authorisation check: a seller simply
@@ -195,11 +199,25 @@ class VendorController extends Controller
         }
 
         DB::transaction(function () use ($order, $data) {
-            if ($data['status'] === 'cancelled') {
-                Product::where('id', $order->product_id)->increment('stock', $order->quantity);
+            // Imports never reserved local stock, so there is none to return.
+            if ($data['status'] === 'cancelled' && $order->fulfilment_type !== \App\Support\Sourcing::IMPORT) {
+                $order->offer_id
+                    ? \App\Models\ProductOffer::where('id', $order->offer_id)->increment('stock', $order->quantity)
+                    : Product::where('id', $order->product_id)->increment('stock', $order->quantity);
             }
 
             $order->update(['status' => $data['status']]);
+
+            // Record the move so the buyer's tracking timeline reflects it.
+            \App\Models\OrderEvent::create([
+                'reference'   => $order->reference,
+                'order_id'    => $order->id,
+                'status'      => $data['status'],
+                'title'       => \App\Support\OrderJourney::label($data['status']),
+                'note'        => $data['note'] ?? \App\Support\OrderJourney::note($data['status']),
+                'location'    => $data['location'] ?? null,
+                'happened_at' => now(),
+            ]);
         });
 
         return response()->json(['message' => 'Order updated.', 'status' => $data['status']]);

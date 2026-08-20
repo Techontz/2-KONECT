@@ -4,7 +4,11 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\OrderResource\Pages;
 use App\Models\Order;
+use App\Models\OrderEvent;
 use App\Models\Product;
+use App\Models\ProductOffer;
+use App\Support\OrderJourney;
+use App\Support\Sourcing;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
@@ -54,13 +58,12 @@ class OrderResource extends Resource
                         ->dehydrated(false),
 
                     Forms\Components\Select::make('status')
-                        ->options([
-                            'pending'    => 'Pending',
-                            'processing' => 'Processing',
-                            'shipped'    => 'Shipped',
-                            'completed'  => 'Completed',
-                            'cancelled'  => 'Cancelled',
-                        ])
+                        // Every stop on the journey, so an imported order can
+                        // be moved through customs and the warehouse rather
+                        // than jumping from "processing" to "shipped".
+                        ->options(collect(OrderJourney::all())
+                            ->mapWithKeys(fn ($s) => [$s => OrderJourney::label($s)])
+                            ->all())
                         ->required()
                         ->native(false),
 
@@ -90,6 +93,34 @@ class OrderResource extends Resource
 
                     Forms\Components\TextInput::make('quantity')->numeric()->disabled()->dehydrated(false),
                     Forms\Components\TextInput::make('total')->prefix('TZS')->disabled()->dehydrated(false),
+                ]),
+
+            Forms\Components\Section::make('Shipping & tracking')
+                ->description('What the buyer sees on their tracking screen.')
+                ->columns(3)
+                ->schema([
+                    Forms\Components\Select::make('fulfilment_type')
+                        ->label('Type')
+                        ->options([
+                            Sourcing::LOCAL  => 'Local delivery',
+                            Sourcing::IMPORT => 'International order',
+                        ])
+                        ->native(false),
+
+                    Forms\Components\Select::make('source_country')
+                        ->label('From')
+                        ->options(collect(Sourcing::COUNTRIES)->map(fn ($c) => $c['flag'] . ' ' . $c['name'])->all())
+                        ->searchable()
+                        ->native(false),
+
+                    Forms\Components\Select::make('shipping_method')
+                        ->label('Transit')
+                        ->options(collect(Sourcing::SHIPPING_METHODS)->map(fn ($m) => $m['label'])->all())
+                        ->native(false),
+
+                    Forms\Components\TextInput::make('carrier')->maxLength(80),
+                    Forms\Components\TextInput::make('tracking_number')->label('Tracking number')->maxLength(80),
+                    Forms\Components\DatePicker::make('estimated_arrival_at')->label('Estimated arrival'),
                 ]),
 
             Forms\Components\Section::make('Delivery')
@@ -138,14 +169,21 @@ class OrderResource extends Resource
 
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
+                    ->formatStateUsing(fn (string $state) => OrderJourney::label($state))
                     ->color(fn (string $state) => match ($state) {
-                        'completed'  => 'success',
-                        'shipped', 'processing' => 'info',
-                        'pending'    => 'warning',
-                        'cancelled'  => 'danger',
-                        default      => 'gray',
+                        'completed' => 'success',
+                        'cancelled', 'refunded' => 'danger',
+                        'pending'   => 'warning',
+                        default     => 'info',
                     })
                     ->sortable(),
+
+                Tables\Columns\TextColumn::make('fulfilment_type')
+                    ->label('Type')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state) => $state === Sourcing::IMPORT ? '🌍 Import' : '🇹🇿 Local')
+                    ->color(fn (?string $state) => $state === Sourcing::IMPORT ? 'info' : 'success')
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('payment_method')
                     ->label('Payment')
@@ -163,13 +201,15 @@ class OrderResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('status')->options([
-                    'pending'    => 'Pending',
-                    'processing' => 'Processing',
-                    'shipped'    => 'Shipped',
-                    'completed'  => 'Completed',
-                    'cancelled'  => 'Cancelled',
-                ]),
+                Tables\Filters\SelectFilter::make('status')->options(
+                    collect(OrderJourney::all())->mapWithKeys(fn ($s) => [$s => OrderJourney::label($s)])->all()
+                ),
+                Tables\Filters\SelectFilter::make('fulfilment_type')
+                    ->label('Type')
+                    ->options([
+                        Sourcing::LOCAL  => 'Local delivery',
+                        Sourcing::IMPORT => 'International order',
+                    ]),
                 Tables\Filters\SelectFilter::make('vendor')
                     ->relationship('vendor', 'business_name')
                     ->searchable()
@@ -182,20 +222,31 @@ class OrderResource extends Resource
                     ->label('Mark next stage')
                     ->icon('heroicon-m-arrow-right-circle')
                     ->color('success')
-                    ->visible(fn (Order $order) => in_array($order->status, ['pending', 'processing', 'shipped'], true))
+                    ->visible(fn (Order $order) => static::nextStage($order) !== null)
                     ->requiresConfirmation()
+                    ->modalDescription(fn (Order $order) => 'Moves to: ' . OrderJourney::label(static::nextStage($order) ?? ''))
                     ->action(function (Order $order) {
-                        $next = match ($order->status) {
-                            'pending'    => 'processing',
-                            'processing' => 'shipped',
-                            'shipped'    => 'completed',
-                            default      => $order->status,
-                        };
+                        $next = static::nextStage($order);
+
+                        if ($next === null) {
+                            return;
+                        }
 
                         $order->update(['status' => $next]);
 
+                        // The buyer's timeline is read from recorded events,
+                        // so moving an order has to leave a trace.
+                        OrderEvent::create([
+                            'reference'   => $order->reference,
+                            'order_id'    => $order->id,
+                            'status'      => $next,
+                            'title'       => OrderJourney::label($next),
+                            'note'        => OrderJourney::note($next),
+                            'happened_at' => now(),
+                        ]);
+
                         Notification::make()->success()
-                            ->title("Order {$order->reference} is now {$next}")
+                            ->title("Order {$order->reference}: " . OrderJourney::label($next))
                             ->send();
                     }),
 
@@ -210,8 +261,22 @@ class OrderResource extends Resource
                         DB::transaction(function () use ($order) {
                             // Cancelling must give the units back, or stock
                             // leaks away every time an order falls through.
-                            Product::where('id', $order->product_id)->increment('stock', $order->quantity);
+                            // An import never held local units to return.
+                            if ($order->fulfilment_type !== Sourcing::IMPORT) {
+                                $order->offer_id
+                                    ? ProductOffer::where('id', $order->offer_id)->increment('stock', $order->quantity)
+                                    : Product::where('id', $order->product_id)->increment('stock', $order->quantity);
+                            }
+
                             $order->update(['status' => 'cancelled']);
+
+                            OrderEvent::create([
+                                'reference'   => $order->reference,
+                                'order_id'    => $order->id,
+                                'status'      => OrderJourney::CANCELLED,
+                                'title'       => OrderJourney::label(OrderJourney::CANCELLED),
+                                'happened_at' => now(),
+                            ]);
                         });
 
                         Notification::make()->success()
@@ -228,6 +293,28 @@ class OrderResource extends Resource
                     ->deselectRecordsAfterCompletion()
                     ->action(fn ($records) => $records->each->update(['status' => 'completed'])),
             ]);
+    }
+
+    /**
+     * The next stop on this order's own route.
+     *
+     * A local delivery skips the import stops entirely, so "next" is read off
+     * the right path rather than hard-coded.
+     */
+    private static function nextStage(Order $order): ?string
+    {
+        if (! OrderJourney::isOpen($order->status)) {
+            return null;
+        }
+
+        $path  = OrderJourney::path($order->fulfilment_type ?? Sourcing::LOCAL);
+        $index = array_search($order->status, $path, true);
+
+        if ($index === false) {
+            return null;
+        }
+
+        return $path[$index + 1] ?? null;
     }
 
     public static function getPages(): array

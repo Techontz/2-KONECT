@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use App\Support\Media;
 use App\Support\Money;
+use App\Support\Sourcing;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
@@ -46,9 +47,23 @@ class ProductCardResource extends JsonResource
                 'name' => $this->subcategory->name,
             ]),
             'vendor' => $this->whenLoaded('vendor', fn () => [
-                'id'   => $this->vendor->id,
-                'name' => $this->vendor->business_name,
+                'id'          => $this->vendor->id,
+                'name'        => $this->vendor->business_name,
+                // Drives the card's verified checkmark, so a shopper can weigh
+                // the seller without opening the product.
+                'is_verified' => (bool) $this->vendor->is_verified,
             ]),
+
+            // Where the item is and when it lands — the distinction the whole
+            // storefront is organised around.
+            'sourcing' => Sourcing::payload(
+                $this->availability,
+                $this->source_country,
+                $this->lead_time_min_days,
+                $this->lead_time_max_days,
+                $this->shipping_method,
+                $this->fulfilment_location,
+            ),
             'badges' => [
                 // Mirrors the reference storefront's card badges. Derived from
                 // real columns — nothing here is decorative invention.

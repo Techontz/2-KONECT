@@ -149,3 +149,7 @@ chrome-profile*/
 .eslintcache
 coverage/
 .nyc_output/
+
+# Local database and env backups taken before the 2KONECT transformation.
+.backups/
+*.pre-2konect.bak

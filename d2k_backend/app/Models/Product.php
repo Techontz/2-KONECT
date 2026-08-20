@@ -22,10 +22,19 @@ class Product extends Model
         'location',
         'custom_fields',
         'short_description',
+        // Where the item is and how long it takes to arrive. See App\Support\Sourcing.
+        'availability',
+        'source_country',
+        'lead_time_min_days',
+        'lead_time_max_days',
+        'shipping_method',
+        'fulfilment_location',
     ];
 
     protected $casts = [
-        'custom_fields' => 'array',
+        'custom_fields'      => 'array',
+        'lead_time_min_days' => 'integer',
+        'lead_time_max_days' => 'integer',
     ];
 
     // Eager load all useful relationships
@@ -72,4 +81,40 @@ class Product extends Model
         return $this->hasMany(ProductReview::class);
     }
 
+    /** Alternative ways to buy this product — see ProductOffer. */
+    public function offers()
+    {
+        return $this->hasMany(ProductOffer::class);
+    }
+
+    /** Is this item already in the country, or does it have to be brought in? */
+    public function isImport(): bool
+    {
+        return $this->availability === \App\Support\Sourcing::IMPORT;
+    }
+
+    /** The "where is it / when do I get it" block the storefront renders. */
+    public function sourcing(): array
+    {
+        return \App\Support\Sourcing::payload(
+            $this->availability,
+            $this->source_country,
+            $this->lead_time_min_days,
+            $this->lead_time_max_days,
+            $this->shipping_method,
+            $this->fulfilment_location,
+        );
+    }
+
+    /* ---------------- scopes ---------------- */
+
+    public function scopeLocal($query)
+    {
+        return $query->where('availability', \App\Support\Sourcing::LOCAL);
+    }
+
+    public function scopeImported($query)
+    {
+        return $query->where('availability', \App\Support\Sourcing::IMPORT);
+    }
 }

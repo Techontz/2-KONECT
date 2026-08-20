@@ -10,6 +10,9 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Section;
+use Filament\Forms\Components\Toggle;
+use App\Support\Sourcing;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ImageColumn;
@@ -69,6 +72,97 @@ class ProductResource extends Resource
                 ->label('Main Product Image')
                 ->columnSpanFull(),
 
+            // ---- where the item actually is -------------------------------
+            // The distinction the whole storefront is built around, so it is
+            // set here rather than inferred from anything.
+            Section::make('Availability & sourcing')
+                ->description('Is this in Tanzania now, or is it brought in when ordered?')
+                ->columns(2)
+                ->columnSpanFull()
+                ->schema([
+                    Select::make('availability')
+                        ->label('Where is it?')
+                        ->options([
+                            Sourcing::LOCAL  => 'In Tanzania — ready to ship',
+                            Sourcing::IMPORT => 'Order from abroad — sourced on demand',
+                        ])
+                        ->default(Sourcing::LOCAL)
+                        ->required()
+                        ->live()
+                        ->native(false),
+
+                    Select::make('source_country')
+                        ->label('Ships from')
+                        ->options(collect(Sourcing::COUNTRIES)->map(fn ($c) => $c['flag'] . ' ' . $c['name'])->all())
+                        ->default(Sourcing::HOME_COUNTRY)
+                        ->searchable()
+                        ->native(false),
+
+                    Select::make('shipping_method')
+                        ->label('Transit')
+                        ->options(collect(Sourcing::SHIPPING_METHODS)->map(fn ($m) => $m['label'])->all())
+                        ->native(false)
+                        // Only meaningful once something has to travel.
+                        ->visible(fn (callable $get) => $get('availability') === Sourcing::IMPORT),
+
+                    TextInput::make('fulfilment_location')
+                        ->label('Ships out of')
+                        ->placeholder('Dar es Salaam warehouse')
+                        ->maxLength(255),
+
+                    TextInput::make('lead_time_min_days')
+                        ->label('Delivery from (days)')
+                        ->numeric()->minValue(1)->maxValue(180)
+                        ->helperText('Leave blank to use the default for this type.'),
+
+                    TextInput::make('lead_time_max_days')
+                        ->label('Delivery to (days)')
+                        ->numeric()->minValue(1)->maxValue(180),
+                ]),
+
+            // ---- the same product, bought a different way -----------------
+            Section::make('Alternative buying options')
+                ->description('Add the imported version of this product so shoppers can compare price against arrival time.')
+                ->collapsed()
+                ->columnSpanFull()
+                ->schema([
+                    Repeater::make('offers')
+                        ->relationship()
+                        ->label('')
+                        ->addActionLabel('Add a buying option')
+                        ->columns(3)
+                        ->schema([
+                            Select::make('availability')
+                                ->options([
+                                    Sourcing::LOCAL  => 'In Tanzania',
+                                    Sourcing::IMPORT => 'From abroad',
+                                ])
+                                ->default(Sourcing::IMPORT)
+                                ->required()
+                                ->native(false),
+
+                            Select::make('source_country')
+                                ->label('Ships from')
+                                ->options(collect(Sourcing::COUNTRIES)->map(fn ($c) => $c['flag'] . ' ' . $c['name'])->all())
+                                ->searchable()
+                                ->native(false),
+
+                            Select::make('shipping_method')
+                                ->label('Transit')
+                                ->options(collect(Sourcing::SHIPPING_METHODS)->map(fn ($m) => $m['label'])->all())
+                                ->native(false),
+
+                            TextInput::make('price')->numeric()->prefix('TZS')->required(),
+                            TextInput::make('was_price')->label('Was')->numeric()->prefix('TZS'),
+                            TextInput::make('stock')->numeric()->default(0)
+                                ->helperText('Imports are sourced to order — stock is optional.'),
+
+                            TextInput::make('lead_time_min_days')->label('From (days)')->numeric(),
+                            TextInput::make('lead_time_max_days')->label('To (days)')->numeric(),
+                            Toggle::make('is_active')->label('Live')->default(true),
+                        ]),
+                ]),
+
             Repeater::make('images')
                 ->relationship()
                 ->schema([
@@ -120,10 +214,31 @@ class ProductResource extends Resource
                     ->label('Stock')
                     ->sortable(),
 
+                TextColumn::make('availability')
+                    ->label('Where')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state) => $state === Sourcing::IMPORT ? 'From abroad' : 'In Tanzania')
+                    ->color(fn (?string $state) => $state === Sourcing::IMPORT ? 'info' : 'success')
+                    ->description(fn ($record) => $record->source_country
+                        ? (Sourcing::country($record->source_country)['name'] ?? $record->source_country)
+                        : null)
+                    ->sortable(),
+
                 TextColumn::make('created_at')
                     ->label('Created')
                     ->dateTime('M d, Y')
                     ->sortable(),
+            ])
+            ->filters([
+                Tables\Filters\SelectFilter::make('availability')
+                    ->label('Availability')
+                    ->options([
+                        Sourcing::LOCAL  => 'In Tanzania',
+                        Sourcing::IMPORT => 'Order from abroad',
+                    ]),
+                Tables\Filters\SelectFilter::make('source_country')
+                    ->label('Ships from')
+                    ->options(collect(Sourcing::COUNTRIES)->map(fn ($c) => $c['name'])->all()),
             ])
             ->defaultSort('id', 'desc');
     }

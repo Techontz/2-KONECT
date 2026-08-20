@@ -5,6 +5,7 @@ namespace App\Http\Resources;
 use App\Support\Media;
 use App\Support\Phone;
 use App\Support\Money;
+use App\Support\Sourcing;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
@@ -31,6 +32,18 @@ class ProductDetailResource extends JsonResource
             'price'       => Money::payload($this->new_price, $this->old_price),
             'stock'       => (int) $this->stock,
             'in_stock'    => $this->stock > 0,
+
+            // Origin, transit mode and the promised window. The product page
+            // leads with this, so it is a first-class part of the payload
+            // rather than something the client has to infer.
+            'sourcing'    => Sourcing::payload(
+                $this->availability,
+                $this->source_country,
+                $this->lead_time_min_days,
+                $this->lead_time_max_days,
+                $this->shipping_method,
+                $this->fulfilment_location,
+            ),
 
             'category' => $this->category ? [
                 'id' => $this->category->id, 'name' => $this->category->name,
@@ -64,6 +77,11 @@ class ProductDetailResource extends JsonResource
 
             // Vendor-entered specs arrive from two places: the structured
             // attribute values and the free-form custom_fields JSON column.
+            // Every way to buy this product, primary first. One entry means
+            // the page renders a single price; two or more turn it into the
+            // local-vs-imported comparison.
+            'buying_options' => $this->buyingOptions(),
+
             'specifications' => $this->specifications(),
 
             'rating' => [
@@ -80,6 +98,36 @@ class ProductDetailResource extends JsonResource
                 'date'    => optional($review->created_at)->format('Y-m-d'),
             ])->values(),
         ];
+    }
+
+    /**
+     * The product's own row is always the first option; alternatives come
+     * from `product_offers`. Sold-out imports are still offered — an import
+     * is sourced on demand — while sold-out local stock is not.
+     */
+    private function buyingOptions(): array
+    {
+        $primary = [
+            'id'       => null,
+            'price'    => Money::payload($this->new_price, $this->old_price),
+            'stock'    => (int) $this->stock,
+            'in_stock' => $this->availability === Sourcing::IMPORT ? true : $this->stock > 0,
+            'seller'   => $this->vendor->business_name ?? '2KONECT',
+            'sourcing' => Sourcing::payload(
+                $this->availability,
+                $this->source_country,
+                $this->lead_time_min_days,
+                $this->lead_time_max_days,
+                $this->shipping_method,
+                $this->fulfilment_location,
+            ),
+        ];
+
+        $alternatives = $this->relationLoaded('offers')
+            ? $this->offers->where('is_active', true)->map(fn ($offer) => $offer->payload())->values()->all()
+            : [];
+
+        return array_merge([$primary], $alternatives);
     }
 
     /** @return array<int, array{label: string, value: string}> */

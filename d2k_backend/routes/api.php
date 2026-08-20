@@ -20,6 +20,9 @@ use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\Shop\AddressController as ShopAddressController;
 use App\Http\Controllers\Api\Shop\CatalogController as ShopCatalogController;
 use App\Http\Controllers\Api\Shop\ChatController as ShopChatController;
+use App\Http\Controllers\Api\Shop\DeliveryRequestController as ShopDeliveryController;
+use App\Http\Controllers\Api\Shop\ProductRequestController as ShopProductRequestController;
+use App\Http\Controllers\Api\Shop\VendorApplicationController as ShopVendorApplicationController;
 use App\Http\Controllers\Api\Shop\SellerController as ShopSellerController;
 use App\Http\Controllers\Api\Shop\OrderController as ShopOrderController;
 use App\Http\Controllers\Api\Shop\VendorController as ShopVendorController;
@@ -50,6 +53,15 @@ Route::prefix('shop')->group(function () {
     Route::get('/categories', [ShopCatalogController::class, 'categories']);
     Route::get('/vendors', [ShopCatalogController::class, 'vendors']);
     Route::get('/categories/{id}', [ShopCatalogController::class, 'category'])->whereNumber('id');
+
+    // Sourcing requests and seller applications are open to signed-out
+    // visitors: someone who cannot find a product, or who wants to sell,
+    // should not have to register before they can say so. Both are throttled
+    // because both write a row that a human then has to read.
+    Route::post('/requests', [ShopProductRequestController::class, 'store'])
+        ->middleware(['optional.auth', 'throttle:10,1']);
+    Route::post('/vendor-applications', [ShopVendorApplicationController::class, 'store'])
+        ->middleware(['optional.auth', 'throttle:6,1']);
 });
 
 // ---------------- PUBLIC ROUTES ----------------
@@ -142,6 +154,20 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/addresses/{id}', [ShopAddressController::class, 'update'])->whereNumber('id');
         Route::delete('/addresses/{id}', [ShopAddressController::class, 'destroy'])->whereNumber('id');
         Route::post('/addresses/{id}/default', [ShopAddressController::class, 'setDefault'])->whereNumber('id');
+
+        // Sourcing requests the shopper has made.
+        Route::get('/requests', [ShopProductRequestController::class, 'index']);
+        Route::get('/requests/{reference}', [ShopProductRequestController::class, 'show']);
+        Route::post('/requests/{reference}/cancel', [ShopProductRequestController::class, 'cancel']);
+
+        // Their seller application, if any.
+        Route::get('/vendor-applications/mine', [ShopVendorApplicationController::class, 'mine']);
+
+        // 2KONECT Rides — last-mile delivery for a landed order.
+        Route::get('/deliveries', [ShopDeliveryController::class, 'index']);
+        Route::post('/deliveries', [ShopDeliveryController::class, 'store']);
+        Route::post('/deliveries/{reference}/cancel', [ShopDeliveryController::class, 'cancel']);
+        Route::get('/orders/{reference}/delivery-options', [ShopDeliveryController::class, 'options']);
 
         Route::get('/orders', [ShopOrderController::class, 'index']);
         Route::post('/orders', [ShopOrderController::class, 'store']);

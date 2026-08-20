@@ -17,6 +17,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // the admin login — was never actually being used.
         $middleware->alias([
             'auth' => \App\Http\Middleware\Authenticate::class,
+            // Signed-in-if-you-are, public-if-you-are-not. Used by endpoints
+            // a visitor may call but which mean more when we know who called.
+            'optional.auth' => \App\Http\Middleware\OptionalAuth::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

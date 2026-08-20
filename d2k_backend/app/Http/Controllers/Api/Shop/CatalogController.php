@@ -10,6 +10,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\Subcategory;
 use App\Support\Media;
+use App\Support\Sourcing;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -39,7 +40,7 @@ class CatalogController extends Controller
     {
         $shelfSize = 12;
 
-        $payload = Cache::remember('shop.home.v2', 300, function () use ($shelfSize) {
+        $payload = Cache::remember('shop.home.v3', 300, function () use ($shelfSize) {
             $banners = $this->bannerGroups();
 
             return [
@@ -52,6 +53,23 @@ class CatalogController extends Controller
                 'categories'  => $this->categoryRail(),
                 'collections' => $this->categoryCollections(),
                 'shelves'     => $this->homeShelves($shelfSize),
+
+                // The two ways to buy, each with its own row, because the
+                // difference between them is the product.
+                'local' => ProductCardResource::collection(
+                    $this->baseListing()->local()->where('stock', '>', 0)->limit($shelfSize)->get()
+                )->resolve(),
+                'imports' => ProductCardResource::collection(
+                    $this->baseListing()->imported()->limit($shelfSize)->get()
+                )->resolve(),
+                // Listings from sellers an administrator has actually vetted.
+                'verified' => ProductCardResource::collection(
+                    $this->baseListing()
+                        ->whereHas('vendor', fn ($v) => $v->where('is_verified', true))
+                        ->where('stock', '>', 0)
+                        ->limit($shelfSize)
+                        ->get()
+                )->resolve(),
                 'deals'      => ProductCardResource::collection(
                     $this->baseListing()
                         ->whereNotNull('old_price')
@@ -95,6 +113,11 @@ class CatalogController extends Controller
             'max_price'      => 'nullable|numeric|min:0',
             'in_stock'       => 'nullable|boolean',
             'on_sale'        => 'nullable|boolean',
+            // The defining filter: is it here, or is it coming?
+            'availability'   => 'nullable|string|in:local,import',
+            'source_country' => 'nullable|string|size:2',
+            'verified'       => 'nullable|boolean',
+            'max_days'       => 'nullable|integer|min:1|max:120',
             'rating'         => 'nullable|numeric|min:0|max:5',
             'sort'           => 'nullable|string|in:newest,price_asc,price_desc,rating,discount,relevance',
             'per_page'       => 'nullable|integer|min:1|max:' . self::MAX_PER_PAGE,
@@ -135,6 +158,7 @@ class CatalogController extends Controller
             'subcategory',
             'vendor',
             'reviews.user',
+            'offers.vendor',
         ])->find($id);
 
         if (! $product) {
@@ -303,7 +327,18 @@ class CatalogController extends Controller
             ->when(! empty($f['on_sale']), fn ($q) => $q
                 ->whereNotNull('old_price')
                 ->whereColumn('old_price', '>', 'new_price'))
-            ->when($f['rating'] ?? null, fn ($q, $v) => $q->having('reviews_avg_rating', '>=', $v));
+            ->when($f['rating'] ?? null, fn ($q, $v) => $q->having('reviews_avg_rating', '>=', $v))
+            ->when($f['availability'] ?? null, fn ($q, $v) => $q->where('availability', $v))
+            ->when($f['source_country'] ?? null, fn ($q, $v) => $q->where('source_country', strtoupper($v)))
+            ->when(! empty($f['verified']), fn ($q) => $q
+                ->whereHas('vendor', fn ($v) => $v->where('is_verified', true)))
+            // "I need it within N days": compare against the promised upper
+            // bound, falling back to the type default when a listing has not
+            // set one, so an unconfigured product is not silently excluded.
+            ->when($f['max_days'] ?? null, fn ($q, $v) => $q->whereRaw(
+                'COALESCE(lead_time_max_days, CASE WHEN availability = ? THEN ? ELSE ? END) <= ?',
+                [Sourcing::IMPORT, Sourcing::DEFAULT_LEAD_TIME[Sourcing::IMPORT]['max'], Sourcing::DEFAULT_LEAD_TIME[Sourcing::LOCAL]['max'], $v],
+            ));
 
         // Keep the search terms grouped: without the closure the OR would
         // escape the filters above and match the whole catalogue.
@@ -363,11 +398,46 @@ class CatalogController extends Controller
             ->selectRaw('MIN(new_price) AS min_price, MAX(new_price) AS max_price')
             ->first();
 
+        // Availability counts ignore the availability filter itself, so the
+        // shopper can always see how many sit on the other side of the toggle.
+        $availabilityScope = Product::query();
+        $this->applyFilters($availabilityScope, array_diff_key($f, [
+            'min_price' => 1, 'max_price' => 1, 'availability' => 1,
+        ]));
+
+        $byAvailability = (clone $availabilityScope)
+            ->select('availability', DB::raw('COUNT(*) AS total'))
+            ->groupBy('availability')
+            ->pluck('total', 'availability');
+
         return [
             'price' => [
                 'min' => (float) ($range->min_price ?? 0),
                 'max' => (float) ($range->max_price ?? 0),
             ],
+            'availability' => [
+                [
+                    'value' => Sourcing::LOCAL,
+                    'label' => 'In Tanzania',
+                    'count' => (int) ($byAvailability[Sourcing::LOCAL] ?? 0),
+                ],
+                [
+                    'value' => Sourcing::IMPORT,
+                    'label' => 'Order from abroad',
+                    'count' => (int) ($byAvailability[Sourcing::IMPORT] ?? 0),
+                ],
+            ],
+            'origins' => (clone $availabilityScope)
+                ->select('source_country', DB::raw('COUNT(*) AS total'))
+                ->whereNotNull('source_country')
+                ->groupBy('source_country')
+                ->orderByDesc('total')
+                ->get()
+                ->map(fn ($row) => Sourcing::country($row->source_country)
+                    ? Sourcing::country($row->source_country) + ['count' => (int) $row->total]
+                    : null)
+                ->filter()
+                ->values(),
             'subcategories' => (clone $scope)
                 ->select('subcategory_id', DB::raw('COUNT(*) AS total'))
                 ->whereNotNull('subcategory_id')
