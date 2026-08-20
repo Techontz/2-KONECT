@@ -26,10 +26,10 @@ class BrandBannerSeeder extends Seeder
 {
     private const DIRECTORY = 'banners/2konect';
 
-    /** #881BCC and the deep ground it sits on. */
-    private const PURPLE = '#881bcc';
-    private const DEEP   = '#3b0a5f';
-    private const LILAC  = '#c5a6ee';
+    /** #1B2C3E and the deep ground it sits on. */
+    private const BRAND  = '#1b2c3e';
+    private const DEEP   = '#0d1a26';
+    private const TINT   = '#9fb2c4';
 
     public function run(): void
     {
@@ -144,20 +144,20 @@ class BrandBannerSeeder extends Seeder
                 . '<ellipse rx="140" ry="52" fill="none" stroke="%1$s" stroke-width="2" opacity=".35"/>'
                 . '<ellipse rx="60" ry="140" fill="none" stroke="%1$s" stroke-width="2" opacity=".35"/>'
                 . '<path d="M-140 0h280" stroke="%1$s" stroke-width="2" opacity=".45"/></g>',
-                self::LILAC,
+                self::TINT,
             ),
             'pin' => sprintf(
                 '<g opacity=".45" transform="translate(980,150)">'
                 . '<path d="M0 0c60 0 110 48 110 108 0 78-110 172-110 172S-110 186-110 108C-110 48-60 0 0 0z" '
                 . 'fill="none" stroke="%1$s" stroke-width="3"/>'
                 . '<circle cy="105" r="42" fill="none" stroke="%1$s" stroke-width="3"/></g>',
-                self::LILAC,
+                self::TINT,
             ),
             default => sprintf(
                 '<g opacity=".45" transform="translate(1010,230)">'
                 . '<circle r="150" fill="none" stroke="%1$s" stroke-width="24" opacity=".35"/>'
                 . '<circle cx="-70" cy="-80" r="86" fill="none" stroke="%1$s" stroke-width="16" opacity=".28"/></g>',
-                self::LILAC,
+                self::TINT,
             ),
         };
 
@@ -166,11 +166,11 @@ class BrandBannerSeeder extends Seeder
         <defs>
           <linearGradient id="g{$id}" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0" stop-color="{$this->deep()}"/>
-            <stop offset="1" stop-color="{$this->purple()}"/>
+            <stop offset="1" stop-color="{$this->brand()}"/>
           </linearGradient>
           <radialGradient id="h{$id}" cx="10%" cy="0%" r="70%">
-            <stop offset="0" stop-color="#b17ceb" stop-opacity=".45"/>
-            <stop offset="1" stop-color="#b17ceb" stop-opacity="0"/>
+            <stop offset="0" stop-color="#5a748f" stop-opacity=".45"/>
+            <stop offset="1" stop-color="#5a748f" stop-opacity="0"/>
           </radialGradient>
           <pattern id="d{$id}" width="20" height="20" patternUnits="userSpaceOnUse">
             <circle cx="10" cy="10" r="1.6" fill="#ffffff" opacity=".10"/>
@@ -181,12 +181,12 @@ class BrandBannerSeeder extends Seeder
         <rect width="1200" height="400" fill="url(#h{$id})"/>
         {$accent}
         <g transform="translate(64,104)">
-          <text font-family="{$font}" font-size="18" font-weight="800" fill="{$this->lilac()}" letter-spacing="3.4">{$eyebrow}</text>
+          <text font-family="{$font}" font-size="18" font-weight="800" fill="{$this->tint()}" letter-spacing="3.4">{$eyebrow}</text>
           <text y="76" font-family="{$font}" font-size="60" font-weight="900" fill="#ffffff" letter-spacing="-1.8">{$title}</text>
           <text y="126" font-family="{$font}" font-size="23" font-weight="500" fill="#ffffff" opacity=".78">{$subtitle}</text>
           <g transform="translate(0,160)">
             <rect width="290" height="56" rx="28" fill="#ffffff"/>
-            <text x="145" y="35" text-anchor="middle" font-family="{$font}" font-size="19" font-weight="800" fill="{$this->purple()}">{$cta}</text>
+            <text x="145" y="35" text-anchor="middle" font-family="{$font}" font-size="19" font-weight="800" fill="{$this->brand()}">{$cta}</text>
           </g>
         </g>
         </svg>
@@ -198,7 +198,7 @@ class BrandBannerSeeder extends Seeder
         return htmlspecialchars($value, ENT_XML1 | ENT_QUOTES, 'UTF-8');
     }
 
-    private function purple(): string { return self::PURPLE; }
+    private function brand(): string { return self::BRAND; }
     private function deep(): string   { return self::DEEP; }
-    private function lilac(): string  { return self::LILAC; }
+    private function tint(): string   { return self::TINT; }
 }

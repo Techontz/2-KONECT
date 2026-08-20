@@ -36,7 +36,7 @@ class AdminPanelProvider extends PanelProvider
                 // The 2KONECT purple is legible as an action colour, so unlike
                 // the previous brand's yellow it can be the panel's primary
                 // directly rather than being confined to the stylesheet.
-                'primary' => Color::hex('#881bcc'),
+                'primary' => Color::hex('#1b2c3e'),
                 'warning' => Color::Amber,
                 'success' => Color::Emerald,
                 'danger'  => Color::Rose,

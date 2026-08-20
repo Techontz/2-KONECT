@@ -21,13 +21,13 @@ export function Logo({
   showWordmark = true,
   className = "",
 }: {
-  /** "light" = for light surfaces, "dark" = for purple/dark surfaces. */
+  /** "light" = for light surfaces, "dark" = for brand-navy and other dark grounds. */
   tone?: "light" | "dark";
   size?: "sm" | "md" | "lg";
   showWordmark?: boolean;
   className?: string;
 }) {
-  const mark = tone === "dark" ? BRAND.logo.white : BRAND.logo.purple;
+  const mark = tone === "dark" ? BRAND.logo.white : BRAND.logo.brand;
 
   const dimensions = {
     sm: { box: "h-6 w-6", text: "text-[15px]", gap: "gap-1.5" },

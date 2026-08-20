@@ -8,7 +8,7 @@ import { keyOf, lineSourcing, unitPrice, useCart } from "@/lib/store/cart";
 import { useWishlist } from "@/lib/store/wishlist";
 import { SiteChrome } from "@/components/layout/SiteChrome";
 import { AvailabilityBadge, DeliveryEstimate } from "@/components/sourcing/Availability";
-import { Button, ButtonLink, EmptyState, Notice } from "@/components/ui/Primitives";
+import { Button, ButtonLink, EmptyState } from "@/components/ui/Primitives";
 
 /** Matches OrderController::DELIVERY_FEE. */
 const DELIVERY_FEE = 3000;
@@ -55,6 +55,23 @@ export default function CartPage() {
   // The two halves of a mixed basket, so the summary can be honest about the
   // fact that they will not turn up together.
   const importLines = cart.lines.filter((line) => lineSourcing(line)?.is_local === false);
+  const localLines = cart.lines.filter((line) => lineSourcing(line)?.is_local === true);
+
+  /** True when the basket genuinely splits — both halves present. */
+  const mixed = importLines.length > 0 && localLines.length > 0;
+
+  /** The slowest promise within one half, which is when that half completes. */
+  function windowFor(lines: typeof cart.lines): string | null {
+    const slowestLine = lines
+      .map((line) => lineSourcing(line))
+      .filter((sourcing): sourcing is NonNullable<typeof sourcing> => Boolean(sourcing))
+      .sort((a, b) => (b.lead_time.max ?? 0) - (a.lead_time.max ?? 0))[0];
+
+    return slowestLine?.lead_time.label ?? null;
+  }
+
+  const localWindow = windowFor(localLines);
+  const importWindow = windowFor(importLines);
   const slowest = cart.lines.reduce(
     (max, line) => Math.max(max, lineSourcing(line)?.lead_time.max ?? 0),
     0,
@@ -177,19 +194,46 @@ export default function CartPage() {
                 <span className="text-[22px] font-black tracking-[-0.02em]">{formatMoney(total)}</span>
               </div>
 
-              {slowest > 0 ? (
+              {/* ---- how this basket actually arrives ----
+                  A mixed basket does not arrive together, and a single "within
+                  N days" line quietly implies that it does. Each half is
+                  stated separately, with its own count and its own window, so
+                  nobody discovers the difference after paying. */}
+              {mixed ? (
+                <div className="mt-3 space-y-px overflow-hidden rounded-[var(--radius-sm)] border border-[color:var(--color-line)]">
+                  <p className="bg-[color:var(--color-surface-alt)] px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-[color:var(--color-ink-faint)]">
+                    Arriving in two deliveries
+                  </p>
+
+                  <div className="flex items-center justify-between gap-3 bg-[color:var(--color-local-soft)] px-3 py-2.5">
+                    <span className="flex items-center gap-1.5 text-[12.5px] font-bold text-[color:var(--color-local)]">
+                      <span aria-hidden="true">🇹🇿</span>
+                      {localLines.length} {localLines.length === 1 ? "item" : "items"} in Tanzania
+                    </span>
+                    <span className="shrink-0 text-[12.5px] font-bold text-[color:var(--color-local)]">
+                      {localWindow ?? "—"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3 bg-[color:var(--color-import-soft)] px-3 py-2.5">
+                    <span className="flex items-center gap-1.5 text-[12.5px] font-bold text-[color:var(--color-import)]">
+                      <span aria-hidden="true">🌍</span>
+                      {importLines.length} {importLines.length === 1 ? "item" : "items"} from abroad
+                    </span>
+                    <span className="shrink-0 text-[12.5px] font-bold text-[color:var(--color-import)]">
+                      {importWindow ?? "—"}
+                    </span>
+                  </div>
+
+                  <p className="bg-white px-3 py-2 text-[11.5px] leading-snug text-[color:var(--color-ink-muted)]">
+                    Each part is tracked separately, and you are not charged twice for delivery.
+                  </p>
+                </div>
+              ) : slowest > 0 ? (
                 <p className="mt-2 text-[12px] text-[color:var(--color-ink-muted)]">
                   Everything arrives within{" "}
                   <span className="font-bold text-[color:var(--color-ink)]">{slowest} days</span>.
                 </p>
-              ) : null}
-
-              {importLines.length > 0 && importLines.length < cart.lines.length ? (
-                <Notice tone="info" className="mt-3">
-                  Your cart mixes local stock with {importLines.length}{" "}
-                  {importLines.length === 1 ? "imported item" : "imported items"}, so it will
-                  arrive in more than one delivery. You can track each part separately.
-                </Notice>
               ) : null}
 
               <Button size="lg" className="mt-3 w-full" onClick={() => router.push("/checkout")}>

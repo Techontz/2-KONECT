@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 
 import { apiError } from "@/lib/api";
 import { BRAND } from "@/lib/brand";
+import { COUNTRIES } from "@/lib/countries";
 import shop from "@/lib/shop";
 import type { SourcingRequest } from "@/lib/types";
 import { useAuth } from "@/lib/store/auth";
@@ -23,6 +24,15 @@ import { Button, ButtonLink, Notice, Skeleton } from "@/components/ui/Primitives
  * Deliberately open to signed-out visitors — asking someone to register before
  * they can tell us what they want is how you never find out what they want.
  */
+/** The countries the sourcing desk actually buys from today. */
+const SOURCE_CHOICES = ["CN", "AE", "US", "GB", "TR", "IN", "JP", "ZA"] as const;
+
+const URGENCIES = [
+  { value: "standard", label: "No rush" },
+  { value: "soon", label: "Soon" },
+  { value: "urgent", label: "Urgent" },
+] as const;
+
 export default function RequestPage() {
   return (
     <SiteChrome>
@@ -40,6 +50,8 @@ function RequestContent() {
   const [name, setName] = useState(params.get("name") ?? "");
   const [description, setDescription] = useState("");
   const [brand, setBrand] = useState("");
+  const [preferredCountry, setPreferredCountry] = useState("");
+  const [urgency, setUrgency] = useState<"standard" | "soon" | "urgent">("standard");
   const [quantity, setQuantity] = useState(1);
   const [budget, setBudget] = useState("");
   const [contactName, setContactName] = useState("");
@@ -82,6 +94,10 @@ function RequestContent() {
         name: name.trim(),
         description: description.trim() || undefined,
         brand: brand.trim() || undefined,
+        preferred_country: preferredCountry || undefined,
+        // Sent only when it is not the default, so "standard" is recorded as
+        // "they did not ask for anything special" rather than as a choice.
+        urgency: urgency !== "standard" ? urgency : undefined,
         quantity,
         budget_max: budget ? Number(budget) : undefined,
         contact_name: contactName.trim(),
@@ -261,6 +277,52 @@ function RequestContent() {
                   next one even on the narrowest phone — stacking three
                   full-width inputs here is what made this form feel endless. */}
               <TextField label="Brand (optional)" value={brand} onChange={setBrand} placeholder="Apple" />
+
+              {/* Where from, and how soon. Both change what the sourcing desk
+                  actually does — an urgent request is quoted air freight, a
+                  patient one goes by sea for a fraction of the price — so
+                  they are asked here rather than discovered on the phone.
+                  Both are optional: a photo and a name are still enough. */}
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block">
+                  <span className="mb-1.5 block text-[13px] font-bold">
+                    Buy it from (optional)
+                  </span>
+                  <select
+                    value={preferredCountry}
+                    onChange={(event) => setPreferredCountry(event.target.value)}
+                    className={`${FIELD} h-12`}
+                  >
+                    <option value="">Wherever is best</option>
+                    {SOURCE_CHOICES.map((code) => (
+                      <option key={code} value={code}>
+                        {COUNTRIES[code].flag} {COUNTRIES[code].name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <fieldset className="block">
+                  <legend className="mb-1.5 block text-[13px] font-bold">How soon?</legend>
+                  <div className="flex gap-1.5">
+                    {URGENCIES.map((choice) => (
+                      <button
+                        key={choice.value}
+                        type="button"
+                        aria-pressed={urgency === choice.value}
+                        onClick={() => setUrgency(choice.value)}
+                        className={`h-12 flex-1 rounded-[var(--radius-sm)] border px-1 text-[12px] font-bold transition-colors ${
+                          urgency === choice.value
+                            ? "border-[color:var(--color-brand)] bg-[color:var(--color-brand)] text-white"
+                            : "border-[color:var(--color-line-strong)] bg-white text-[color:var(--color-ink-soft)] hover:border-[color:var(--color-brand-200)]"
+                        }`}
+                      >
+                        {choice.label}
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+              </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <label className="block">

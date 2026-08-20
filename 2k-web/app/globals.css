@@ -3,83 +3,106 @@
 /* ==========================================================================
    2KONECT — design system
    --------------------------------------------------------------------------
-   Every colour, radius, shadow and layout constant the storefront uses is
+   Every colour, radius, shadow, gap and layout constant the storefront uses is
    declared once here. Components reference the tokens; nothing hard-codes a
    hex value or a magic pixel number.
 
-   The palette is purple-led but not purple-washed: #881BCC is reserved for
-   brand moments and primary actions, and the page itself is white, near-black
-   and a single quiet grey. Two semantic families carry the idea the whole
-   marketplace turns on — "local", which is here now, and "import", which is
-   on its way.
+   The system is built from #1B2C3E — a deep, desaturated navy that carries
+   the brand by being the darkest thing on the page rather than the loudest.
+   The page itself is white and a single cool grey; the navy owns the header
+   band, the footer, the headings and every primary action. Two semantic
+   families carry the idea the whole marketplace turns on: "local", which is
+   here now, and "import", which is on its way.
    ========================================================================== */
 
 @theme {
-  /* --- Brand ------------------------------------------------------------ */
-  --color-brand: #881bcc;          /* the 2KONECT purple                    */
-  --color-brand-strong: #7216ab;   /* pressed / hover on brand surfaces     */
-  --color-brand-deep: #3b0a5f;     /* dark brand ground, hero, footer       */
-  --color-brand-600: #962cdf;
-  --color-brand-400: #b17ceb;
-  --color-brand-200: #e7d1f5;
-  --color-brand-100: #f4eafa;
-  --color-brand-50:  #faf6fd;
-  --color-brand-ink: #ffffff;      /* text on brand purple                  */
+  /* --- Brand ------------------------------------------------------------
+     #1B2C3E. A deep, desaturated navy — the colour of the header band, the
+     footer, every primary action and every heading. It carries the identity
+     by being the darkest thing on the page rather than the brightest, which
+     is what separates a premium commerce surface from a loud one.
+
+     White on it measures 14.2:1, so the header, the buttons and the footer
+     all clear AAA without a second thought. */
+  --color-brand: #1b2c3e;
+  --color-brand-strong: #142232;   /* pressed / hover on brand surfaces     */
+  --color-brand-deep: #0d1a26;     /* deepest ground — footer, hero floor   */
+  --color-brand-600: #27405a;      /* hover on a dark ground                */
+  --color-brand-400: #5a748f;      /* muted brand text                      */
+  --color-brand-300: #9fb2c4;      /* metadata on a dark ground             */
+  --color-brand-200: #d3dce6;      /* border on a tinted surface            */
+  --color-brand-100: #e8eef4;      /* tinted surface                        */
+  --color-brand-50:  #f4f7fa;      /* faint band behind a section           */
+  --color-brand-ink: #ffffff;      /* text on brand navy                    */
 
   /* --- Ink ---------------------------------------------------------------
-     A four-step ramp, every step of which clears WCAG AA (4.5:1) against
-     every surface in this file — including the tinted ones. The previous
-     faintest grey was 2.8:1 on white, which is a suggestion of text rather
-     than text, and it was carrying real labels. */
-  --color-ink: #0c0a18;
-  --color-ink-soft: #3a3550;
-  --color-ink-muted: #575369;
-  --color-ink-faint: #6b6879;
+     Four steps, every one of which clears WCAG AA (4.5:1) against every
+     surface declared in this file, including the tinted ones. The ramp is
+     the brand hue held at low saturation, so grey text still belongs to the
+     navy rather than sitting beside it. */
+  --color-ink: #101923;
+  --color-ink-soft: #35414f;
+  --color-ink-muted: #55616f;
+  --color-ink-faint: #626d79;
 
   /* --- Surfaces --------------------------------------------------------- */
-  --color-canvas: #f7f7fb;         /* page background                       */
+  --color-canvas: #f4f6f8;         /* page background                       */
   --color-surface: #ffffff;
-  --color-surface-alt: #fafafc;
-  --color-line: #e9e8ef;
-  --color-line-strong: #d6d4e0;
+  --color-surface-alt: #fafbfc;
+  --color-line: #e4e8ec;
+  --color-line-strong: #cfd6dd;
 
   /* --- Availability ------------------------------------------------------
-     The distinction the storefront is organised around. Local is a settled
-     green; import is a travelling blue. Neither is purple, so a badge never
-     competes with the brand or with a primary action. */
+     The distinction the whole marketplace is organised around, and the one
+     pair of colours that must never be mistaken for the brand. Local is a
+     settled green — it is here. Import is an airmail blue — it is coming.
+     Neither is navy, so a badge never competes with a primary action. */
   --color-local: #0f7a52;
-  --color-local-soft: #e6f6ef;
-  --color-local-line: #bde5d3;
-  --color-import: #1d5fd0;
-  --color-import-soft: #eaf1ff;
-  --color-import-line: #c3d8fb;
+  --color-local-soft: #e7f6ef;
+  --color-local-line: #bce5d4;
+  --color-import: #1668c7;
+  --color-import-soft: #e9f1fd;
+  --color-import-line: #c2d8f6;
 
-  /* --- Semantic --------------------------------------------------------- */
+  /* --- Semantic ----------------------------------------------------------
+     Unchanged in meaning: green succeeds, red fails or discounts, amber
+     warns. The redesign moved the brand, not the signals. */
   --color-sale: #d81f45;
-  --color-sale-soft: #fef2f4;
+  --color-sale-soft: #fdf0f3;
   --color-success: #0f7a52;
-  --color-success-soft: #e6f6ef;
+  --color-success-soft: #e7f6ef;
   --color-warn: #a45309;
   --color-warn-soft: #fdf2dc;
   --color-danger: #c62828;
   --color-danger-soft: #fdeaea;
-  --color-verified: #881bcc;
+  --color-verified: #1668c7;
 
-  /* --- Radii ------------------------------------------------------------ */
-  --radius-xs: 6px;
-  --radius-sm: 10px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
-  --radius-xl: 28px;
+  /* --- Radii -------------------------------------------------------------
+     Flatter than before. The reference builds its cards out of hairlines and
+     right angles, not rounded corners, and a 28px radius on a product tile
+     reads as a toy. */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
   --radius-pill: 999px;
 
-  /* --- Elevation --------------------------------------------------------
-     Soft and purple-tinted rather than grey: shadows sit under a coloured
-     brand rather than on a neutral one. */
-  --shadow-card: 0 1px 2px rgba(20, 12, 44, 0.05), 0 1px 3px rgba(20, 12, 44, 0.04);
-  --shadow-hover: 0 8px 24px rgba(20, 12, 44, 0.10);
-  --shadow-pop: 0 16px 44px rgba(20, 12, 44, 0.16);
-  --shadow-brand: 0 8px 22px rgba(136, 27, 204, 0.26);
+  /* --- Elevation ---------------------------------------------------------
+     Border-first. A commerce grid separated by hairlines stays legible at
+     five columns; the same grid separated by shadows turns to soup. Shadows
+     are reserved for things that genuinely float — a menu, a sheet, a card
+     being hovered. */
+  --shadow-card: 0 1px 2px rgba(16, 25, 35, 0.05);
+  --shadow-hover: 0 6px 20px rgba(16, 25, 35, 0.10);
+  --shadow-pop: 0 16px 40px rgba(16, 25, 35, 0.16);
+  --shadow-brand: 0 6px 18px rgba(27, 44, 62, 0.24);
+
+  /* --- Spacing rhythm ----------------------------------------------------
+     Sections are separated by one of two gaps and nothing else, which is
+     what gives a long homepage a pulse instead of a drift. */
+  --gap-section: 28px;
+  --gap-section-lg: 44px;
 
   /* --- Layout ----------------------------------------------------------- */
   --header-height: 60px;
@@ -87,7 +110,7 @@
   /* The bottom bar on a phone; pages add this to their trailing padding so
      nothing is ever parked underneath it. */
   --tabbar-height: 62px;
-  --shell-max: 1440px;
+  --shell-max: 1520px;
 
   --font-sans: var(--font-brand), "Inter", system-ui, -apple-system, sans-serif;
 }
@@ -114,8 +137,12 @@ body {
 }
 
 /* Headings are tight and dark; the type does the work the colour does not. */
+/* Headings are tight and heavy; the type does the work the colour used to.
+   Deliberately no `color` here — a heading inherits, so the same element is
+   navy on a white section and white on a brand ground without either surface
+   having to fight a global rule. Sections that want the brand navy say so. */
 h1, h2, h3, h4 {
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
 }
 
 /* --------------------------------------------------------------------------
@@ -205,11 +232,49 @@ h1, h2, h3, h4 {
 }
 
 /* The deep brand ground used by the hero, the footer and the seller console. */
+/* The deep brand ground: the header band, the footer, the sourcing panel.
+   A near-flat navy with one cool highlight, rather than a gradient wash —
+   the reference keeps its brand band a single solid colour, and the small
+   amount of movement here is only enough to stop a 1600px-wide band from
+   looking like a printed block. */
 .brand-ground {
   background:
-    radial-gradient(120% 130% at 8% 0%, rgba(177, 124, 235, 0.30) 0%, rgba(177, 124, 235, 0) 55%),
-    linear-gradient(155deg, var(--color-brand-deep) 0%, var(--color-brand) 100%);
+    radial-gradient(90% 140% at 12% 0%, rgba(90, 116, 143, 0.28) 0%, rgba(90, 116, 143, 0) 60%),
+    linear-gradient(180deg, var(--color-brand) 0%, var(--color-brand-deep) 100%);
   color: #ffffff;
+}
+
+/* A flat navy band — no gradient at all. Used where the band must read as
+   one solid plane: the utility bar, the header, the seller console rail. */
+.brand-flat {
+  background: var(--color-brand);
+  color: #ffffff;
+}
+
+/* --------------------------------------------------------------------------
+   Section rhythm
+
+   A homepage this long needs a pulse. Every section is separated by exactly
+   one of two gaps, and every section title uses the same block, so the eye
+   learns the interval instead of re-measuring it each time.
+   -------------------------------------------------------------------------- */
+
+.section {
+  margin-top: var(--gap-section);
+}
+@media (min-width: 1024px) {
+  .section { margin-top: var(--gap-section-lg); }
+}
+
+/* A product or category rail that bleeds to the screen edge on a phone but stays
+   inside the shell on a desktop, so a phone can scroll a full-width row
+   without a dead 16px gutter on the right. */
+.bleed {
+  margin-inline: -16px;
+  padding-inline: 16px;
+}
+@media (min-width: 768px) {
+  .bleed { margin-inline: 0; padding-inline: 0; }
 }
 
 /* --------------------------------------------------------------------------
@@ -222,7 +287,7 @@ h1, h2, h3, h4 {
   100% { background-position: 400px 0; }
 }
 .skeleton {
-  background: linear-gradient(90deg, #ecebf2 25%, #f6f5fa 50%, #ecebf2 75%);
+  background: linear-gradient(90deg, #e7ebef 25%, #f3f5f8 50%, #e7ebef 75%);
   background-size: 800px 100%;
   animation: shimmer 1.4s infinite linear;
   border-radius: var(--radius-sm);
@@ -278,10 +343,10 @@ h1, h2, h3, h4 {
 
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-thumb {
-  background-color: rgba(20, 12, 44, 0.16);
+  background-color: rgba(16, 25, 35, 0.18);
   border-radius: var(--radius-pill);
 }
-::-webkit-scrollbar-thumb:hover { background-color: rgba(20, 12, 44, 0.28); }
+::-webkit-scrollbar-thumb:hover { background-color: rgba(16, 25, 35, 0.30); }
 
 /* Number inputs: the spinners are noise on a quantity field. */
 input[type="number"]::-webkit-outer-spin-button,

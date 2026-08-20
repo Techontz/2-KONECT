@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 import shop from "@/lib/shop";
-import type { HomeFeed } from "@/lib/types";
+import type { HomeFeed, ListingFilters } from "@/lib/types";
 import { SiteChrome } from "@/components/layout/SiteChrome";
 import { Hero } from "@/components/home/Hero";
 import {
@@ -14,6 +14,12 @@ import {
   SellBand,
 } from "@/components/home/HomeSections";
 import { CategoryCollection } from "@/components/home/CategoryCollection";
+import {
+  RecentlyViewed,
+  ShopByCountry,
+  ShopByDelivery,
+  TrustBand,
+} from "@/components/home/Discovery";
 import { ProductShelf } from "@/components/product/ProductShelf";
 import { Button, EmptyState } from "@/components/ui/Primitives";
 
@@ -31,6 +37,7 @@ import { Button, EmptyState } from "@/components/ui/Primitives";
  */
 export default function HomePage() {
   const [feed, setFeed] = useState<HomeFeed | null>(null);
+  const [filters, setFilters] = useState<ListingFilters | null>(null);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
@@ -40,6 +47,15 @@ export default function HomePage() {
       .home()
       .then((data) => { if (!cancelled) setFeed(data); })
       .catch(() => { if (!cancelled) setFailed(true); });
+
+    // The catalogue's own facets, for "shop by country". One row is requested
+    // because only the facet block is wanted, not the products — and the
+    // section renders nothing at all if this fails, rather than a country list
+    // that is not backed by stock.
+    shop
+      .products({ per_page: 1 })
+      .then((listing) => { if (!cancelled) setFilters(listing.filters); })
+      .catch(() => undefined);
 
     return () => { cancelled = true; };
   }, []);
@@ -93,7 +109,13 @@ export default function HomePage() {
     />,
   );
 
+  // The two shelves have shown what the difference is; this explains the half
+  // nobody has done before, then opens the door to every source country.
   sections.push(<HowImportsWork key="how" />);
+
+  sections.push(<ShopByCountry key="countries" filters={filters} />);
+
+  sections.push(<ShopByDelivery key="speed" />);
 
   sections.push(
     <ProductShelf
@@ -126,6 +148,8 @@ export default function HomePage() {
 
   sections.push(<RequestBand key="request" />);
 
+  sections.push(<RecentlyViewed key="recent" />);
+
   // Then the catalogue itself: a product row, then a way to browse the same
   // category visually, alternating so the two never stack monotonously.
   shelves.forEach((shelf, index) => {
@@ -154,19 +178,23 @@ export default function HomePage() {
     );
   }
 
+  sections.push(<TrustBand key="trust" />);
+
   sections.push(<SellBand key="sell" />);
 
   return (
     <SiteChrome>
       {/* pb-tabbar keeps the last section clear of the phone navigation bar. */}
-      <div className="shell space-y-5 py-4 pb-tabbar sm:space-y-6">
+      <div className="shell py-4 pb-tabbar">
         <Hero
           categories={feed?.categories ?? []}
           banner={feed?.hero?.[0] ?? feed?.hero_side ?? null}
           loading={loading}
         />
 
-        <CategoryRail categories={feed?.categories ?? []} loading={loading} />
+        <div className="section">
+          <CategoryRail categories={feed?.categories ?? []} loading={loading} />
+        </div>
 
         {sections}
       </div>

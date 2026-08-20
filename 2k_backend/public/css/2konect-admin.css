@@ -9,14 +9,14 @@
  */
 
 :root {
-    --k-purple: #881bcc;
-    --k-purple-dark: #7216ab;
-    --k-purple-deep: #3b0a5f;
-    --k-purple-soft: #f4eafa;
+    --k-brand: #1b2c3e;
+    --k-brand-dark: #142232;
+    --k-brand-deep: #0d1a26;
+    --k-brand-soft: #e8eef4;
     --k-ink: #0c0a18;
     --k-canvas: #f7f7fb;
     --k-line: #e9e8ef;
-    --k-action: #881bcc;
+    --k-action: #1b2c3e;
     --k-radius: 14px;
 }
 
@@ -57,8 +57,8 @@
     position: relative;
     overflow: hidden;
     background:
-        radial-gradient(120% 130% at 8% 0%, rgba(177, 124, 235, 0.30) 0%, rgba(177, 124, 235, 0) 55%),
-        linear-gradient(155deg, var(--k-purple-deep) 0%, var(--k-purple) 100%);
+        radial-gradient(120% 130% at 8% 0%, rgba(90, 116, 143, 0.30) 0%, rgba(90, 116, 143, 0) 55%),
+        linear-gradient(155deg, var(--k-brand-deep) 0%, var(--k-brand) 100%);
     color: #fff;
     padding: 3.5rem 4rem;
     flex-direction: column;
@@ -98,7 +98,7 @@
     letter-spacing: -0.02em;
     line-height: 1;
 }
-.k-wordmark span { color: #c5a6ee; }
+.k-wordmark span { color: #9fb2c4; }
 
 .k-rail-eyebrow {
     display: inline-flex;
@@ -108,7 +108,7 @@
     padding: 0.3rem 0.75rem;
     border-radius: 9999px;
     background: rgba(255, 255, 255, 0.14);
-    color: #e1c6f2;
+    color: #d3dce6;
     font-size: 0.68rem;
     font-weight: 800;
     letter-spacing: 0.14em;
@@ -284,7 +284,7 @@
 /* Primary actions carry the brand rather than Filament's amber default. */
 .fi-btn.fi-color-primary,
 .k-auth-card .fi-btn[type="submit"] {
-    background: var(--k-purple) !important;
+    background: var(--k-brand) !important;
     color: #ffffff !important;
     border-radius: 10px !important;
     font-weight: 700 !important;
@@ -294,7 +294,7 @@
 
 .fi-btn.fi-color-primary:hover,
 .k-auth-card .fi-btn[type="submit"]:hover {
-    background: var(--k-purple-dark) !important;
+    background: var(--k-brand-dark) !important;
 }
 
 .fi-btn.fi-color-primary:active,
@@ -324,11 +324,11 @@
 }
 
 .fi-sidebar-nav-groups .fi-sidebar-item-active .fi-sidebar-item-button {
-    background: var(--k-purple-soft) !important;
+    background: var(--k-brand-soft) !important;
 }
 .fi-sidebar-nav-groups .fi-sidebar-item-active .fi-sidebar-item-label,
 .fi-sidebar-nav-groups .fi-sidebar-item-active .fi-sidebar-item-icon {
-    color: var(--k-purple) !important;
+    color: var(--k-brand) !important;
 }
 
 .fi-section,
@@ -351,7 +351,7 @@
     letter-spacing: -0.02em;
     color: var(--k-ink);
 }
-.k-sidebar-mark span { color: var(--k-purple); }
+.k-sidebar-mark span { color: var(--k-brand); }
 
 .dark .k-sidebar-mark { color: #fff; }
-.dark .k-sidebar-mark span { color: #c5a6ee; }
+.dark .k-sidebar-mark span { color: #9fb2c4; }

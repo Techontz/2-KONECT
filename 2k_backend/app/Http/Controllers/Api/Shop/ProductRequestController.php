@@ -39,6 +39,10 @@ class ProductRequestController extends Controller
             'name'          => 'required|string|max:180',
             'description'   => 'nullable|string|max:2000',
             'brand'         => 'nullable|string|max:120',
+            // Where they would rather we bought it, and how soon they need
+            // it. Both optional — a photo and a name are still enough.
+            'preferred_country' => 'nullable|string|size:2',
+            'urgency'       => 'nullable|string|in:' . implode(',', ProductRequest::URGENCIES),
             'quantity'      => 'required|integer|min:1|max:10000',
             'budget_max'    => 'nullable|numeric|min:0|max:1000000000',
             'contact_name'  => 'required|string|max:120',
@@ -59,6 +63,10 @@ class ProductRequestController extends Controller
             'name'          => $data['name'],
             'description'   => $data['description'] ?? null,
             'brand'         => $data['brand'] ?? null,
+            'preferred_country' => isset($data['preferred_country'])
+                ? strtoupper($data['preferred_country'])
+                : null,
+            'urgency'       => $data['urgency'] ?? null,
             'quantity'      => $data['quantity'],
             'budget_max'    => $data['budget_max'] ?? null,
             'image'         => $path,
@@ -139,6 +147,10 @@ class ProductRequestController extends Controller
             'name'         => $row->name,
             'description'  => $row->description,
             'brand'        => $row->brand,
+            // Additive: older clients ignore these two, and a request made
+            // before the columns existed simply reports null for both.
+            'preferred_country' => $row->preferred_country,
+            'urgency'      => $row->urgency,
             'quantity'     => (int) $row->quantity,
             'budget_max'   => $row->budget_max !== null ? (float) $row->budget_max : null,
             'image'        => Media::url($row->image),

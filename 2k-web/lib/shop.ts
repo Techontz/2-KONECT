@@ -114,6 +114,9 @@ export const shop = {
     name: string;
     description?: string;
     brand?: string;
+    /** ISO alpha-2. Where they would rather we bought it, if they mind. */
+    preferred_country?: string;
+    urgency?: "standard" | "soon" | "urgent";
     quantity: number;
     budget_max?: number;
     contact_name: string;

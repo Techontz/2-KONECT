@@ -60,7 +60,7 @@ export function ProductCard({
 
   return (
     <article
-      className={`group relative flex h-full flex-col overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:var(--color-brand-200)] hover:shadow-[var(--shadow-hover)] ${className}`}
+      className={`group relative flex h-full flex-col overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] transition-all duration-200 hover:border-[color:var(--color-brand-200)] hover:shadow-[var(--shadow-hover)] ${className}`}
     >
       <Link href={href} className="flex h-full flex-col" prefetch={false}>
         {/* ---- image plate ---- */}
@@ -127,31 +127,39 @@ export function ProductCard({
         {/* ---- where it is, and when ----
             A full-width tinted strip rather than a small pill: this is the
             field that decides between two otherwise identical listings, so it
-            gets the width of the card. */}
+            gets the width of the card. It sits directly beneath the photo,
+            above the name, because in a scanned grid the eye reaches it before
+            it has finished reading the title. */}
         {sourcing ? <AvailabilityStrip sourcing={sourcing} /> : null}
 
-        {/* ---- details ---- */}
+        {/* ---- details ----
+            Ordered the way the reference orders it, and the way a shopper
+            actually reads a grid: what it is, how it has been rated, then the
+            price — set large and heavy, because in a five-across row the
+            price is the thing being compared, not the name. */}
         <div className="flex flex-1 flex-col gap-1.5 p-2.5 sm:p-3">
-          <h3 className="clamp-2 min-h-[34px] text-[13px] leading-[17px] text-[color:var(--color-ink)]">
+          <h3 className="clamp-2 min-h-[34px] text-[12.5px] font-medium leading-[17px] text-[color:var(--color-ink-soft)]">
             {product.name}
           </h3>
 
-          <PriceBlock price={product.price} size="sm" />
-
-          {/* Reserved so the price line sits at the same height on every card
-              in a row, whether or not the product has been reviewed. */}
+          {/* Reserved so every card in a row keeps the same baseline whether
+              or not the product has been reviewed. */}
           <div className="min-h-[18px]">
             <RatingPill rating={product.rating} />
           </div>
 
-          {product.vendor ? (
-            <span className="flex min-w-0 items-center gap-1">
-              <span className="clamp-1 text-[10px] text-[color:var(--color-ink-faint)]">
-                {product.vendor.name}
-              </span>
-              {product.vendor.is_verified ? <VerifiedBadge size="sm" label="" className="px-1" /> : null}
-            </span>
-          ) : null}
+          <PriceBlock price={product.price} size="md" />
+
+          <div className="mt-auto flex min-w-0 items-center gap-1 pt-0.5">
+            {product.vendor ? (
+              <>
+                <span className="clamp-1 text-[10.5px] text-[color:var(--color-ink-faint)]">
+                  {product.vendor.name}
+                </span>
+                {product.vendor.is_verified ? <VerifiedBadge size="sm" label="" className="px-1" /> : null}
+              </>
+            ) : null}
+          </div>
         </div>
       </Link>
     </article>

@@ -480,6 +480,46 @@ class SourcingTest extends TestCase
         Storage::disk('public')->assertExists($request->image);
     }
 
+    public function test_a_request_can_state_where_to_buy_and_how_soon(): void
+    {
+        $this->post('/api/shop/requests', [
+            'name' => 'Dyson Airwrap',
+            'quantity' => 1,
+            'preferred_country' => 'ae',
+            'urgency' => 'urgent',
+            'contact_name' => 'Neema',
+            'contact_phone' => '0700000009',
+        ])->assertCreated()
+            ->assertJsonPath('request.preferred_country', 'AE')
+            ->assertJsonPath('request.urgency', 'urgent');
+
+        $this->assertSame('AE', ProductRequest::firstOrFail()->preferred_country);
+    }
+
+    public function test_both_sourcing_preferences_stay_optional(): void
+    {
+        // The whole point of the desk is that a photo and a name are enough.
+        $this->post('/api/shop/requests', [
+            'name' => 'Something I saw once',
+            'quantity' => 1,
+            'contact_name' => 'Walk-in',
+            'contact_phone' => '0700000010',
+        ])->assertCreated()
+            ->assertJsonPath('request.preferred_country', null)
+            ->assertJsonPath('request.urgency', null);
+    }
+
+    public function test_an_unknown_urgency_is_refused(): void
+    {
+        $this->postJson('/api/shop/requests', [
+            'name' => 'Anything',
+            'quantity' => 1,
+            'urgency' => 'immediately-or-else',
+            'contact_name' => 'Walk-in',
+            'contact_phone' => '0700000011',
+        ])->assertStatus(422);
+    }
+
     public function test_a_signed_in_request_lands_in_the_account(): void
     {
         Sanctum::actingAs($this->shopper);

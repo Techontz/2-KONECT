@@ -27,7 +27,7 @@ export const BRAND = {
   /** The official first-party seller, shown as the platform's own storefront. */
   officialSeller: "2KONECT Official",
   /**
-   * The 2KONECT purple, and the deep ground it sits on.
+   * The 2KONECT navy, and the deep ground it sits on.
    *
    * app/globals.css holds the same values as design tokens and is what every
    * component reads. This copy exists only for the two consumers that are
@@ -35,17 +35,17 @@ export const BRAND = {
    * and the browser theme colour. Change both together.
    */
   color: {
-    primary: "#881bcc",
-    deep: "#3b0a5f",
+    primary: "#1b2c3e",
+    deep: "#0d1a26",
   },
   logo: {
     /** White mark, for purple and dark surfaces. */
     white: "/brand/mark-white.png",
-    /** Brand-purple mark, for white and light surfaces. */
-    purple: "/brand/mark-purple.png",
+    /** Brand-navy mark, for white and light surfaces. */
+    brand: "/brand/mark-brand.png",
     /** Near-black mark, for pale tinted surfaces. */
     ink: "/brand/mark-ink.png",
-    /** Rounded app icon: white mark on purple. */
+    /** Rounded app icon: white mark on brand navy. */
     icon: "/brand/icon-512.png",
     /** Social share card. */
     og: "/brand/og.png",

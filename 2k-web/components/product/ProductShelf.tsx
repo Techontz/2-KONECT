@@ -75,7 +75,7 @@ export function ProductShelf({
   };
 
   return (
-    <section className="rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] py-4">
+    <section className="section rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] py-4">
       <header className="mb-3 flex items-end justify-between gap-4 px-4">
         <div className="min-w-0">
           {eyebrow ? (
@@ -85,7 +85,7 @@ export function ProductShelf({
               {eyebrow}
             </p>
           ) : null}
-          <h2 className="text-[18px] font-black tracking-[-0.02em] md:text-[21px]">{title}</h2>
+          <h2 className="text-[19px] font-extrabold tracking-[-0.03em] text-[color:var(--color-brand)] md:text-[24px]">{title}</h2>
           {subtitle ? (
             <p className="clamp-1 text-[12px] text-[color:var(--color-ink-muted)]">{subtitle}</p>
           ) : null}

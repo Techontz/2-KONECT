@@ -49,6 +49,23 @@ class ProductRequestResource extends Resource
                     Forms\Components\TextInput::make('name')->label('Product')->required()->columnSpan(1),
                     Forms\Components\Textarea::make('description')->rows(3)->columnSpanFull(),
                     Forms\Components\TextInput::make('brand'),
+                    Forms\Components\Select::make('preferred_country')
+                        ->label('They would rather we buy from')
+                        ->options([
+                            'CN' => 'China', 'AE' => 'UAE', 'US' => 'United States',
+                            'GB' => 'United Kingdom', 'TR' => 'Türkiye', 'IN' => 'India',
+                            'JP' => 'Japan', 'ZA' => 'South Africa',
+                        ])
+                        ->placeholder('No preference')
+                        ->helperText('Optional. Only set when the shopper asked for it.'),
+                    Forms\Components\Select::make('urgency')
+                        ->label('How soon they need it')
+                        ->options([
+                            'standard' => 'Standard — cheapest route',
+                            'soon'     => 'Soon — within a couple of weeks',
+                            'urgent'   => 'Urgent — as fast as possible',
+                        ])
+                        ->placeholder('Not stated'),
                     Forms\Components\TextInput::make('quantity')->numeric()->minValue(1),
                     Forms\Components\TextInput::make('budget_max')->label('Their budget')->numeric()->prefix('TZS'),
                     Forms\Components\FileUpload::make('image')

@@ -54,12 +54,12 @@ export function SellerStatusBanner() {
       : t("seller.statusRejected");
 
   return (
-    <section className="mb-4 overflow-hidden rounded-[var(--radius-md)] bg-[color:var(--color-brand)]">
+    <section className="mb-4 overflow-hidden rounded-[var(--radius-md)] bg-[color:var(--color-brand)] text-white">
       <div className="flex flex-wrap items-center gap-4 p-5">
         {store.logo ? (
           <img src={store.logo} alt="" className="h-14 w-14 shrink-0 rounded-full object-cover ring-2 ring-white/60" />
         ) : (
-          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white/70 text-xl font-black">
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white text-xl font-black text-[color:var(--color-brand)]">
             {store.name.charAt(0).toUpperCase()}
           </span>
         )}
@@ -102,11 +102,11 @@ export function SellerStatusBanner() {
       {/* Whatever the reviewer wrote, shown verbatim so the seller knows what
           to fix rather than guessing. */}
       {seller.note || verification.note ? (
-        <p className="border-t border-black/10 bg-white/40 px-5 py-2.5 text-[12px] font-semibold">
+        <p className="border-t border-white/15 bg-[color:var(--color-brand-deep)] px-5 py-2.5 text-[12px] font-semibold text-white">
           {seller.note ?? verification.note}
         </p>
       ) : !seller.can_publish ? (
-        <p className="border-t border-black/10 bg-white/40 px-5 py-2.5 text-[12px]">
+        <p className="border-t border-white/15 bg-[color:var(--color-brand-deep)] px-5 py-2.5 text-[12px] text-white/85">
           {t("seller.statusPendingHint")}
         </p>
       ) : null}

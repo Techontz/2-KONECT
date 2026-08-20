@@ -62,11 +62,11 @@ export function ListingView({
   const [sort, setSort] = useState<ProductQuery["sort"]>("relevance");
   const [subcategoryId, setSubcategoryId] = useState<number | undefined>(baseQuery.subcategory_id);
   const [availability, setAvailability] = useState<Availability | undefined>(baseQuery.availability);
-  const [origin, setOrigin] = useState<string | undefined>();
+  const [origin, setOrigin] = useState<string | undefined>(baseQuery.source_country);
   const [verifiedOnly, setVerifiedOnly] = useState(Boolean(baseQuery.verified));
   const [inStockOnly, setInStockOnly] = useState(false);
   const [onSaleOnly, setOnSaleOnly] = useState(false);
-  const [maxDays, setMaxDays] = useState<number | undefined>();
+  const [maxDays, setMaxDays] = useState<number | undefined>(baseQuery.max_days);
   const [priceCap, setPriceCap] = useState<number | undefined>();
 
   // Serialised so the effect re-runs when the caller changes category/search
@@ -77,7 +77,8 @@ export function ListingView({
     setSubcategoryId(baseQuery.subcategory_id);
     setAvailability(baseQuery.availability);
     setVerifiedOnly(Boolean(baseQuery.verified));
-    setOrigin(undefined);
+    setOrigin(baseQuery.source_country);
+    setMaxDays(baseQuery.max_days);
     setPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baseKey]);
@@ -127,14 +128,17 @@ export function ListingView({
     void load(1, false);
   }, [load]);
 
+  // "Clear" returns to whatever the page itself is about, not to an empty
+  // query: clearing on /shop/abroad?country=CN must leave China selected,
+  // because that is the page, not a filter the shopper added.
   function resetFilters() {
     setSubcategoryId(baseQuery.subcategory_id);
     setAvailability(baseQuery.availability);
-    setOrigin(undefined);
+    setOrigin(baseQuery.source_country);
     setVerifiedOnly(Boolean(baseQuery.verified));
     setInStockOnly(false);
     setOnSaleOnly(false);
-    setMaxDays(undefined);
+    setMaxDays(baseQuery.max_days);
     setPriceCap(undefined);
     setSort("relevance");
   }
@@ -142,11 +146,11 @@ export function ListingView({
   const activeFilterCount =
     (subcategoryId && subcategoryId !== baseQuery.subcategory_id ? 1 : 0) +
     (availability !== baseQuery.availability ? 1 : 0) +
-    (origin ? 1 : 0) +
+    (origin !== baseQuery.source_country ? 1 : 0) +
     (verifiedOnly !== Boolean(baseQuery.verified) ? 1 : 0) +
     (inStockOnly ? 1 : 0) +
     (onSaleOnly ? 1 : 0) +
-    (maxDays ? 1 : 0) +
+    (maxDays !== baseQuery.max_days ? 1 : 0) +
     (priceCap ? 1 : 0);
 
   const panel = (

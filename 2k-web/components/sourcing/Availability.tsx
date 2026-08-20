@@ -63,12 +63,20 @@ export function AvailabilityStrip({
 
   return (
     <p
-      className={`flex items-center gap-1.5 border-b ${t.line} ${t.soft} px-2.5 py-1.5 text-[11px] font-bold leading-none ${t.text} ${className}`}
+      className={`flex items-center gap-1.5 border-y ${t.line} ${t.soft} px-2.5 py-[7px] text-[11px] font-bold leading-none ${t.text} ${className}`}
     >
+      {/* An import names the country it is coming from rather than repeating
+          "Order from abroad" — it is shorter, so it survives a 164px card
+          without an ellipsis, and it is strictly more information. The long
+          form still leads the product page, where there is room for it. */}
       <span aria-hidden="true" className="text-[12px] leading-none">
-        {sourcing.is_local ? sourcing.destination?.flag ?? "🇹🇿" : "🌍"}
+        {sourcing.is_local
+          ? sourcing.destination?.flag ?? "🇹🇿"
+          : sourcing.origin?.flag ?? "🌍"}
       </span>
-      <span className="truncate">{sourcing.label}</span>
+      <span className="truncate">
+        {sourcing.is_local ? sourcing.label : sourcing.origin?.name ?? sourcing.label}
+      </span>
       <span aria-hidden="true" className="opacity-40">·</span>
       <span className="shrink-0 whitespace-nowrap font-semibold">
         {sourcing.lead_time.label}

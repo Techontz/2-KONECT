@@ -96,7 +96,7 @@ export function HowImportsWork() {
   ];
 
   return (
-    <section className="overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)]">
+    <section className="section overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)]">
       <div className="flex flex-wrap items-end justify-between gap-3 px-5 pt-5">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-import)]">
@@ -144,7 +144,7 @@ export function HowImportsWork() {
  */
 export function RequestBand() {
   return (
-    <section className="overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)]">
+    <section className="section overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)]">
       <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7">
         <div className="max-w-xl">
           <p className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-brand)]">
@@ -174,7 +174,7 @@ export function RequestBand() {
 /** The seller pitch, which closes the page once a visitor has seen the shop. */
 export function SellBand() {
   return (
-    <section className="brand-ground overflow-hidden rounded-[var(--radius-md)]">
+    <section className="section brand-ground overflow-hidden rounded-[var(--radius-md)]">
       <div className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
         <div className="max-w-xl">
           <p className="text-[11px] font-bold uppercase tracking-wider text-white/60">

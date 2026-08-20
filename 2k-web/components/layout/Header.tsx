@@ -18,14 +18,16 @@ import { LanguageSwitcher } from "./LanguageSwitcher";
 /**
  * The storefront header.
  *
- * Three bands on a desktop — a thin utility strip carrying the two ways to
- * buy, then the search bar, then categories (rendered separately) — and two
- * rows on a phone, where search gets a line of its own rather than being
- * squeezed between eight icons.
+ * The whole band is brand navy, edge to edge, with one white pill for search
+ * — the arrangement the reference recording uses, and the reason its header
+ * reads as a single owned surface rather than a strip of controls. It works
+ * here for a reason the reference does not have to think about: #1B2C3E is
+ * dark, so white sits on it at 14:1 and the band frames product photography
+ * instead of competing with it, which a saturated bar would.
  *
- * White rather than purple: a saturated bar over a page of product photography
- * fights the products for attention. The brand shows up in the mark, in the
- * actions, and in the deep utility strip above.
+ * Three tiers on a desktop — utility strip, the main bar, then categories
+ * (rendered separately by <CategoryNav>) — and two rows on a phone, where
+ * search takes a line of its own rather than being squeezed between icons.
  */
 export function Header({ onOpenMenu }: { onOpenMenu?(): void }) {
   const router = useRouter();
@@ -77,28 +79,30 @@ export function Header({ onOpenMenu }: { onOpenMenu?(): void }) {
     suggestions.categories.length === 0;
 
   return (
-    <header className="sticky top-0 z-50 border-b border-[color:var(--color-line)] bg-[color:var(--color-surface)]">
-      {/* ---- utility strip: the two ways to buy, stated up front ---- */}
+    <header className="sticky top-0 z-50 bg-[color:var(--color-brand)]">
+      {/* ---- utility strip: the two ways to buy, stated before anything else.
+              A shade deeper than the main bar so the tiers separate without a
+              rule between them. ---- */}
       <div className="hidden bg-[color:var(--color-brand-deep)] text-white lg:block">
         <div className="shell flex h-9 items-center gap-5 text-[12px] font-semibold">
-          <Link href="/shop/local" prefetch={false} className="inline-flex items-center gap-1.5 opacity-90 hover:opacity-100">
+          <Link href="/shop/local" prefetch={false} className="inline-flex items-center gap-1.5 text-white/85 transition-colors hover:text-white">
             <span aria-hidden="true">🇹🇿</span> Available in Tanzania
           </Link>
-          <Link href="/shop/abroad" prefetch={false} className="inline-flex items-center gap-1.5 opacity-90 hover:opacity-100">
+          <Link href="/shop/abroad" prefetch={false} className="inline-flex items-center gap-1.5 text-white/85 transition-colors hover:text-white">
             <span aria-hidden="true">🌍</span> Order from abroad
           </Link>
-          <Link href="/request" prefetch={false} className="opacity-90 hover:opacity-100">
+          <Link href="/request" prefetch={false} className="text-white/85 transition-colors hover:text-white">
             Request a product
           </Link>
 
           <span className="ml-auto flex items-center gap-5">
-            <Link href="/track" prefetch={false} className="opacity-90 hover:opacity-100">
+            <Link href="/track" prefetch={false} className="text-white/85 transition-colors hover:text-white">
               Track order
             </Link>
-            <Link href="/sell" prefetch={false} className="opacity-90 hover:opacity-100">
+            <Link href="/sell" prefetch={false} className="text-white/85 transition-colors hover:text-white">
               Sell with {BRAND.name}
             </Link>
-            <Link href="/help" prefetch={false} className="opacity-90 hover:opacity-100">
+            <Link href="/help" prefetch={false} className="text-white/85 transition-colors hover:text-white">
               Help
             </Link>
             <LanguageSwitcher tone="dark" compact />
@@ -107,30 +111,31 @@ export function Header({ onOpenMenu }: { onOpenMenu?(): void }) {
       </div>
 
       {/* ---- main bar ---- */}
-      <div className="shell flex flex-wrap items-center gap-x-3 gap-y-2 py-2.5 lg:flex-nowrap lg:gap-x-5 lg:py-3">
+      <div className="shell flex flex-wrap items-center gap-x-3 gap-y-2 py-2.5 lg:flex-nowrap lg:gap-x-6 lg:py-3">
         {/* The burger is the whole of the site's navigation on a phone, so it
             leads rather than hiding behind the logo. */}
         <button
           type="button"
           onClick={onOpenMenu}
           aria-label="Open menu"
-          className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-[color:var(--color-ink)] hover:bg-[color:var(--color-surface-alt)] lg:hidden"
+          className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-white hover:bg-white/10 lg:hidden"
         >
           <MenuIcon className="h-6 w-6" />
         </button>
 
-        <LogoLink size="md" className="shrink-0" />
+        {/* The band is navy, so the mark and wordmark are the white pair. */}
+        <LogoLink tone="dark" size="md" className="shrink-0" />
 
         {/* Opens the one shared location picker — the same component checkout
             uses, so there is a single delivery-location model. */}
         <button
           type="button"
           onClick={() => setLocationOpen(true)}
-          className="hidden shrink-0 items-center gap-1.5 rounded-[var(--radius-sm)] px-2 py-1.5 text-[13px] text-[color:var(--color-ink-soft)] hover:bg-[color:var(--color-surface-alt)] xl:inline-flex"
+          className="hidden shrink-0 items-center gap-1.5 rounded-[var(--radius-sm)] px-2 py-1.5 text-[13px] text-white hover:bg-white/10 xl:inline-flex"
         >
-          <PinIcon className="h-4 w-4 shrink-0 text-[color:var(--color-brand)]" />
+          <PinIcon className="h-4 w-4 shrink-0 text-white/70" />
           <span className="max-w-[150px] truncate text-left leading-tight">
-            <span className="block text-[10px] uppercase tracking-wide text-[color:var(--color-ink-faint)]">
+            <span className="block text-[10px] uppercase tracking-wide text-white/60">
               Deliver to
             </span>
             <span className="block font-bold">{location?.label ?? BRAND.city}</span>
@@ -145,8 +150,11 @@ export function Header({ onOpenMenu }: { onOpenMenu?(): void }) {
             first row and be clipped rather than dropping below it. */}
         <div ref={searchRef} className="relative order-last w-full basis-full lg:order-none lg:w-auto lg:flex-1 lg:basis-auto">
           <form onSubmit={submitSearch} role="search">
-            <div className="flex h-11 items-center gap-2 rounded-[var(--radius-pill)] border border-[color:var(--color-line-strong)] bg-[color:var(--color-surface-alt)] pl-4 pr-1.5 transition-colors focus-within:border-[color:var(--color-brand)] focus-within:bg-white">
-              <SearchIcon className="h-4 w-4 shrink-0 text-[color:var(--color-ink-muted)]" />
+            {/* One white pill on the navy — the single brightest object in
+                the band, which is what makes search read as the header's
+                purpose rather than one control among eight. */}
+            <div className="flex h-11 items-center gap-2 rounded-[var(--radius-pill)] bg-white pl-4 pr-1.5 ring-1 ring-transparent transition-shadow focus-within:ring-2 focus-within:ring-white/70">
+              <SearchIcon className="h-[18px] w-[18px] shrink-0 text-[color:var(--color-ink-muted)]" />
               <input
                 value={term}
                 onChange={(event) => {
@@ -156,7 +164,7 @@ export function Header({ onOpenMenu }: { onOpenMenu?(): void }) {
                 onFocus={() => setShowSuggestions(true)}
                 placeholder="Search products, brands and categories"
                 aria-label="Search products"
-                className="h-full w-full min-w-0 bg-transparent text-[15px] outline-none placeholder:text-[color:var(--color-ink-faint)]"
+                className="h-full w-full min-w-0 bg-transparent text-[15px] text-[color:var(--color-ink)] outline-none placeholder:text-[color:var(--color-ink-faint)]"
               />
               {term ? (
                 <button
@@ -247,7 +255,7 @@ export function Header({ onOpenMenu }: { onOpenMenu?(): void }) {
               onClick={() => (isAuthenticated ? setAccountOpen((open) => !open) : openAuthPrompt())}
               aria-label={isAuthenticated ? "Your account" : "Sign in"}
               aria-expanded={isAuthenticated ? accountOpen : undefined}
-              className="flex h-11 items-center gap-1.5 rounded-[var(--radius-sm)] px-2 text-[13px] font-semibold text-[color:var(--color-ink)] hover:bg-[color:var(--color-surface-alt)]"
+              className="flex h-11 items-center gap-1.5 rounded-[var(--radius-sm)] px-2 text-[13px] font-semibold text-white hover:bg-white/10"
             >
               <UserIcon className="h-5 w-5" />
               <span className="hidden max-w-[110px] truncate lg:inline">
@@ -319,14 +327,20 @@ function HeaderAction({
       href={href}
       prefetch={false}
       aria-label={badge > 0 ? `${label} (${badge})` : label}
-      className={`relative h-11 w-11 items-center justify-center rounded-[var(--radius-sm)] text-[color:var(--color-ink)] hover:bg-[color:var(--color-surface-alt)] ${display}`}
+      className={`relative h-11 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] px-2 text-[13px] font-semibold text-white hover:bg-white/10 ${display}`}
     >
-      {icon}
-      {badge > 0 ? (
-        <span className="absolute right-1 top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[color:var(--color-brand)] px-1 text-[10px] font-bold leading-none text-white">
-          {badge > 99 ? "99+" : badge}
-        </span>
-      ) : null}
+      <span className="relative">
+        {icon}
+        {/* The count sits in the sale red rather than the brand: a navy pip
+            on a navy bar is invisible, and this is the one number in the
+            header a shopper looks for. */}
+        {badge > 0 ? (
+          <span className="absolute -right-2 -top-1.5 flex h-[17px] min-w-[17px] items-center justify-center rounded-full bg-[color:var(--color-sale)] px-1 text-[10px] font-bold leading-none text-white">
+            {badge > 99 ? "99+" : badge}
+          </span>
+        ) : null}
+      </span>
+      <span className="hidden xl:inline">{label}</span>
     </Link>
   );
 }

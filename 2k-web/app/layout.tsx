@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Manrope } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import { BRAND } from "@/lib/brand";
 import { SITE_URL } from "@/lib/site";
 import { Providers } from "@/components/layout/Providers";
@@ -14,7 +14,19 @@ import "./globals.css";
  * shop header and footer.
  */
 
-const brandFont = Manrope({
+/**
+ * Plus Jakarta Sans.
+ *
+ * Chosen against the reference recording, whose type is a geometric grotesque
+ * set very heavy and very tight — near-circular bowls, a single-storey 'a' at
+ * display sizes, headings at 800 with negative tracking. Jakarta is the
+ * closest thing on Google Fonts to that voice and, unlike the previous face,
+ * it has a genuine 800 that holds up at 40px in a hero.
+ *
+ * One family, five weights, nothing else: a second typeface would only make
+ * the price and the product name argue with each other.
+ */
+const brandFont = Plus_Jakarta_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
   variable: "--font-brand",
