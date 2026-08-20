@@ -44,6 +44,11 @@ export function ListingView({
   emptyMessage?: string;
   lockAvailability?: boolean;
 }) {
+  // What the shopper typed, carried into the sourcing desk if nothing matches.
+  const requestHref = baseQuery.q
+    ? `/request?name=${encodeURIComponent(baseQuery.q)}`
+    : "/request";
+
   const [products, setProducts] = useState<ProductCardModel[]>([]);
   const [filters, setFilters] = useState<ListingFilters | null>(null);
   const [total, setTotal] = useState(0);
@@ -168,6 +173,47 @@ export function ListingView({
     />
   );
 
+  // Nothing matched, and nothing is filtering it out: the controls cannot fix
+  // this, so they are cleared away and the page becomes the sourcing offer.
+  const barren = !loading && !failed && products.length === 0 && activeFilterCount === 0;
+
+  if (barren) {
+    return (
+      <div className="shell py-4 pb-tabbar">
+        <header className="mb-3">
+          <h1 className="text-[22px] font-black tracking-[-0.02em] sm:text-[28px]">{heading}</h1>
+        </header>
+
+        <div className="rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)]">
+          <EmptyState
+            icon={<SearchIcon className="h-9 w-9" />}
+            title="We don’t carry that yet"
+            message={
+              emptyMessage ??
+              "Nothing in the catalogue matches. Tell us what you need and our sourcing team will find it, price it and bring it in."
+            }
+            action={
+              <>
+                <Link
+                  href={requestHref}
+                  className="inline-flex h-12 items-center justify-center rounded-[var(--radius-sm)] bg-[color:var(--color-brand)] px-6 text-sm font-bold text-white shadow-[var(--shadow-brand)]"
+                >
+                  Ask us to source it
+                </Link>
+                <Link
+                  href="/shop"
+                  className="inline-flex h-12 items-center justify-center rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] px-6 text-sm font-bold"
+                >
+                  Browse everything
+                </Link>
+              </>
+            }
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="shell py-4 pb-tabbar">
       <header className="mb-3">
@@ -248,7 +294,7 @@ export function ListingView({
                     <Button variant="secondary" onClick={resetFilters}>Clear filters</Button>
                   ) : null}
                   <Link
-                    href="/request"
+                    href={requestHref}
                     className="inline-flex h-11 items-center justify-center rounded-[var(--radius-sm)] bg-[color:var(--color-brand)] px-5 text-sm font-bold text-white"
                   >
                     Request this product
@@ -623,6 +669,16 @@ function FilterRow({
         <span className="shrink-0 text-[11px] text-[color:var(--color-ink-faint)]">{count}</span>
       ) : null}
     </button>
+  );
+}
+
+function SearchIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.6"
+      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="11" cy="11" r="7" />
+      <path d="M20 20l-3.2-3.2" />
+    </svg>
   );
 }
 

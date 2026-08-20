@@ -74,6 +74,19 @@ function ProductContent() {
     shop.product(productId).then(setData).catch(() => setMissing(true));
   }, [productId]);
 
+  // The route's own metadata cannot know which product this is — the id is a
+  // query string and the data arrives in the browser — so the tab is named
+  // once it does. Restored on the way out so a back-navigation does not leave
+  // the previous product's name on an unrelated page.
+  useEffect(() => {
+    const product = data?.product;
+    if (!product) return;
+
+    const previous = document.title;
+    document.title = `${product.name} | ${BRAND.name}`;
+    return () => { document.title = previous; };
+  }, [data]);
+
   const product = data?.product;
 
   /** Every way to buy this product. Always at least one. */

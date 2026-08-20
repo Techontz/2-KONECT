@@ -167,19 +167,24 @@ function RequestContent() {
           <h1 className="mt-1 max-w-2xl text-[28px] font-black leading-tight tracking-[-0.025em] text-white sm:text-[38px]">
             Tell us what you need. We’ll find it.
           </h1>
-          <p className="mt-2 max-w-xl text-[14px] leading-relaxed text-white/75 sm:text-[15px]">
-            If it isn’t in the catalogue, that doesn’t mean you can’t have it. Send a
-            photo or a description and our team will source it, price it and bring it
-            into {BRAND.country}.
+          <p className="mt-2 max-w-xl text-[14px] leading-snug text-white/75 sm:text-[15px] sm:leading-relaxed">
+            Send a photo or a description. We source it, price it and bring it into{" "}
+            {BRAND.country}.
           </p>
 
-          <ul className="mt-6 grid gap-2 sm:grid-cols-3">
+          {/* Three short reassurances, wrapped rather than stacked: on a phone
+              three full-width rows of one sentence each push the form itself
+              off the screen, and the form is the point of the page. */}
+          <ul className="mt-4 flex flex-wrap gap-1.5 sm:mt-6 sm:gap-2">
             {[
-              { icon: <SendIcon className="h-4 w-4" />, text: "No account needed to ask" },
-              { icon: <GlobeIcon className="h-4 w-4" />, text: "Sourced from anywhere" },
-              { icon: <ShieldIcon className="h-4 w-4" />, text: "You approve the price first" },
+              { icon: <SendIcon className="h-3.5 w-3.5" />, text: "No account needed" },
+              { icon: <GlobeIcon className="h-3.5 w-3.5" />, text: "Sourced from anywhere" },
+              { icon: <ShieldIcon className="h-3.5 w-3.5" />, text: "You approve the price" },
             ].map((item) => (
-              <li key={item.text} className="flex items-center gap-2 rounded-[var(--radius-sm)] bg-white/10 px-3 py-2.5 text-[13px] font-semibold text-white">
+              <li
+                key={item.text}
+                className="flex items-center gap-1.5 rounded-[var(--radius-pill)] bg-white/12 px-2.5 py-1.5 text-[12px] font-semibold text-white sm:px-3 sm:py-2 sm:text-[13px]"
+              >
                 <span className="text-[color:var(--color-brand-200)]">{item.icon}</span>
                 {item.text}
               </li>
@@ -252,8 +257,12 @@ function RequestContent() {
                 placeholder="Colour, size, model, condition — anything that matters to you."
               />
 
-              <div className="grid gap-3 sm:grid-cols-3">
-                <TextField label="Brand (optional)" value={brand} onChange={setBrand} placeholder="Apple" />
+              {/* Brand takes the row; the two short numeric fields share the
+                  next one even on the narrowest phone — stacking three
+                  full-width inputs here is what made this form feel endless. */}
+              <TextField label="Brand (optional)" value={brand} onChange={setBrand} placeholder="Apple" />
+
+              <div className="grid grid-cols-2 gap-3">
                 <label className="block">
                   <span className="mb-1.5 block text-[13px] font-bold">Quantity</span>
                   <input
