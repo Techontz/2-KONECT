@@ -107,7 +107,7 @@ php artisan db:seed --class=BrandRenameSeeder
 ## Checks
 
 ```bash
-cd 2k_backend && php artisan test     # 129 tests
+cd 2k_backend && php artisan test     # 132 tests
 cd 2k-web     && npm run typecheck   # tsc --noEmit
 cd 2k-web     && npm run lint
 cd 2k-web     && npm run build
@@ -128,6 +128,7 @@ cd 2k-web     && npm run build
 | Sourcing requests | `app/Http/Controllers/Api/Shop/ProductRequestController.php` |
 | Seller applications | `app/Http/Controllers/Api/Shop/VendorApplicationController.php` |
 | 2KONECT Rides | `app/Http/Controllers/Api/Shop/DeliveryRequestController.php` |
+| Seller earnings and payouts | `app/Http/Controllers/Api/WalletController.php`, `WithdrawalController.php` |
 
 **Frontend**
 
@@ -140,6 +141,8 @@ cd 2k-web     && npm run build
 | Order tracking timeline | `components/sourcing/JourneyTimeline.tsx` |
 | The one product card | `components/product/ProductCard.tsx` |
 | The one listing surface | `components/product/ListingView.tsx` |
+| The one inbox, both sides | `components/chat/Inbox.tsx` |
+| Per-route titles and descriptions | `lib/pageMeta.ts` + each route's `layout.tsx` |
 
 ---
 
@@ -170,6 +173,14 @@ orders kept working through the transformation.
   work.
 - Payment is cash on delivery only. Lipa Namba and mobile money are shown as
   coming soon rather than faked.
+- Seller subscriptions have a working backend (`SubscriptionController`, AzamPay,
+  plans in `config/azampay.php`) but no screen. The previous one posted to a URL
+  that did not exist and advertised benefits — listing limits, API access — that
+  nothing enforces, so it was removed rather than left to mislead. Define what
+  the tiers actually do, then build it.
 - Kiswahili, French and Chinese carry the interface and the written pages, but
   the copy written for the new surfaces is English-first and falls back to
   English until a translator revises it.
+- Product pages are client-rendered, so a crawler that does not run JavaScript
+  sees the generic listing title rather than the product's name. The JSON-LD
+  block carries the real price, currency and availability either way.
