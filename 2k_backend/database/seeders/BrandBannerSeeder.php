@@ -26,10 +26,10 @@ class BrandBannerSeeder extends Seeder
 {
     private const DIRECTORY = 'banners/2konect';
 
-    /** #6D28D9 and the deep ground it sits on. */
-    private const PURPLE = '#6d28d9';
-    private const DEEP   = '#2e1065';
-    private const LILAC  = '#c4b5fd';
+    /** #881BCC and the deep ground it sits on. */
+    private const PURPLE = '#881bcc';
+    private const DEEP   = '#3b0a5f';
+    private const LILAC  = '#c5a6ee';
 
     public function run(): void
     {
@@ -169,8 +169,8 @@ class BrandBannerSeeder extends Seeder
             <stop offset="1" stop-color="{$this->purple()}"/>
           </linearGradient>
           <radialGradient id="h{$id}" cx="10%" cy="0%" r="70%">
-            <stop offset="0" stop-color="#a78bfa" stop-opacity=".45"/>
-            <stop offset="1" stop-color="#a78bfa" stop-opacity="0"/>
+            <stop offset="0" stop-color="#b17ceb" stop-opacity=".45"/>
+            <stop offset="1" stop-color="#b17ceb" stop-opacity="0"/>
           </radialGradient>
           <pattern id="d{$id}" width="20" height="20" patternUnits="userSpaceOnUse">
             <circle cx="10" cy="10" r="1.6" fill="#ffffff" opacity=".10"/>

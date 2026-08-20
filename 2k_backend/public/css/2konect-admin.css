@@ -9,14 +9,14 @@
  */
 
 :root {
-    --k-purple: #6d28d9;
-    --k-purple-dark: #5b21b6;
-    --k-purple-deep: #2e1065;
-    --k-purple-soft: #ede9fe;
+    --k-purple: #881bcc;
+    --k-purple-dark: #7216ab;
+    --k-purple-deep: #3b0a5f;
+    --k-purple-soft: #f4eafa;
     --k-ink: #0c0a18;
     --k-canvas: #f7f7fb;
     --k-line: #e9e8ef;
-    --k-action: #6d28d9;
+    --k-action: #881bcc;
     --k-radius: 14px;
 }
 
@@ -57,7 +57,7 @@
     position: relative;
     overflow: hidden;
     background:
-        radial-gradient(120% 130% at 8% 0%, rgba(167, 139, 250, 0.30) 0%, rgba(167, 139, 250, 0) 55%),
+        radial-gradient(120% 130% at 8% 0%, rgba(177, 124, 235, 0.30) 0%, rgba(177, 124, 235, 0) 55%),
         linear-gradient(155deg, var(--k-purple-deep) 0%, var(--k-purple) 100%);
     color: #fff;
     padding: 3.5rem 4rem;
@@ -98,7 +98,7 @@
     letter-spacing: -0.02em;
     line-height: 1;
 }
-.k-wordmark span { color: #c4b5fd; }
+.k-wordmark span { color: #c5a6ee; }
 
 .k-rail-eyebrow {
     display: inline-flex;
@@ -108,7 +108,7 @@
     padding: 0.3rem 0.75rem;
     border-radius: 9999px;
     background: rgba(255, 255, 255, 0.14);
-    color: #ddd6fe;
+    color: #e1c6f2;
     font-size: 0.68rem;
     font-weight: 800;
     letter-spacing: 0.14em;
@@ -354,4 +354,4 @@
 .k-sidebar-mark span { color: var(--k-purple); }
 
 .dark .k-sidebar-mark { color: #fff; }
-.dark .k-sidebar-mark span { color: #c4b5fd; }
+.dark .k-sidebar-mark span { color: #c5a6ee; }

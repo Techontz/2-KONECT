@@ -22,7 +22,8 @@ npm run build
 |---|---|
 | `NEXT_PUBLIC_API_URL` | every request (`lib/api.ts`) |
 | `NEXT_PUBLIC_SITE_URL` | metadata, sitemap, `robots.txt` |
-| `NEXT_PUBLIC_FIREBASE_*` | Google sign-in (`lib/firebase.ts`) |
+| `NEXT_PUBLIC_FIREBASE_*` | Google sign-in, Firebase project `konect-83a21` (`lib/firebase.ts`) |
+| `NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID` | optional — Analytics, browser-only, never loaded if blank |
 | `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | the delivery-address picker |
 
 Every one is a public client identifier. A feature whose key is missing simply

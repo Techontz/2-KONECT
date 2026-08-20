@@ -69,7 +69,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#6d28d9",
+  themeColor: BRAND.color.primary,
   width: "device-width",
   initialScale: 1,
   // Pinch-zoom stays available: capping it locks out anyone who needs to

@@ -11,6 +11,11 @@ return [
         // Verifying an ID token needs only the project id and Google's public
         // certificates — no service-account private key is stored here.
         'project_id' => env('FIREBASE_PROJECT_ID'),
+
+        // Older Firebase projects whose tokens are still arriving from clients
+        // that have not been rebuilt yet — today, the published Flutter app.
+        // Comma-separated; remove an id once nothing in the wild mints it.
+        'legacy_project_ids' => array_filter(explode(',', (string) env('FIREBASE_LEGACY_PROJECT_IDS', ''))),
     ],
 
 

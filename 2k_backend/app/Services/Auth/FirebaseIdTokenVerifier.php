@@ -18,10 +18,17 @@ use RuntimeException;
  *
  * What is checked, per Google's published requirements for ID tokens:
  *   - RS256 signature against the current securetoken certificates
- *   - `iss` is https://securetoken.google.com/<project-id>
- *   - `aud` is <project-id>
+ *   - `aud` is one of the accepted project ids
+ *   - `iss` is https://securetoken.google.com/<that same project id>
  *   - `exp` / `iat` are sane (enforced by the JWT decoder)
  *   - `sub` is non-empty — it becomes the 2KONECT firebase_uid
+ *
+ * More than one project id is accepted because the web app has moved to the
+ * 2KONECT Firebase project while the published Flutter build still ships the
+ * old one and posts its tokens to this same endpoint. Both are our projects,
+ * both are named explicitly in configuration, and `iss` and `aud` must agree
+ * with each other — so this widens which of our own apps can sign in, not who.
+ * Drop FIREBASE_LEGACY_PROJECT_IDS once the mobile release has rolled over.
  *
  * A client-supplied email, uid, name or role is never trusted; only the claims
  * inside a token that passed all of the above are believed.
@@ -42,22 +49,27 @@ class FirebaseIdTokenVerifier
      */
     public function verify(string $idToken): array
     {
-        $projectId = (string) config('services.firebase.project_id');
+        $accepted = $this->acceptedProjectIds();
 
-        if ($projectId === '') {
+        if ($accepted === []) {
             throw new RuntimeException('Google sign-in is not configured on this server.');
         }
 
         $claims = $this->decodeVerified($idToken);
 
-        if (($claims['iss'] ?? '') !== "https://securetoken.google.com/{$projectId}") {
-            throw new RuntimeException('That Google sign-in could not be verified.');
+        // The audience is what stops a token minted for somebody else's
+        // Firebase project from being replayed against ours.
+        $audience = (string) ($claims['aud'] ?? '');
+
+        if (! in_array($audience, $accepted, true)) {
+            throw new RuntimeException('That sign-in was issued for a different application.');
         }
 
-        // The audience is what stops a token minted for a different Firebase
-        // project from being replayed against ours.
-        if (($claims['aud'] ?? '') !== $projectId) {
-            throw new RuntimeException('That sign-in was issued for a different application.');
+        // `iss` must name the *same* project as `aud`. Checking them against
+        // the accepted list independently would let a token from one of our
+        // projects be paired with an issuer from the other.
+        if (($claims['iss'] ?? '') !== "https://securetoken.google.com/{$audience}") {
+            throw new RuntimeException('That Google sign-in could not be verified.');
         }
 
         $uid = (string) ($claims['sub'] ?? '');
@@ -86,6 +98,28 @@ class FirebaseIdTokenVerifier
             'email_verified' => true,
             'provider'       => (string) ($claims['firebase']['sign_in_provider'] ?? 'google.com'),
         ];
+    }
+
+    /**
+     * The Firebase projects whose tokens this server will believe.
+     *
+     * The primary project first, then any legacy project still in the hands of
+     * shipped clients. Blank entries are dropped so an empty environment
+     * variable cannot widen the list to "anything".
+     *
+     * @return array<int, string>
+     */
+    private function acceptedProjectIds(): array
+    {
+        $ids = array_merge(
+            [(string) config('services.firebase.project_id')],
+            (array) config('services.firebase.legacy_project_ids', []),
+        );
+
+        return array_values(array_unique(array_filter(array_map(
+            static fn ($id) => trim((string) $id),
+            $ids,
+        ), static fn (string $id) => $id !== '')));
     }
 
     private function isTrue(mixed $value): bool

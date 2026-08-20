@@ -26,6 +26,18 @@ export const BRAND = {
   supportPhone: "+255 764 224 477",
   /** The official first-party seller, shown as the platform's own storefront. */
   officialSeller: "2KONECT Official",
+  /**
+   * The 2KONECT purple, and the deep ground it sits on.
+   *
+   * app/globals.css holds the same values as design tokens and is what every
+   * component reads. This copy exists only for the two consumers that are
+   * handed a plain string and cannot resolve a CSS variable: the PWA manifest
+   * and the browser theme colour. Change both together.
+   */
+  color: {
+    primary: "#881bcc",
+    deep: "#3b0a5f",
+  },
   logo: {
     /** White mark, for purple and dark surfaces. */
     white: "/brand/mark-white.png",

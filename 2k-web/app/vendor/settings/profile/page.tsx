@@ -353,9 +353,9 @@ export default function VendorProfilePage() {
             />
             <label className="absolute bottom-0 right-0 bg-white p-2 rounded-full cursor-pointer shadow-sm hover:bg-gray-100 transition">
               {isUploading ? (
-                <Loader2 className="w-4 h-4 animate-spin text-[#6d28d9]" />
+                <Loader2 className="w-4 h-4 animate-spin text-[color:var(--color-brand)]" />
               ) : (
-                <Camera className="w-4 h-4 text-[#6d28d9]" />
+                <Camera className="w-4 h-4 text-[color:var(--color-brand)]" />
               )}
               <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
             </label>
@@ -368,17 +368,17 @@ export default function VendorProfilePage() {
 
         {/* Vendor Info */}
         <ProfileCard
-          icon={<Store className="w-5 h-5 text-[#6d28d9]" />}
+          icon={<Store className="w-5 h-5 text-[color:var(--color-brand)]" />}
           title="Business Name"
           subtitle={vendor?.business_name || "-"}
         />
         <ProfileCard
-          icon={<Mail className="w-5 h-5 text-[#6d28d9]" />}
+          icon={<Mail className="w-5 h-5 text-[color:var(--color-brand)]" />}
           title="Email"
           subtitle={user?.email || vendor?.email || "-"}
         />
         <EditableRow
-          icon={<Phone className="w-5 h-5 text-[#6d28d9]" />}
+          icon={<Phone className="w-5 h-5 text-[color:var(--color-brand)]" />}
           label="Phone"
           value={phone}
           editing={editingPhone}
@@ -386,15 +386,17 @@ export default function VendorProfilePage() {
           onSave={(v: string) => handleUpdate("phone", v)}
         />
         <ProfileCard
-          icon={<MapPin className="w-5 h-5 text-[#6d28d9]" />}
+          icon={<MapPin className="w-5 h-5 text-[color:var(--color-brand)]" />}
           title="Business Address"
           subtitle={location || "-"}
           action={
             <button
+              type="button"
+              aria-label="Edit business address"
               onClick={() => alert("Map picker coming soon")}
-              className="text-[#6d28d9] hover:text-[#5b21b6]"
+              className="text-[color:var(--color-brand)] hover:text-[color:var(--color-brand-strong)]"
             >
-              <Edit2 size={16} />
+              <Edit2 size={16} aria-hidden="true" />
             </button>
           }
         />
@@ -403,12 +405,12 @@ export default function VendorProfilePage() {
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mb-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <CreditCard className="w-5 h-5 text-[#6d28d9]" />
+              <CreditCard className="w-5 h-5 text-[color:var(--color-brand)]" />
               <h4 className="text-sm font-medium text-gray-800">Payment Options</h4>
             </div>
             <button
               onClick={() => openPaymentModal()}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#6d28d9] hover:bg-[#5b21b6] text-sm font-semibold text-white transition"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[color:var(--color-brand)] hover:bg-[color:var(--color-brand-strong)] text-sm font-semibold text-white transition"
             >
               <Plus size={14} /> Add
             </button>
@@ -428,16 +430,20 @@ export default function VendorProfilePage() {
                 </div>
                 <div className="flex gap-3 items-center">
                   <button
+                    type="button"
+                    aria-label={`Edit ${opt.payment_method?.name || "payment"} details`}
                     onClick={() => openPaymentModal(opt)}
-                    className="text-[#6d28d9] hover:text-[#5b21b6]"
+                    className="text-[color:var(--color-brand)] hover:text-[color:var(--color-brand-strong)]"
                   >
-                    <Edit2 size={15} />
+                    <Edit2 size={15} aria-hidden="true" />
                   </button>
                   <button
+                    type="button"
+                    aria-label={`Remove ${opt.payment_method?.name || "payment"} details`}
                     onClick={() => handleDeletePayment(opt.id)}
                     className="text-[#c62828] hover:text-[#8e1f1f]"
                   >
-                    <Trash2 size={15} />
+                    <Trash2 size={15} aria-hidden="true" />
                   </button>
                 </div>
               </div>
@@ -473,7 +479,7 @@ export default function VendorProfilePage() {
                   setPaymentForm((p) => ({ ...p, type_id: id, method_id: "" }));
                   fetchPaymentMethods(id);
                 }}
-                className="w-full border border-gray-200 rounded-xl p-2.5 bg-gray-50 focus:ring-2 focus:ring-[#a78bfa]"
+                className="w-full border border-gray-200 rounded-xl p-2.5 bg-gray-50 focus:ring-2 focus:ring-[color:var(--color-brand-400)]"
               >
                 <option value="">Select Type</option>
                 {paymentTypes.map((t) => (
@@ -489,7 +495,7 @@ export default function VendorProfilePage() {
                   setPaymentForm((p) => ({ ...p, method_id: e.target.value }))
                 }
                 disabled={!paymentForm.type_id}
-                className="w-full border border-gray-200 rounded-xl p-2.5 bg-gray-50 focus:ring-2 focus:ring-[#a78bfa] disabled:opacity-50"
+                className="w-full border border-gray-200 rounded-xl p-2.5 bg-gray-50 focus:ring-2 focus:ring-[color:var(--color-brand-400)] disabled:opacity-50"
               >
                 <option value="">Select Method</option>
                 {paymentMethods.map((m) => (
@@ -504,7 +510,7 @@ export default function VendorProfilePage() {
                 placeholder="Enter account / phone number"
                 value={paymentForm.account}
                 onChange={(e) => setPaymentForm((p) => ({ ...p, account: e.target.value }))}
-                className="w-full border border-gray-200 rounded-xl p-2.5 bg-gray-50 focus:ring-2 focus:ring-[#a78bfa]"
+                className="w-full border border-gray-200 rounded-xl p-2.5 bg-gray-50 focus:ring-2 focus:ring-[color:var(--color-brand-400)]"
               />
             </div>
 
@@ -518,7 +524,7 @@ export default function VendorProfilePage() {
               <button
                 onClick={handleSavePayment}
                 disabled={savingPayment}
-                className="px-5 py-2 bg-[#6d28d9] hover:bg-[#5b21b6] text-white font-semibold rounded-xl transition disabled:opacity-60"
+                className="px-5 py-2 bg-[color:var(--color-brand)] hover:bg-[color:var(--color-brand-strong)] text-white font-semibold rounded-xl transition disabled:opacity-60"
               >
                 {savingPayment ? (
                   <Loader2 className="w-4 h-4 animate-spin inline-block" />
@@ -589,16 +595,18 @@ function EditableRow({
               <input
                 value={val}
                 onChange={(e) => setVal(e.target.value)}
-                className="border border-gray-200 rounded-lg px-2 py-1 text-sm w-44 bg-gray-50 focus:ring-2 focus:ring-[#a78bfa]"
+                className="border border-gray-200 rounded-lg px-2 py-1 text-sm w-44 bg-gray-50 focus:ring-2 focus:ring-[color:var(--color-brand-400)]"
               />
               <button
+                type="button"
+                aria-label={`Save ${label}`}
                 onClick={() => {
                   onSave(val);
                   setEditing(false);
                 }}
-                className="p-1 rounded-md bg-[#6d28d9] text-white font-semibold"
+                className="p-1 rounded-md bg-[color:var(--color-brand)] text-white font-semibold"
               >
-                <Check size={14} />
+                <Check size={14} aria-hidden="true" />
               </button>
             </div>
           ) : (
@@ -608,10 +616,12 @@ function EditableRow({
       </div>
       {!editing && (
         <button
+          type="button"
+          aria-label={`Edit ${label}`}
           onClick={() => setEditing(true)}
-          className="text-[#6d28d9] hover:text-[#5b21b6] transition"
+          className="text-[color:var(--color-brand)] hover:text-[color:var(--color-brand-strong)] transition"
         >
-          <Edit2 size={16} />
+          <Edit2 size={16} aria-hidden="true" />
         </button>
       )}
     </div>

@@ -22,6 +22,7 @@ const config = {
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
 /** True once the deployment has been given its Firebase values. */
@@ -33,9 +34,41 @@ function firebaseApp(): FirebaseApp | undefined {
   if (!firebaseConfigured) return undefined;
   if (app) return app;
 
-  // Next's fast refresh can evaluate this module more than once.
+  // Next's fast refresh can evaluate this module more than once, and every
+  // caller here funnels through this one function — so initializeApp() runs
+  // at most once per browser, never per component.
   app = getApps().length ? getApps()[0] : initializeApp(config as Required<typeof config>);
   return app;
+}
+
+/**
+ * Starts Firebase Analytics, if this deployment has a measurement id.
+ *
+ * Analytics is browser-only — it reads `window`, `document` and cookies — so
+ * it must never be touched while the page is being rendered on the server or
+ * during hydration. Three things keep that true: the module is imported
+ * dynamically (so it is not in the server bundle at all), the call is guarded
+ * on `window`, and Firebase's own `isSupported()` is awaited, which is what
+ * declines gracefully in a private window or a browser with storage blocked.
+ *
+ * It renders nothing and sets no state, so it cannot cause a hydration
+ * mismatch. Leave NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID unset and none of this
+ * code is ever fetched.
+ */
+export async function startAnalytics(): Promise<void> {
+  if (typeof window === "undefined") return;
+  if (!firebaseConfigured || !config.measurementId) return;
+
+  const instance = firebaseApp();
+  if (!instance) return;
+
+  try {
+    const { getAnalytics, isSupported } = await import("firebase/analytics");
+    if (await isSupported()) getAnalytics(instance);
+  } catch {
+    // Analytics is telemetry, not function. A blocked script, an ad blocker or
+    // an unsupported browser must never take the storefront down with it.
+  }
 }
 
 export function firebaseAuth(): Auth | undefined {

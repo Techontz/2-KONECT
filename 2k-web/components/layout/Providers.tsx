@@ -1,5 +1,6 @@
 "use client";
 
+import { FirebaseAnalytics } from "@/components/analytics/FirebaseAnalytics";
 import { LanguageProvider } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/store/auth";
 import { CartProvider } from "@/lib/store/cart";
@@ -30,6 +31,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <CartProvider>
             <WishlistProvider>
               {children}
+              <FirebaseAnalytics />
             </WishlistProvider>
           </CartProvider>
         </AuthProvider>

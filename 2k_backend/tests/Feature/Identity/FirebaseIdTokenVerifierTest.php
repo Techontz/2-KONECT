@@ -20,7 +20,10 @@ use Tests\TestCase;
  */
 class FirebaseIdTokenVerifierTest extends TestCase
 {
-    private const PROJECT = 'direct2kariakoo-56782';
+    private const PROJECT = 'konect-83a21';
+
+    /** The project the published Flutter build still signs in against. */
+    private const LEGACY_PROJECT = 'direct2kariakoo-56782';
     private const KID = 'test-key-1';
 
     private \OpenSSLAsymmetricKey $privateKey;
@@ -30,6 +33,9 @@ class FirebaseIdTokenVerifierTest extends TestCase
         parent::setUp();
 
         config(['services.firebase.project_id' => self::PROJECT]);
+        // Set explicitly rather than inherited from the environment, so these
+        // tests say which projects they accept instead of asking the machine.
+        config(['services.firebase.legacy_project_ids' => []]);
         Cache::flush();
 
         $key = openssl_pkey_new([
@@ -108,6 +114,55 @@ class FirebaseIdTokenVerifierTest extends TestCase
             'aud' => 'someone-elses-project',
             'iss' => 'https://securetoken.google.com/someone-elses-project',
         ]));
+    }
+
+    public function test_a_token_from_a_named_legacy_project_is_accepted(): void
+    {
+        // The published mobile app still mints tokens for the old project and
+        // posts them to the same endpoint. Refusing them would lock every
+        // mobile Google user out on the day the web app moved projects.
+        config(['services.firebase.legacy_project_ids' => [self::LEGACY_PROJECT]]);
+
+        $profile = $this->verifier()->verify($this->token([
+            'aud' => self::LEGACY_PROJECT,
+            'iss' => 'https://securetoken.google.com/' . self::LEGACY_PROJECT,
+        ]));
+
+        $this->assertSame('firebase-uid-9', $profile['uid']);
+    }
+
+    public function test_a_stranger_is_still_rejected_while_a_legacy_project_is_accepted(): void
+    {
+        config(['services.firebase.legacy_project_ids' => [self::LEGACY_PROJECT]]);
+
+        $this->expectException(RuntimeException::class);
+        $this->verifier()->verify($this->token([
+            'aud' => 'someone-elses-project',
+            'iss' => 'https://securetoken.google.com/someone-elses-project',
+        ]));
+    }
+
+    public function test_the_issuer_must_name_the_same_project_as_the_audience(): void
+    {
+        // Both ids are ours and both are on the accepted list — but a token is
+        // only valid when its issuer and its audience are the same project.
+        config(['services.firebase.legacy_project_ids' => [self::LEGACY_PROJECT]]);
+
+        $this->expectException(RuntimeException::class);
+        $this->verifier()->verify($this->token([
+            'aud' => self::PROJECT,
+            'iss' => 'https://securetoken.google.com/' . self::LEGACY_PROJECT,
+        ]));
+    }
+
+    public function test_a_blank_legacy_entry_does_not_widen_the_accepted_list(): void
+    {
+        // An empty FIREBASE_LEGACY_PROJECT_IDS must mean "no extra projects",
+        // never "any project", and never a token with no audience at all.
+        config(['services.firebase.legacy_project_ids' => ['', '  ']]);
+
+        $this->expectException(RuntimeException::class);
+        $this->verifier()->verify($this->token(['aud' => '', 'iss' => 'https://securetoken.google.com/']));
     }
 
     public function test_an_unverified_email_is_rejected(): void

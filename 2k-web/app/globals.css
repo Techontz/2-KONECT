@@ -7,7 +7,7 @@
    declared once here. Components reference the tokens; nothing hard-codes a
    hex value or a magic pixel number.
 
-   The palette is purple-led but not purple-washed: #6D28D9 is reserved for
+   The palette is purple-led but not purple-washed: #881BCC is reserved for
    brand moments and primary actions, and the page itself is white, near-black
    and a single quiet grey. Two semantic families carry the idea the whole
    marketplace turns on — "local", which is here now, and "import", which is
@@ -16,14 +16,14 @@
 
 @theme {
   /* --- Brand ------------------------------------------------------------ */
-  --color-brand: #6d28d9;          /* the 2KONECT purple                    */
-  --color-brand-strong: #5b21b6;   /* pressed / hover on brand surfaces     */
-  --color-brand-deep: #2e1065;     /* dark brand ground, hero, footer       */
-  --color-brand-600: #7c3aed;
-  --color-brand-400: #a78bfa;
-  --color-brand-200: #ddd6fe;
-  --color-brand-100: #ede9fe;
-  --color-brand-50:  #f5f3ff;
+  --color-brand: #881bcc;          /* the 2KONECT purple                    */
+  --color-brand-strong: #7216ab;   /* pressed / hover on brand surfaces     */
+  --color-brand-deep: #3b0a5f;     /* dark brand ground, hero, footer       */
+  --color-brand-600: #962cdf;
+  --color-brand-400: #b17ceb;
+  --color-brand-200: #e7d1f5;
+  --color-brand-100: #f4eafa;
+  --color-brand-50:  #faf6fd;
   --color-brand-ink: #ffffff;      /* text on brand purple                  */
 
   /* --- Ink ---------------------------------------------------------------
@@ -63,7 +63,7 @@
   --color-warn-soft: #fdf2dc;
   --color-danger: #c62828;
   --color-danger-soft: #fdeaea;
-  --color-verified: #6d28d9;
+  --color-verified: #881bcc;
 
   /* --- Radii ------------------------------------------------------------ */
   --radius-xs: 6px;
@@ -79,7 +79,7 @@
   --shadow-card: 0 1px 2px rgba(20, 12, 44, 0.05), 0 1px 3px rgba(20, 12, 44, 0.04);
   --shadow-hover: 0 8px 24px rgba(20, 12, 44, 0.10);
   --shadow-pop: 0 16px 44px rgba(20, 12, 44, 0.16);
-  --shadow-brand: 0 8px 22px rgba(109, 40, 217, 0.26);
+  --shadow-brand: 0 8px 22px rgba(136, 27, 204, 0.26);
 
   /* --- Layout ----------------------------------------------------------- */
   --header-height: 60px;
@@ -207,7 +207,7 @@ h1, h2, h3, h4 {
 /* The deep brand ground used by the hero, the footer and the seller console. */
 .brand-ground {
   background:
-    radial-gradient(120% 130% at 8% 0%, rgba(167, 139, 250, 0.30) 0%, rgba(167, 139, 250, 0) 55%),
+    radial-gradient(120% 130% at 8% 0%, rgba(177, 124, 235, 0.30) 0%, rgba(177, 124, 235, 0) 55%),
     linear-gradient(155deg, var(--color-brand-deep) 0%, var(--color-brand) 100%);
   color: #ffffff;
 }
