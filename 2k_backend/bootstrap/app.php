@@ -20,6 +20,10 @@ return Application::configure(basePath: dirname(__DIR__))
             // Signed-in-if-you-are, public-if-you-are-not. Used by endpoints
             // a visitor may call but which mean more when we know who called.
             'optional.auth' => \App\Http\Middleware\OptionalAuth::class,
+            // Lets a public catalogue GET be held by the browser instead of
+            // being asked for again on every visit. Never applied globally —
+            // see the storefront route group in routes/api.php.
+            'cacheable' => \App\Http\Middleware\CacheableResponse::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

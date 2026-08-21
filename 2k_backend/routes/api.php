@@ -47,13 +47,27 @@ use App\Http\Controllers\Api\Shop\WishlistController as ShopWishlistController;
 |
 */
 Route::prefix('shop')->group(function () {
-    Route::get('/home', [ShopCatalogController::class, 'home']);
-    Route::get('/products', [ShopCatalogController::class, 'products']);
-    Route::get('/products/suggest', [ShopCatalogController::class, 'suggest']);
-    Route::get('/products/{id}', [ShopCatalogController::class, 'product'])->whereNumber('id');
-    Route::get('/categories', [ShopCatalogController::class, 'categories']);
-    Route::get('/vendors', [ShopCatalogController::class, 'vendors']);
-    Route::get('/categories/{id}', [ShopCatalogController::class, 'category'])->whereNumber('id');
+    // `cacheable:max-age,stale-while-revalidate` lets the browser hold an
+    // anonymous catalogue response instead of paying the origin round trip for
+    // it again. The windows are short and each is paired with a much longer
+    // stale-while-revalidate, so a repeat view is instant and a changed price
+    // still corrects itself on the next one. The middleware stands down the
+    // moment a request carries credentials.
+    Route::get('/home', [ShopCatalogController::class, 'home'])
+        ->middleware('cacheable:120,600');
+    Route::get('/products', [ShopCatalogController::class, 'products'])
+        ->middleware('cacheable:60,300');
+    Route::get('/products/suggest', [ShopCatalogController::class, 'suggest'])
+        ->middleware('cacheable:120,600');
+    Route::get('/products/{id}', [ShopCatalogController::class, 'product'])
+        ->whereNumber('id')->middleware('cacheable:60,300');
+    // The category tree moves only when an administrator edits it.
+    Route::get('/categories', [ShopCatalogController::class, 'categories'])
+        ->middleware('cacheable:300,3600');
+    Route::get('/vendors', [ShopCatalogController::class, 'vendors'])
+        ->middleware('cacheable:300,3600');
+    Route::get('/categories/{id}', [ShopCatalogController::class, 'category'])
+        ->whereNumber('id')->middleware('cacheable:300,1800');
 
     // Sourcing requests and seller applications are open to signed-out
     // visitors: someone who cannot find a product, or who wants to sell,

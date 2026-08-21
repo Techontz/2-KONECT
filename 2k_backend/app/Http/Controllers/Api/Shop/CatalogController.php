@@ -9,6 +9,7 @@ use App\Models\Banner;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Subcategory;
+use App\Support\CatalogCache;
 use App\Support\Media;
 use App\Support\Sourcing;
 use Illuminate\Database\Eloquent\Builder;
@@ -40,7 +41,7 @@ class CatalogController extends Controller
     {
         $shelfSize = 12;
 
-        $payload = Cache::remember('shop.home.v3', 300, function () use ($shelfSize) {
+        $payload = CatalogCache::remember('home', 300, function () use ($shelfSize) {
             $banners = $this->bannerGroups();
 
             return [
@@ -53,6 +54,15 @@ class CatalogController extends Controller
                 'categories'  => $this->categoryRail(),
                 'collections' => $this->categoryCollections(),
                 'shelves'     => $this->homeShelves($shelfSize),
+
+                // Two small facets the homepage used to collect by issuing
+                // five extra listing requests of its own — four of them asking
+                // for a single row purely to read the paginator's total. They
+                // are answered here, inside the same cached payload, because
+                // they describe the same catalogue. Additive keys: every
+                // existing consumer, the Flutter app included, is unaffected.
+                'origins'          => $this->originFacet(),
+                'delivery_windows' => $this->deliveryWindows(),
 
                 // The two ways to buy, each with its own row, because the
                 // difference between them is the product.
@@ -237,7 +247,7 @@ class CatalogController extends Controller
     /** The full category tree, used by the nav bar and the mega menu. */
     public function categories()
     {
-        $categories = Cache::remember('shop.categories.v1', 600, function () {
+        $categories = CatalogCache::remember('categories', 600, function () {
             return Category::query()
                 ->with(['subcategories' => fn ($q) => $q->select('id', 'category_id', 'name', 'icon', 'icon_image')])
                 ->withCount('products')
@@ -266,13 +276,37 @@ class CatalogController extends Controller
     /** A single category with its subcategories and a first page of products. */
     public function category(int $id, Request $request)
     {
-        $category = Category::with('subcategories')->find($id);
+        // The one catalogue read that was not cached, and the most expensive
+        // per visit: six product shelves plus a count for every subcategory.
+        // Versioned like the rest, so an administrator's edit still lands on
+        // the next request.
+        $payload = CatalogCache::remember('category.' . $id, 600, function () use ($id) {
+            return $this->buildCategoryPage($id);
+        });
 
-        if (! $category) {
+        if ($payload === null) {
             return response()->json(['message' => 'Category not found.'], 404);
         }
 
-        return response()->json([
+        return response()->json($payload);
+    }
+
+    /**
+     * @return array<string, mixed>|null  null when the category does not exist
+     */
+    private function buildCategoryPage(int $id): ?array
+    {
+        // `withCount` on the relation, rather than a `Product::count()` inside
+        // the map below: that ran one COUNT query per subcategory, so a
+        // fourteen-subcategory category paid fourteen round trips to put a
+        // number under each tile.
+        $category = Category::with(['subcategories' => fn ($q) => $q->withCount('products')])->find($id);
+
+        if (! $category) {
+            return null;
+        }
+
+        return ([
             'category' => [
                 'id'    => $category->id,
                 'name'  => $category->name,
@@ -282,7 +316,7 @@ class CatalogController extends Controller
                 'id'    => $sub->id,
                 'name'  => $sub->name,
                 'image' => Media::url($sub->icon_image),
-                'product_count' => Product::where('subcategory_id', $sub->id)->count(),
+                'product_count' => (int) $sub->products_count,
             ])->values(),
             'shelves' => $category->subcategories
                 ->take(6)
@@ -294,7 +328,8 @@ class CatalogController extends Controller
                     )->resolve(),
                 ])
                 ->filter(fn ($shelf) => count($shelf['products']) > 0)
-                ->values(),
+                ->values()
+                ->all(),
         ]);
     }
 
@@ -310,6 +345,12 @@ class CatalogController extends Controller
     {
         return Product::query()
             ->with(['images', 'category', 'subcategory', 'vendor'])
+            // The model auto-eager-loads `attributeValues.attribute` for every
+            // query in the application. A product card never renders an
+            // attribute, so on a listing page that is two extra queries and a
+            // few hundred unused rows per request. Dropped here only — the
+            // model default still stands for the endpoints that do need it.
+            ->without('attributeValues')
             ->withAvg('reviews', 'rating')
             ->withCount('reviews')
             ->latest('id');
@@ -407,7 +448,11 @@ class CatalogController extends Controller
     /** Facet data so the PLP sidebar reflects what is actually available. */
     private function availableFilters(array $f): array
     {
-        $scope = Product::query();
+        // `withOnly([])` clears the model's automatic eager loads. These
+        // queries return grouped aggregates rather than products, so without
+        // it Laravel hydrates a phantom row and issues five relation queries
+        // against `product_id in (0)` for every facet computed.
+        $scope = Product::query()->withOnly([]);
         $this->applyFilters($scope, array_diff_key($f, ['min_price' => 1, 'max_price' => 1]));
 
         $range = (clone $scope)
@@ -416,7 +461,7 @@ class CatalogController extends Controller
 
         // Availability counts ignore the availability filter itself, so the
         // shopper can always see how many sit on the other side of the toggle.
-        $availabilityScope = Product::query();
+        $availabilityScope = Product::query()->withOnly([]);
         $this->applyFilters($availabilityScope, array_diff_key($f, [
             'min_price' => 1, 'max_price' => 1, 'availability' => 1,
         ]));
@@ -454,23 +499,44 @@ class CatalogController extends Controller
                     : null)
                 ->filter()
                 ->values(),
-            'subcategories' => (clone $scope)
-                ->select('subcategory_id', DB::raw('COUNT(*) AS total'))
-                ->whereNotNull('subcategory_id')
-                ->groupBy('subcategory_id')
-                ->orderByDesc('total')
-                ->limit(30)
-                ->get()
-                ->map(function ($row) {
-                    $sub = Subcategory::find($row->subcategory_id);
-
-                    return $sub ? [
-                        'id' => $sub->id, 'name' => $sub->name, 'count' => (int) $row->total,
-                    ] : null;
-                })
-                ->filter()
-                ->values(),
+            'subcategories' => $this->subcategoryFacet($scope),
         ];
+    }
+
+    /**
+     * The subcategory facet, resolved in one lookup rather than one per row.
+     *
+     * This used to call `Subcategory::find()` inside the map, so a listing
+     * page issued up to thirty extra queries just to put names on the filter
+     * chips — two thirds of every catalogue request. The counts still come
+     * from the same grouped query; only the name lookup changed.
+     */
+    private function subcategoryFacet(Builder $scope): \Illuminate\Support\Collection
+    {
+        $rows = (clone $scope)
+            ->select('subcategory_id', DB::raw('COUNT(*) AS total'))
+            ->whereNotNull('subcategory_id')
+            ->groupBy('subcategory_id')
+            ->orderByDesc('total')
+            ->limit(30)
+            ->get();
+
+        if ($rows->isEmpty()) {
+            return collect();
+        }
+
+        $names = Subcategory::query()
+            ->whereIn('id', $rows->pluck('subcategory_id'))
+            ->pluck('name', 'id');
+
+        return $rows
+            ->map(fn ($row) => isset($names[$row->subcategory_id]) ? [
+                'id'    => (int) $row->subcategory_id,
+                'name'  => $names[$row->subcategory_id],
+                'count' => (int) $row->total,
+            ] : null)
+            ->filter()
+            ->values();
     }
 
     /**
@@ -485,7 +551,12 @@ class CatalogController extends Controller
         $vendors = \App\Models\Vendor::query()
             ->where('is_approved', true)
             ->withCount(['products' => fn ($q) => $q->where('stock', '>', 0)])
-            ->having('products_count', '>', 0)
+            // `whereHas` rather than `having` on the aggregate alias, for the
+            // same reason `homeShelves()` avoids it: SQLite rejects a HAVING
+            // clause on a non-aggregate query, so this endpoint returned a 500
+            // on the test database while working on the production MySQL. Same
+            // result on both, and no test could reach it before.
+            ->whereHas('products', fn ($q) => $q->where('stock', '>', 0))
             ->orderByDesc('products_count')
             ->get()
             ->map(fn ($vendor) => [
@@ -509,6 +580,62 @@ class CatalogController extends Controller
      * administrator can move a campaign from the carousel to a mid-page strip
      * without a deploy.
      */
+    /**
+     * Source countries that actually have stock behind them, commonest first.
+     */
+    private function originFacet(): array
+    {
+        return Product::query()
+            ->withOnly([])
+            ->select('source_country', DB::raw('COUNT(*) AS total'))
+            ->whereNotNull('source_country')
+            ->groupBy('source_country')
+            ->orderByDesc('total')
+            ->get()
+            ->map(fn ($row) => Sourcing::country($row->source_country)
+                ? Sourcing::country($row->source_country) + ['count' => (int) $row->total]
+                : null)
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * How many products can be promised within each of the storefront's four
+     * delivery windows.
+     *
+     * The same `max_days` comparison the listing filter makes, answered for
+     * every window in one grouped pass instead of one request per window.
+     */
+    private function deliveryWindows(): array
+    {
+        $windows = [3, 10, 14, 45];
+
+        // Grouped on the same COALESCE the `max_days` listing filter uses, so
+        // a tile's count and the page it opens can never disagree — including
+        // for a listing whose seller never set a lead time.
+        $promised = DB::raw(
+            'COALESCE(lead_time_max_days, CASE WHEN availability = \'' . Sourcing::IMPORT . '\' THEN '
+            . Sourcing::DEFAULT_LEAD_TIME[Sourcing::IMPORT]['max'] . ' ELSE '
+            . Sourcing::DEFAULT_LEAD_TIME[Sourcing::LOCAL]['max'] . ' END)'
+        );
+
+        $rows = Product::query()
+            ->withOnly([])
+            ->select([DB::raw($promised->getValue(DB::connection()->getQueryGrammar()) . ' AS promised'), DB::raw('COUNT(*) AS total')])
+            ->groupBy('promised')
+            ->get();
+
+        $counts = [];
+        foreach ($windows as $days) {
+            $counts[$days] = (int) $rows
+                ->filter(fn ($row) => (int) $row->promised <= $days)
+                ->sum('total');
+        }
+
+        return $counts;
+    }
+
     private function bannerGroups(): array
     {
         $groups = Banner::query()
@@ -556,31 +683,34 @@ class CatalogController extends Controller
             ->limit($limit)
             ->get();
 
+        // Every tile on the page needs one representative photo. Resolved for
+        // all of them together below, because doing it inside the map issued a
+        // product query *and* an images query per tile — the single largest
+        // contributor to the home feed's cold rebuild.
+        $tileSubcategoryIds = $categories
+            ->flatMap(fn (Category $category) => $category->subcategories
+                ->filter(fn ($sub) => $sub->products_count > 0)
+                ->sortByDesc('products_count')
+                ->take(7)
+                ->pluck('id'))
+            ->unique()
+            ->values();
+
+        $tileImages = $this->representativeImages($tileSubcategoryIds->all());
+
         return $categories
-            ->map(function (Category $category) {
+            ->map(function (Category $category) use ($tileImages) {
                 $tiles = $category->subcategories
                     ->filter(fn ($sub) => $sub->products_count > 0)
                     ->sortByDesc('products_count')
                     ->take(7)
-                    ->map(function ($sub) use ($category) {
-                        // One extra query per tile, but only for the handful of
-                        // tiles actually rendered, and the whole payload is
-                        // cached for five minutes.
-                        $image = Product::query()
-                            ->where('subcategory_id', $sub->id)
-                            ->whereHas('images')
-                            ->with('images')
-                            ->latest('id')
-                            ->first()?->images->first()?->image;
-
-                        return [
-                            'id'            => $sub->id,
-                            'category_id'   => $category->id,
-                            'name'          => trim($sub->name),
-                            'product_count' => $sub->products_count,
-                            'image'         => Media::url($image),
-                        ];
-                    })
+                    ->map(fn ($sub) => [
+                        'id'            => $sub->id,
+                        'category_id'   => $category->id,
+                        'name'          => trim($sub->name),
+                        'product_count' => $sub->products_count,
+                        'image'         => Media::url($tileImages[$sub->id] ?? null),
+                    ])
                     ->values()
                     ->all();
 
@@ -594,6 +724,59 @@ class CatalogController extends Controller
             ->filter(fn ($collection) => count($collection['tiles']) >= 3)
             ->values()
             ->all();
+    }
+
+    /**
+     * One photo per subcategory, for every subcategory at once.
+     *
+     * Takes the newest product in each that actually has an image. Two queries
+     * regardless of how many subcategories are asked for, in place of two per
+     * subcategory.
+     *
+     * @param  list<int>  $subcategoryIds
+     * @return array<int, string>  subcategory id => image path
+     */
+    private function representativeImages(array $subcategoryIds): array
+    {
+        if (empty($subcategoryIds)) {
+            return [];
+        }
+
+        // The newest image-bearing product in each subcategory. Grouping in
+        // PHP rather than SQL keeps this working identically on MySQL and on
+        // the SQLite the test suite runs against.
+        $products = Product::query()
+            ->withOnly([])
+            ->select('id', 'subcategory_id')
+            ->whereIn('subcategory_id', $subcategoryIds)
+            ->whereHas('images')
+            ->orderByDesc('id')
+            ->get();
+
+        $chosen = [];
+        foreach ($products as $product) {
+            $chosen[$product->subcategory_id] ??= $product->id;
+        }
+
+        if (empty($chosen)) {
+            return [];
+        }
+
+        $images = \App\Models\ProductImage::query()
+            ->select('product_id', 'image')
+            ->whereIn('product_id', array_values($chosen))
+            ->get()
+            ->groupBy('product_id');
+
+        $out = [];
+        foreach ($chosen as $subcategoryId => $productId) {
+            $image = $images[$productId][0]->image ?? null;
+            if ($image !== null) {
+                $out[$subcategoryId] = $image;
+            }
+        }
+
+        return $out;
     }
 
     private function categoryRail(): array
