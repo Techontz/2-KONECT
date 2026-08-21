@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
+import { prefetchCategoryPage } from "@/lib/queries";
 import type { Category } from "@/lib/types";
 
 /**
@@ -105,6 +106,11 @@ export function CategoryNav({ categories }: { categories: Category[] }) {
                   href={`/category?id=${category.id}`}
                   prefetch={false}
                   onClick={() => setAllOpen(false)}
+                  // Warmed on approach rather than on render: the open mega
+                  // menu shows every category at once, and fetching all of
+                  // them would be a request storm for one click.
+                  onPointerEnter={() => prefetchCategoryPage(category.id)}
+                  onFocus={() => prefetchCategoryPage(category.id)}
                   className="block text-[13px] font-extrabold hover:text-[color:var(--color-brand)]"
                 >
                   {category.name.trim()}

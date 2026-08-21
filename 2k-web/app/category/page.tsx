@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import shop from "@/lib/shop";
+import { useCategoryPage } from "@/lib/queries";
 import { SiteChrome } from "@/components/layout/SiteChrome";
 import { ListingView } from "@/components/product/ListingView";
 import { EmptyState, Skeleton } from "@/components/ui/Primitives";
@@ -30,23 +30,8 @@ function CategoryContent() {
   const categoryId = Number(params.get("id"));
   const subcategoryId = params.get("subcategory") ? Number(params.get("subcategory")) : undefined;
 
-  const [detail, setDetail] = useState<Awaited<ReturnType<typeof shop.category>> | null>(null);
-  const [missing, setMissing] = useState(false);
-
-  useEffect(() => {
-    if (!categoryId) {
-      setMissing(true);
-      return;
-    }
-
-    setDetail(null);
-    setMissing(false);
-
-    shop
-      .category(categoryId)
-      .then(setDetail)
-      .catch(() => setMissing(true));
-  }, [categoryId]);
+  const { data: detail, error } = useCategoryPage(categoryId || null);
+  const missing = !categoryId || error;
 
   if (missing) {
     return (

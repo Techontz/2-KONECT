@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import shop from "@/lib/shop";
+import { readProductPreview, useProduct } from "@/lib/queries";
 import { BRAND } from "@/lib/brand";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useCart } from "@/lib/store/cart";
@@ -44,12 +44,6 @@ function ProductContent() {
   const router = useRouter();
   const productId = Number(params.get("id"));
 
-  const [data, setData] = useState<{
-    product: ProductDetail;
-    related: ProductCardModel[];
-    from_vendor: ProductCardModel[];
-  } | null>(null);
-  const [missing, setMissing] = useState(false);
   const [activeImage, setActiveImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [optionIndex, setOptionIndex] = useState(0);
@@ -59,19 +53,23 @@ function ProductContent() {
   const cart = useCart();
   const wishlist = useWishlist();
 
-  useEffect(() => {
-    if (!productId) { setMissing(true); return; }
+  const { data, loading, error } = useProduct(productId || null);
+  const missing = !productId || error;
 
-    setData(null);
-    setMissing(false);
+  // The card the shopper clicked is already in memory: name, image, price,
+  // rating, stock and sourcing — everything above the fold. Showing it while
+  // the full detail is in flight means the page has a headline the moment it
+  // opens instead of a skeleton, and the request behind it only has to deliver
+  // the description, the gallery and the related shelves.
+  const preview = productId ? readProductPreview(productId) : null;
+
+  useEffect(() => {
     setActiveImage(0);
     setQuantity(1);
     setOptionIndex(0);
     // A fresh product means scrolling back to the top — otherwise following a
     // related-product link lands the shopper halfway down the new page.
     window.scrollTo({ top: 0 });
-
-    shop.product(productId).then(setData).catch(() => setMissing(true));
   }, [productId]);
 
   // The route's own metadata cannot know which product this is — the id is a
@@ -125,7 +123,7 @@ function ProductContent() {
     );
   }
 
-  if (!product) return <PdpSkeleton />;
+  if (!product) return <PdpSkeleton preview={preview} loading={loading} />;
 
   const option = options[Math.min(optionIndex, options.length - 1)] ?? options[0];
   const sourcing = option.sourcing;
@@ -603,15 +601,49 @@ function productSchema(product: ProductDetail, option: BuyingOption) {
   };
 }
 
-function PdpSkeleton() {
+/**
+ * The page before its detail payload lands.
+ *
+ * Given the card the shopper clicked, this is not a skeleton at all: the
+ * photo, the name and the price are already known, so they are drawn straight
+ * away and only the parts that genuinely have to be fetched — description,
+ * gallery, seller panel, related shelves — are left as placeholders. Without a
+ * preview (a shared link, a page opened cold) it falls back to the plain
+ * skeleton it always was.
+ */
+function PdpSkeleton({ preview }: { preview?: ProductCardModel | null; loading?: boolean }) {
   return (
     <div className="shell grid gap-4 py-3 lg:grid-cols-[minmax(0,1fr)_400px]">
       <div className="space-y-4">
-        <Skeleton className="aspect-square w-full rounded-[var(--radius-md)]" />
+        {preview?.image ? (
+          <div className="overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-white">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={preview.image}
+              alt={preview.name}
+              className="aspect-square w-full object-contain"
+              fetchPriority="high"
+            />
+          </div>
+        ) : (
+          <Skeleton className="aspect-square w-full rounded-[var(--radius-md)]" />
+        )}
         <Skeleton className="h-40 w-full rounded-[var(--radius-md)]" />
       </div>
       <div className="space-y-3">
-        <Skeleton className="h-52 w-full rounded-[var(--radius-md)]" />
+        {preview ? (
+          <div className="rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-white p-4">
+            <h1 className="text-[17px] font-bold leading-snug text-[color:var(--color-ink)] sm:text-[20px]">
+              {preview.name}
+            </h1>
+            <div className="mt-2">
+              <PriceBlock price={preview.price} size="lg" />
+            </div>
+            <Skeleton className="mt-4 h-11 w-full rounded-[var(--radius-sm)]" />
+          </div>
+        ) : (
+          <Skeleton className="h-52 w-full rounded-[var(--radius-md)]" />
+        )}
         <Skeleton className="h-32 w-full rounded-[var(--radius-md)]" />
         <Skeleton className="h-40 w-full rounded-[var(--radius-md)]" />
       </div>

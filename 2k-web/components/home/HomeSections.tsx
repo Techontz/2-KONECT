@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { BRAND } from "@/lib/brand";
 import type { Category, HeroBanner } from "@/lib/types";
+import { prefetchCategoryPage } from "@/lib/queries";
 import { Skeleton } from "@/components/ui/Primitives";
 import { BoxIcon, GlobeIcon, PlaneIcon, SendIcon, TruckIcon } from "@/components/sourcing/icons";
 
@@ -37,7 +38,13 @@ export function CategoryRail({
               <Link
                 key={category.id}
                 href={`/category?id=${category.id}`}
-                prefetch={false}
+                // The route chunk is shared by every category — Next fetches
+                // it once for the whole rail. What differs is the data, and
+                // that is warmed only for the tile actually being reached for.
+                prefetch
+                onPointerEnter={() => prefetchCategoryPage(category.id)}
+                onTouchStart={() => prefetchCategoryPage(category.id)}
+                onFocus={() => prefetchCategoryPage(category.id)}
                 className="group w-[92px] shrink-0 text-center sm:w-[104px]"
               >
                 <span className="block aspect-square overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-white transition-all group-hover:border-[color:var(--color-brand-200)] group-hover:shadow-[var(--shadow-card)]">

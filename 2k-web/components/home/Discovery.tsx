@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { BRAND } from "@/lib/brand";
 import { country as lookupCountry } from "@/lib/countries";
 import shop from "@/lib/shop";
-import type { ListingFilters, ProductCard as ProductCardType } from "@/lib/types";
+import type { Country, ProductCard as ProductCardType } from "@/lib/types";
 import { ProductCard } from "@/components/product/ProductCard";
 import { Skeleton } from "@/components/ui/Primitives";
 import { SectionHead } from "@/components/home/SectionHead";
@@ -27,8 +27,8 @@ import { SectionHead } from "@/components/home/SectionHead";
  * local shop. Counts and codes come from the `origins` facet; Tanzania is
  * dropped because it is the other half of the model and has its own entrance.
  */
-export function ShopByCountry({ filters }: { filters: ListingFilters | null }) {
-  const origins = (filters?.origins ?? []).filter((origin) => origin.code !== "TZ" && origin.count > 0);
+export function ShopByCountry({ origins: all }: { origins: (Country & { count: number })[] | null }) {
+  const origins = (all ?? []).filter((origin) => origin.code !== "TZ" && origin.count > 0);
 
   if (origins.length === 0) return null;
 
@@ -101,28 +101,16 @@ const WINDOWS = [
   { days: 45, title: "Best price",     window: "Up to 45 days", note: "Everything, including sea freight" },
 ] as const;
 
-export function ShopByDelivery() {
-  const [counts, setCounts] = useState<Record<number, number> | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    // One count per window, in parallel, asking for a single row each — the
-    // number wanted is the paginator's total, not the products.
-    Promise.all(
-      WINDOWS.map((w) =>
-        shop
-          .products({ max_days: w.days, per_page: 1 })
-          .then((r) => [w.days, r.meta.total] as const)
-          .catch(() => [w.days, 0] as const),
-      ),
-    ).then((pairs) => {
-      if (!cancelled) setCounts(Object.fromEntries(pairs));
-    });
-
-    return () => { cancelled = true; };
-  }, []);
-
+/**
+ * The counts arrive with the home feed.
+ *
+ * This section used to fetch its own, one request per window, each asking the
+ * listing endpoint for a single row purely to read the paginator's total —
+ * four round trips to put four numbers on the screen. The catalogue answers
+ * all four in one grouped query now, inside the payload the page was already
+ * waiting for.
+ */
+export function ShopByDelivery({ counts }: { counts: Record<number, number> | null }) {
   const shown = WINDOWS.filter((w) => counts === null || (counts[w.days] ?? 0) > 0);
   if (counts !== null && shown.length === 0) return null;
 
@@ -157,7 +145,7 @@ export function ShopByDelivery() {
                 <Skeleton className="h-3.5 w-20" />
               ) : (
                 <>
-                  {counts[w.days].toLocaleString()} products{" "}
+                  {(counts[w.days] ?? 0).toLocaleString()} products{" "}
                   <span aria-hidden="true" className="inline-block transition-transform group-hover:translate-x-0.5">→</span>
                 </>
               )}

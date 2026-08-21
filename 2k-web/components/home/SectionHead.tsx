@@ -56,7 +56,9 @@ export function SectionHead({
       {href ? (
         <Link
           href={href}
-          prefetch={false}
+          // These resolve to four routes across the whole homepage, and Next
+          // fetches each chunk once however many headings point at it.
+          prefetch
           className="tap shrink-0 whitespace-nowrap rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] px-3 py-1.5 text-[12px] font-bold text-[color:var(--color-brand)] transition-colors hover:bg-[color:var(--color-brand-50)] sm:text-[13px]"
         >
           {linkLabel}

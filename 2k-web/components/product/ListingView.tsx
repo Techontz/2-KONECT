@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import shop, { type ProductQuery } from "@/lib/shop";
+import { type ProductQuery } from "@/lib/shop";
+import { usePagedListing } from "@/lib/queries";
 import { formatMoney } from "@/lib/format";
 import type { Availability, ListingFilters, ProductCard as ProductCardModel } from "@/lib/types";
 import { Button, EmptyState } from "@/components/ui/Primitives";
@@ -15,6 +16,13 @@ import { ProductGrid } from "./ProductShelf";
  *
  * One listing chrome everywhere, parameterised by its base query, rather than
  * four near-copies that drift apart.
+ *
+ * Results are cached against the query that produced them, so going back to a
+ * grid — from a product, or by flipping a tab back to one already seen —
+ * repaints the products immediately and checks for changes behind them. It
+ * previously refetched from scratch and showed a skeleton every time, which on
+ * the production API meant several seconds of blank grid to arrive back
+ * somewhere the shopper had just been.
  *
  * The availability filter is the first control on the page and the only one
  * that is always visible, because "is it here, or is it coming?" is the
@@ -45,14 +53,7 @@ export function ListingView({
     ? `/request?name=${encodeURIComponent(baseQuery.q)}`
     : "/request";
 
-  const [products, setProducts] = useState<ProductCardModel[]>([]);
-  const [filters, setFilters] = useState<ListingFilters | null>(null);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [failed, setFailed] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const [sort, setSort] = useState<ProductQuery["sort"]>("relevance");
@@ -75,7 +76,6 @@ export function ListingView({
     setVerifiedOnly(Boolean(baseQuery.verified));
     setOrigin(baseQuery.source_country);
     setMaxDays(baseQuery.max_days);
-    setPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baseKey]);
 
@@ -97,32 +97,23 @@ export function ListingView({
     [baseKey, subcategoryId, availability, origin, verifiedOnly, maxDays, sort, inStockOnly, onSaleOnly, priceCap],
   );
 
-  const load = useCallback(
-    async (targetPage: number, append: boolean) => {
-      if (append) setLoadingMore(true);
-      else setLoading(true);
-      setFailed(false);
+  const listing = usePagedListing(query);
 
-      try {
-        const data = await shop.products({ ...query, page: targetPage });
-        setProducts((current) => (append ? [...current, ...data.products] : data.products));
-        setFilters(data.filters);
-        setTotal(data.meta.total);
-        setHasMore(data.meta.has_more);
-        setPage(data.meta.current_page);
-      } catch {
-        setFailed(true);
-      } finally {
-        setLoading(false);
-        setLoadingMore(false);
-      }
-    },
-    [query],
-  );
+  const products: ProductCardModel[] = listing.data?.products ?? [];
+  const filters: ListingFilters | null = listing.data?.filters ?? null;
+  const total = listing.data?.meta.total ?? 0;
+  const hasMore = listing.data?.meta.has_more ?? false;
+  const loading = listing.loading;
+  const failed = listing.error;
 
-  useEffect(() => {
-    void load(1, false);
-  }, [load]);
+  async function showMore() {
+    setLoadingMore(true);
+    try {
+      await listing.loadMore();
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   // "Clear" returns to whatever the page itself is about, not to an empty
   // query: clearing on /shop/abroad?country=CN must leave China selected,
@@ -285,7 +276,7 @@ export function ListingView({
             <EmptyState
               title="We couldn’t load these products"
               message="Check your connection and try again."
-              action={<Button onClick={() => void load(1, false)}>Try again</Button>}
+              action={<Button onClick={listing.refresh}>Try again</Button>}
             />
           ) : !loading && products.length === 0 ? (
             /* Nothing found is an opportunity, not a dead end: this is exactly
@@ -317,7 +308,7 @@ export function ListingView({
                     variant="secondary"
                     size="lg"
                     loading={loadingMore}
-                    onClick={() => void load(page + 1, true)}
+                    onClick={() => void showMore()}
                   >
                     {loadingMore ? "Loading" : "Show more"}
                   </Button>

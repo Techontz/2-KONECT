@@ -1,10 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 
-import shop from "@/lib/shop";
-import type { Category } from "@/lib/types";
+import { useCategories } from "@/lib/queries";
 import { SiteChrome } from "@/components/layout/SiteChrome";
 import { EmptyState, Skeleton } from "@/components/ui/Primitives";
 
@@ -16,12 +14,9 @@ import { EmptyState, Skeleton } from "@/components/ui/Primitives";
  * follows to reach the depth of the catalogue.
  */
 export default function CategoriesPage() {
-  const [categories, setCategories] = useState<Category[] | null>(null);
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    shop.categories().then(setCategories).catch(() => setFailed(true));
-  }, []);
+  // Shared with the header's category tree: whichever loads first, the other
+  // reads it from the cache rather than asking again.
+  const { data: categories, error: failed } = useCategories();
 
   return (
     <SiteChrome>

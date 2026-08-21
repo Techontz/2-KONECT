@@ -1,10 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import shop from "@/lib/shop";
-import type { VendorSummary } from "@/lib/types";
+import { useVendors } from "@/lib/queries";
 import { usePageContent, useT } from "@/lib/i18n";
 import { SiteChrome } from "@/components/layout/SiteChrome";
 import { ListingView } from "@/components/product/ListingView";
@@ -35,16 +34,7 @@ function VendorsContent() {
   const copy = usePageContent("vendors");
   const t = useT();
 
-  const [vendors, setVendors] = useState<VendorSummary[] | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    shop
-      .vendors()
-      .then((list) => { if (!cancelled) setVendors(list); })
-      .catch(() => { if (!cancelled) setVendors([]); });
-    return () => { cancelled = true; };
-  }, []);
+  const { data: vendors } = useVendors();
 
   // ---- a single seller's storefront ----
   if (vendorId) {

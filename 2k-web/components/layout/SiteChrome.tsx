@@ -4,7 +4,7 @@ import Link from "next/link";
 import { createContext, useContext, useEffect, useState } from "react";
 
 import { BRAND } from "@/lib/brand";
-import shop from "@/lib/shop";
+import { useCategories as useCategoryTree } from "@/lib/queries";
 import type { Category } from "@/lib/types";
 import { useAuth } from "@/lib/store/auth";
 import { useLocation } from "@/lib/store/location";
@@ -22,10 +22,20 @@ import { MobileTabBar } from "./MobileTabBar";
  * Everything wrapped around a storefront page: header, category navigation,
  * mobile menu, bottom tab bar, footer and the auth sheet.
  *
- * The category tree is fetched once here and shared through context, so the
- * nav, mega menu, footer and mobile drawer all read the same data instead of
- * each issuing their own request.
+ * The category tree is read once here and shared through context, so the nav,
+ * mega menu, footer and mobile drawer all use the same data instead of each
+ * issuing their own request.
+ *
+ * "Once" now means once per session rather than once per page. This component
+ * is remounted by every storefront route, so a `useEffect` fetch here meant
+ * the same 11kB category tree was downloaded again on the way to the category
+ * page, again on the product page and again on the way back — four times in a
+ * journey where nothing about it had changed. It is cached instead, and only
+ * refreshed in the background after half an hour.
  */
+
+/** Stable identity, so an empty nav does not re-render every consumer. */
+const EMPTY_CATEGORIES: Category[] = [];
 
 const CategoriesContext = createContext<Category[]>([]);
 export const useCategories = () => useContext(CategoriesContext);
@@ -35,7 +45,6 @@ export const useCategories = () => useContext(CategoriesContext);
  * may read cart/auth/wishlist state before this ever renders.
  */
 export function SiteChrome({ children }: { children: React.ReactNode }) {
-  const [categories, setCategories] = useState<Category[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   // A seller is sent to their console rather than shown the shop. This is the
@@ -44,17 +53,10 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
   // under /vendor does.
   const leavingForConsole = useVendorRedirect();
 
-  useEffect(() => {
-    // Pointless work for a seller who is on their way out.
-    if (leavingForConsole) return;
-
-    shop
-      .categories()
-      .then(setCategories)
-      // A failed category fetch must not take the page down — the nav simply
-      // renders empty and everything else keeps working.
-      .catch(() => setCategories([]));
-  }, [leavingForConsole]);
+  // A failed category fetch must not take the page down — the nav simply
+  // renders empty and everything else keeps working. `enabled` stands the
+  // request down entirely for a seller who is on their way to the console.
+  const categories = useCategoryTree(!leavingForConsole).data ?? EMPTY_CATEGORIES;
 
   // Hold the storefront back while the redirect lands, so a seller never sees
   // a frame of the shopping interface.

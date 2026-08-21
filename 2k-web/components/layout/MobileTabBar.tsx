@@ -49,7 +49,10 @@ export function MobileTabBar() {
             <li key={tab.href} className="flex-1">
               <Link
                 href={tab.href}
-                prefetch={false}
+                // The bottom bar is how a phone gets around this site. Five
+                // links, five routes, all of them likely — worth having their
+                // chunks in hand before the tap.
+                prefetch
                 aria-current={active ? "page" : undefined}
                 className={`relative flex h-full flex-col items-center justify-center gap-1 text-[10px] font-bold transition-colors ${
                   active ? "text-[color:var(--color-brand)]" : "text-[color:var(--color-ink-muted)]"

@@ -246,6 +246,15 @@ export interface HomeFeed {
   collections: CategoryCollection[];
   shelves: Shelf[];
   deals: ProductCard[];
+
+  /**
+   * Two facets the homepage used to gather with five listing requests of its
+   * own. Optional so an older cached payload — or a backend that has not been
+   * deployed yet — still renders rather than throwing.
+   */
+  origins?: (Country & { count: number })[];
+  /** `{ 3: 2441, 10: 2511, … }` — products promised within each window. */
+  delivery_windows?: Record<string, number>;
 }
 
 export interface VendorSummary {

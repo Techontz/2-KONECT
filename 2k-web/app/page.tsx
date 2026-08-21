@@ -1,10 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
 import { BRAND } from "@/lib/brand";
-import shop from "@/lib/shop";
-import type { HomeFeed, ListingFilters } from "@/lib/types";
+import { useHomeFeed } from "@/lib/queries";
 import { SiteChrome } from "@/components/layout/SiteChrome";
 import { BannerRow } from "@/components/home/BannerRow";
 import { ModuleRow } from "@/components/home/ModuleRow";
@@ -40,31 +37,24 @@ import { Button, EmptyState } from "@/components/ui/Primitives";
  *
  * Every product, category and banner is real data from a single `/shop/home`
  * request, and nothing here requires a login.
+ *
+ * That request is now genuinely the only one. The page also used to ask the
+ * listing endpoint for the country facet, and once more per delivery window
+ * for a count — five extra round trips, four of them fetching a single row to
+ * read a total off the paginator. Both facets ship inside the home payload.
+ *
+ * The feed is cached, so coming back to the homepage repaints it from memory
+ * and checks for changes behind the scenes instead of showing skeletons again.
  */
+/** JSON object keys arrive as strings; the tiles are keyed by day count. */
+function normaliseWindows(windows: Record<string, number>): Record<number, number> {
+  const out: Record<number, number> = {};
+  for (const [days, count] of Object.entries(windows)) out[Number(days)] = count;
+  return out;
+}
+
 export default function HomePage() {
-  const [feed, setFeed] = useState<HomeFeed | null>(null);
-  const [filters, setFilters] = useState<ListingFilters | null>(null);
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    shop
-      .home()
-      .then((data) => { if (!cancelled) setFeed(data); })
-      .catch(() => { if (!cancelled) setFailed(true); });
-
-    // The catalogue's own facets, for "shop by country". One row is requested
-    // because only the facet block is wanted, not the products — and the
-    // section renders nothing at all if this fails, rather than a country list
-    // that is not backed by stock.
-    shop
-      .products({ per_page: 1 })
-      .then((listing) => { if (!cancelled) setFilters(listing.filters); })
-      .catch(() => undefined);
-
-    return () => { cancelled = true; };
-  }, []);
+  const { data: feed, loading, error: failed } = useHomeFeed();
 
   if (failed) {
     return (
@@ -80,7 +70,6 @@ export default function HomePage() {
     );
   }
 
-  const loading = feed === null;
   const shelves = feed?.shelves ?? [];
   const collections = feed?.collections ?? [];
   const promos = feed?.promos ?? [];
@@ -119,9 +108,14 @@ export default function HomePage() {
   // nobody has done before, then opens the door to every source country.
   sections.push(<HowImportsWork key="how" />);
 
-  sections.push(<ShopByCountry key="countries" filters={filters} />);
+  sections.push(<ShopByCountry key="countries" origins={feed?.origins ?? null} />);
 
-  sections.push(<ShopByDelivery key="speed" />);
+  sections.push(
+    <ShopByDelivery
+      key="speed"
+      counts={feed?.delivery_windows ? normaliseWindows(feed.delivery_windows) : null}
+    />,
+  );
 
   sections.push(
     <ProductShelf

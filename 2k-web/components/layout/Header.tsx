@@ -85,10 +85,10 @@ export function Header({ onOpenMenu }: { onOpenMenu?(): void }) {
               rule between them. ---- */}
       <div className="hidden bg-[color:var(--color-brand-deep)] text-white lg:block">
         <div className="shell flex h-9 items-center gap-5 text-[12px] font-semibold">
-          <Link href="/shop/local" prefetch={false} className="inline-flex items-center gap-1.5 text-white/85 transition-colors hover:text-white">
+          <Link href="/shop/local" prefetch className="inline-flex items-center gap-1.5 text-white/85 transition-colors hover:text-white">
             <span aria-hidden="true">🇹🇿</span> Available in Tanzania
           </Link>
-          <Link href="/shop/abroad" prefetch={false} className="inline-flex items-center gap-1.5 text-white/85 transition-colors hover:text-white">
+          <Link href="/shop/abroad" prefetch className="inline-flex items-center gap-1.5 text-white/85 transition-colors hover:text-white">
             <span aria-hidden="true">🌍</span> Order from abroad
           </Link>
           <Link href="/request" prefetch={false} className="text-white/85 transition-colors hover:text-white">

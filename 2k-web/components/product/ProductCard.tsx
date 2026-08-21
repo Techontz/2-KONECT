@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import { prefetchProduct, seedProductPreview } from "@/lib/queries";
 import { useCart } from "@/lib/store/cart";
 import { useWishlist } from "@/lib/store/wishlist";
 import type { ProductCard as ProductCardModel } from "@/lib/types";
@@ -20,6 +21,16 @@ import { VerifiedBadge } from "@/components/sourcing/Trust";
  *
  * There is deliberately only one implementation; variants are props, not
  * copies.
+ *
+ * Opening one is made to feel immediate in two steps. Reaching for the card —
+ * a pointer entering it, or a finger landing on it — starts fetching the
+ * product's detail payload, so by the time the tap registers the answer is
+ * usually already back. And the card hands the product page the copy of itself
+ * it is holding, so the photo, name and price are on screen from the first
+ * frame rather than after a round trip.
+ *
+ * Prefetching is driven by intent, not by rendering: a grid of twenty-four
+ * cards issues no requests until one of them is actually approached.
  */
 export function ProductCard({
   product,
@@ -41,6 +52,16 @@ export function ProductCard({
   // unbuyable — only local stock actually runs out.
   const buyable = sourcing ? (sourcing.is_local ? product.in_stock : true) : product.in_stock;
 
+  /**
+   * Warm the destination. Cheap and idempotent — an id already held is
+   * returned from the cache without touching the network — but still deferred
+   * to a real gesture so that scrolling past a shelf costs nothing.
+   */
+  function warm() {
+    seedProductPreview(product);
+    prefetchProduct(product.id);
+  }
+
   function handleAdd(event: React.MouseEvent) {
     // The whole card is a link; the add button must not navigate.
     event.preventDefault();
@@ -61,8 +82,13 @@ export function ProductCard({
   return (
     <article
       className={`group relative flex h-full flex-col overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] transition-all duration-200 hover:border-[color:var(--color-brand-200)] hover:shadow-[var(--shadow-hover)] ${className}`}
+      onPointerEnter={warm}
+      onTouchStart={warm}
     >
-      <Link href={href} className="flex h-full flex-col" prefetch={false}>
+      {/* `prefetch` left off: the product route's own chunk is shared by every
+          card on the page and is fetched once by the first link Next sees. It
+          is the *data* that differs per card, and that is handled above. */}
+      <Link href={href} className="flex h-full flex-col" prefetch={false} onFocus={warm}>
         {/* ---- image plate ---- */}
         <div className="relative aspect-square w-full overflow-hidden bg-white">
           {product.image ? (
