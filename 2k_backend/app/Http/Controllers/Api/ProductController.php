@@ -199,7 +199,15 @@ class ProductController extends Controller
                 'old_price'      => $p->old_price,
                 'new_price'      => $p->new_price,
                 'stock'          => $p->stock,
-                'images'         => $p->images->map(fn($img) => ['image' => asset('storage/' . $img->image)]),
+                'images' => $p->images->map(function ($img) {
+                        $image = $img->image;
+
+                        return [
+                            'image' => filter_var($image, FILTER_VALIDATE_URL)
+                                ? $image
+                                : asset('storage/' . ltrim($image, '/')),
+                        ];
+                    }),
                 'average_rating' => round($p->reviews->avg('rating'), 1) ?? 0.0,
                 'review_count'   => $p->reviews->count(),
                 'subcategory'    => $p->subcategory ? [
