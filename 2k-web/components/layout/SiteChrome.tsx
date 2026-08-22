@@ -4,6 +4,7 @@ import Link from "next/link";
 import { createContext, useContext, useEffect, useState } from "react";
 
 import { BRAND } from "@/lib/brand";
+import { useT } from "@/lib/i18n";
 import { useCategories as useCategoryTree } from "@/lib/queries";
 import type { Category } from "@/lib/types";
 import { useAuth } from "@/lib/store/auth";
@@ -111,6 +112,7 @@ function MobileMenu({
   onClose(): void;
   categories: Category[];
 }) {
+  const t = useT();
   const [expanded, setExpanded] = useState<number | null>(null);
   const [locationOpen, setLocationOpen] = useState(false);
   const { location } = useLocation();
@@ -137,7 +139,7 @@ function MobileMenu({
   const isVendor = user?.role === "vendor";
 
   return (
-    <div className="fixed inset-0 z-[90] lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">
+    <div className="fixed inset-0 z-[90] lg:hidden" role="dialog" aria-modal="true" aria-label={t("nav.menu")}>
       <div className="fade-in absolute inset-0 bg-black/55" onClick={onClose} />
 
       <aside className="absolute inset-y-0 left-0 flex w-[88%] max-w-sm flex-col bg-white">
@@ -146,7 +148,7 @@ function MobileMenu({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close menu"
+            aria-label={t("nav.closeMenu")}
             className="-mr-2 flex h-11 w-11 items-center justify-center rounded-[var(--radius-sm)] text-white hover:bg-white/10"
           >
             <CloseIcon className="h-5 w-5" />
@@ -175,14 +177,14 @@ function MobileMenu({
           ) : (
             <div className="border-b border-[color:var(--color-line)] px-4 py-4">
               <p className="mb-2.5 text-[13px] text-[color:var(--color-ink-muted)]">
-                Sign in to track orders, save items and check out faster.
+                {t("nav.signInHint")}
               </p>
               <button
                 type="button"
                 onClick={() => { onClose(); openAuthPrompt(); }}
                 className="flex h-11 w-full items-center justify-center rounded-[var(--radius-sm)] bg-[color:var(--color-brand)] text-sm font-bold text-white"
               >
-                Sign in
+                {t("header.signIn")}
               </button>
             </div>
           )}
@@ -196,8 +198,8 @@ function MobileMenu({
               className="flex flex-col gap-1 rounded-[var(--radius-md)] border border-[color:var(--color-local-line)] bg-[color:var(--color-local-soft)] p-3"
             >
               <span aria-hidden="true" className="text-[18px]">🇹🇿</span>
-              <span className="text-[13px] font-extrabold text-[color:var(--color-local)]">In Tanzania</span>
-              <span className="text-[11px] text-[color:var(--color-ink-muted)]">Ready in 1–3 days</span>
+              <span className="text-[13px] font-extrabold text-[color:var(--color-local)]">{t("nav.inCountry", { country: BRAND.country })}</span>
+              <span className="text-[11px] text-[color:var(--color-ink-muted)]">{t("nav.readyInDays")}</span>
             </Link>
             <Link
               href="/shop/abroad"
@@ -206,19 +208,19 @@ function MobileMenu({
               className="flex flex-col gap-1 rounded-[var(--radius-md)] border border-[color:var(--color-import-line)] bg-[color:var(--color-import-soft)] p-3"
             >
               <span aria-hidden="true" className="text-[18px]">🌍</span>
-              <span className="text-[13px] font-extrabold text-[color:var(--color-import)]">From abroad</span>
-              <span className="text-[11px] text-[color:var(--color-ink-muted)]">Lower price, we import it</span>
+              <span className="text-[13px] font-extrabold text-[color:var(--color-import)]">{t("nav.fromAbroad")}</span>
+              <span className="text-[11px] text-[color:var(--color-ink-muted)]">{t("nav.lowerPriceImport")}</span>
             </Link>
           </div>
 
           <nav className="border-b border-[color:var(--color-line)] py-1">
-            <MenuRow href="/" onClick={onClose} icon={<HomeIcon />} label="Home" />
-            <MenuRow href="/request" onClick={onClose} icon={<SearchIcon />} label="Request a product" />
-            <MenuRow href="/track" onClick={onClose} icon={<PinIcon />} label="Track an order" />
-            <MenuRow href="/account/orders" onClick={onClose} icon={<BoxIcon />} label="My orders" />
-            <MenuRow href="/wishlist" onClick={onClose} icon={<HeartIcon />} label="Saved items" badge={wishlist.count} />
-            <MenuRow href="/account/messages" onClick={onClose} icon={<ChatIcon />} label="Messages" />
-            <MenuRow href="/deals" onClick={onClose} icon={<TagIcon />} label="Deals" />
+            <MenuRow href="/" onClick={onClose} icon={<HomeIcon />} label={t("nav.home")} />
+            <MenuRow href="/request" onClick={onClose} icon={<SearchIcon />} label={t("nav.requestProduct")} />
+            <MenuRow href="/track" onClick={onClose} icon={<PinIcon />} label={t("nav.trackAnOrder")} />
+            <MenuRow href="/account/orders" onClick={onClose} icon={<BoxIcon />} label={t("header.myOrders")} />
+            <MenuRow href="/wishlist" onClick={onClose} icon={<HeartIcon />} label={t("header.savedItems")} badge={wishlist.count} />
+            <MenuRow href="/account/messages" onClick={onClose} icon={<ChatIcon />} label={t("header.messages")} />
+            <MenuRow href="/deals" onClick={onClose} icon={<TagIcon />} label={t("nav.deals")} />
           </nav>
 
           <nav className="border-b border-[color:var(--color-line)] py-1">
@@ -226,7 +228,7 @@ function MobileMenu({
               href={isVendor ? "/vendor/dashboard" : "/sell"}
               onClick={onClose}
               icon={<StoreIcon />}
-              label={isVendor ? "Seller console" : `Sell with ${BRAND.name}`}
+              label={isVendor ? t("header.sellerConsole") : t("header.sellWith", { brand: BRAND.name })}
             />
             <button
               type="button"
@@ -235,7 +237,7 @@ function MobileMenu({
             >
               <span className="text-[color:var(--color-ink-muted)]"><PinIcon /></span>
               <span className="min-w-0 flex-1">
-                Deliver to{" "}
+                {t("header.deliverTo")}{" "}
                 <span className="font-bold">{location?.label ?? BRAND.city}</span>
               </span>
               <Chevron />
@@ -245,7 +247,7 @@ function MobileMenu({
           {/* ---- categories ---- */}
           <div className="py-1">
             <p className="px-4 pb-1 pt-3 text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-ink-faint)]">
-              Categories
+              {t("nav.categories")}
             </p>
             {categories.map((category) => {
               const isOpen = expanded === category.id;
@@ -265,7 +267,9 @@ function MobileMenu({
                       <button
                         type="button"
                         onClick={() => setExpanded(isOpen ? null : category.id)}
-                        aria-label={`${isOpen ? "Hide" : "Show"} ${category.name.trim()} subcategories`}
+                        aria-label={isOpen
+                          ? t("nav.hideSubcategories", { name: category.name.trim() })
+                          : t("nav.showSubcategories", { name: category.name.trim() })}
                         aria-expanded={isOpen}
                         className="flex w-12 shrink-0 items-center justify-center text-[color:var(--color-ink-muted)] hover:bg-[color:var(--color-surface-alt)]"
                       >
@@ -302,7 +306,7 @@ function MobileMenu({
                 onClick={() => { onClose(); logout(); }}
                 className="flex h-11 w-full items-center justify-center rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] text-sm font-bold text-[color:var(--color-sale)]"
               >
-                Sign out
+                {t("header.logout")}
               </button>
             </div>
           ) : null}

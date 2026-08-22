@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import { BRAND } from "@/lib/brand";
+import { useT } from "@/lib/i18n";
 import type { Category, HeroBanner } from "@/lib/types";
 import { prefetchCategoryPage } from "@/lib/queries";
 import { Skeleton } from "@/components/ui/Primitives";
@@ -22,10 +23,11 @@ export function CategoryRail({
   categories: Pick<Category, "id" | "name" | "image" | "product_count">[];
   loading?: boolean;
 }) {
+  const t = useT();
   if (!loading && categories.length === 0) return null;
 
   return (
-    <section aria-label="Shop by category">
+    <section aria-label={t("home.shopByCategory2")}>
       <div className="rail gap-2.5 pb-1">
         {loading
           ? Array.from({ length: 8 }).map((_, index) => (
@@ -79,26 +81,27 @@ export function CategoryRail({
  * pay. So the answer is on the homepage rather than buried in a help page.
  */
 export function HowImportsWork() {
+  const t = useT();
   const steps = [
     {
       icon: <GlobeIcon className="h-5 w-5" />,
-      title: "You order",
-      note: "Pick the imported price and pay once. Nothing else to arrange.",
+      title: t("home.youOrder"),
+      note: t("home.youOrderNote"),
     },
     {
       icon: <SendIcon className="h-5 w-5" />,
-      title: "We source it",
-      note: "We buy from the supplier and hand it to the carrier.",
+      title: t("home.weSource"),
+      note: t("home.weSourceNote"),
     },
     {
       icon: <PlaneIcon className="h-5 w-5" />,
-      title: "It travels",
+      title: t("home.itTravels"),
       note: `Air or sea to ${BRAND.country}, tracked at every step.`,
     },
     {
       icon: <TruckIcon className="h-5 w-5" />,
-      title: "You choose delivery",
-      note: "When it lands, have it brought to you or collect it.",
+      title: t("home.youChooseDelivery"),
+      note: t("home.youChooseDeliveryNote"),
     },
   ];
 
@@ -118,7 +121,7 @@ export function HowImportsWork() {
           prefetch={false}
           className="tap text-[13px] font-bold text-[color:var(--color-brand)] hover:underline"
         >
-          Browse imported products →
+          {t("home.browseImported")}
         </Link>
       </div>
 
@@ -150,19 +153,19 @@ export function HowImportsWork() {
  * service.
  */
 export function RequestBand() {
+  const t = useT();
   return (
     <section className="section overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)]">
       <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7">
         <div className="max-w-xl">
           <p className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-brand)]">
-            Sourcing service
+            {t("home.sourcingService")}
           </p>
           <h2 className="mt-1 text-[20px] font-black tracking-[-0.02em] sm:text-[24px]">
-            Can’t find what you’re looking for?
+            {t("home.cantFindTitle")}
           </h2>
           <p className="mt-1.5 text-[14px] leading-relaxed text-[color:var(--color-ink-soft)]">
-            Send us a photo or a description and our team will find it, price it and
-            bring it in. No account needed to ask.
+            {t("home.cantFindBody")}
           </p>
         </div>
 
@@ -171,7 +174,7 @@ export function RequestBand() {
           prefetch={false}
           className="inline-flex h-[52px] shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[color:var(--color-brand)] px-7 text-[15px] font-bold text-white shadow-[var(--shadow-brand)] transition-colors hover:bg-[color:var(--color-brand-strong)]"
         >
-          Request a product
+          {t("home.requestProductCta")}
         </Link>
       </div>
     </section>
@@ -210,6 +213,7 @@ export function SellBand() {
 
 /** A campaign strip placed by an administrator. Renders nothing without one. */
 export function PromoStrip({ banner }: { banner?: HeroBanner | null }) {
+  const t = useT();
   if (!banner?.image) return null;
 
   return (
@@ -224,7 +228,7 @@ export function PromoStrip({ banner }: { banner?: HeroBanner | null }) {
         <source media="(min-width: 768px)" srcSet={banner.image} />
         <img
           src={banner.mobile_image || banner.image}
-          alt={banner.alt || banner.title || "Offer"}
+          alt={banner.alt || banner.title || t("home.offer")}
           loading="lazy"
           className="h-auto w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
         />

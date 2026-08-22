@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { BRAND } from "@/lib/brand";
 import shop from "@/lib/shop";
 import { formatMoney } from "@/lib/format";
+import { useT } from "@/lib/i18n";
 import { useAuth } from "@/lib/store/auth";
 import { useCart } from "@/lib/store/cart";
 import { useLocation } from "@/lib/store/location";
@@ -30,6 +31,7 @@ import { LanguageSwitcher } from "./LanguageSwitcher";
  * search takes a line of its own rather than being squeezed between icons.
  */
 export function Header({ onOpenMenu }: { onOpenMenu?(): void }) {
+  const t = useT();
   const router = useRouter();
   const { user, isAuthenticated, logout, openAuthPrompt } = useAuth();
   const cart = useCart();
@@ -86,24 +88,24 @@ export function Header({ onOpenMenu }: { onOpenMenu?(): void }) {
       <div className="hidden bg-[color:var(--color-brand-deep)] text-white lg:block">
         <div className="shell flex h-9 items-center gap-5 text-[12px] font-semibold">
           <Link href="/shop/local" prefetch className="inline-flex items-center gap-1.5 text-white/85 transition-colors hover:text-white">
-            <span aria-hidden="true">🇹🇿</span> Available in Tanzania
+            <span aria-hidden="true">🇹🇿</span> {t("header.availableIn", { country: BRAND.country })}
           </Link>
           <Link href="/shop/abroad" prefetch className="inline-flex items-center gap-1.5 text-white/85 transition-colors hover:text-white">
-            <span aria-hidden="true">🌍</span> Order from abroad
+            <span aria-hidden="true">🌍</span> {t("header.orderAbroad")}
           </Link>
           <Link href="/request" prefetch={false} className="text-white/85 transition-colors hover:text-white">
-            Request a product
+            {t("header.requestProduct")}
           </Link>
 
           <span className="ml-auto flex items-center gap-5">
             <Link href="/track" prefetch={false} className="text-white/85 transition-colors hover:text-white">
-              Track order
+              {t("header.trackOrder")}
             </Link>
             <Link href="/sell" prefetch={false} className="text-white/85 transition-colors hover:text-white">
-              Sell with {BRAND.name}
+              {t("header.sellWith", { brand: BRAND.name })}
             </Link>
             <Link href="/help" prefetch={false} className="text-white/85 transition-colors hover:text-white">
-              Help
+              {t("header.help")}
             </Link>
             <LanguageSwitcher tone="dark" compact />
           </span>
@@ -117,7 +119,7 @@ export function Header({ onOpenMenu }: { onOpenMenu?(): void }) {
         <button
           type="button"
           onClick={onOpenMenu}
-          aria-label="Open menu"
+          aria-label={t("header.openMenu")}
           className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-white hover:bg-white/10 lg:hidden"
         >
           <MenuIcon className="h-6 w-6" />
@@ -136,7 +138,7 @@ export function Header({ onOpenMenu }: { onOpenMenu?(): void }) {
           <PinIcon className="h-4 w-4 shrink-0 text-white/70" />
           <span className="max-w-[150px] truncate text-left leading-tight">
             <span className="block text-[10px] uppercase tracking-wide text-white/60">
-              Deliver to
+              {t("header.deliverTo")}
             </span>
             <span className="block font-bold">{location?.label ?? BRAND.city}</span>
           </span>
@@ -162,15 +164,15 @@ export function Header({ onOpenMenu }: { onOpenMenu?(): void }) {
                   setShowSuggestions(true);
                 }}
                 onFocus={() => setShowSuggestions(true)}
-                placeholder="Search products, brands and categories"
-                aria-label="Search products"
+                placeholder={t("header.searchAllPlaceholder")}
+                aria-label={t("header.searchAria")}
                 className="h-full w-full min-w-0 bg-transparent text-[15px] text-[color:var(--color-ink)] outline-none placeholder:text-[color:var(--color-ink-faint)]"
               />
               {term ? (
                 <button
                   type="button"
                   onClick={() => { setTerm(""); setSuggestions(null); }}
-                  aria-label="Clear search"
+                  aria-label={t("header.clearSearch")}
                   className="shrink-0 px-1 text-[color:var(--color-ink-faint)] hover:text-[color:var(--color-ink)]"
                 >
                   <CloseIcon className="h-4 w-4" />
@@ -178,10 +180,10 @@ export function Header({ onOpenMenu }: { onOpenMenu?(): void }) {
               ) : null}
               <button
                 type="submit"
-                aria-label="Search"
+                aria-label={t("common.search")}
                 className="hidden h-8 shrink-0 items-center rounded-[var(--radius-pill)] bg-[color:var(--color-brand)] px-4 text-[13px] font-bold text-white transition-colors hover:bg-[color:var(--color-brand-strong)] sm:flex"
               >
-                Search
+                {t("common.search")}
               </button>
             </div>
           </form>
@@ -192,7 +194,7 @@ export function Header({ onOpenMenu }: { onOpenMenu?(): void }) {
               {suggestions.categories.length > 0 ? (
                 <div className="border-b border-[color:var(--color-line)] p-2">
                   <p className="px-2 pb-1 text-[10px] font-bold uppercase tracking-wide text-[color:var(--color-ink-faint)]">
-                    Categories
+                    {t("header.categories")}
                   </p>
                   {suggestions.categories.map((category) => (
                     <Link
@@ -231,9 +233,9 @@ export function Header({ onOpenMenu }: { onOpenMenu?(): void }) {
               the sourcing desk, which is a product rather than an apology. */}
           {noResults ? (
             <div className="absolute left-0 right-0 top-[calc(100%+6px)] overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-white p-4 shadow-[var(--shadow-pop)]">
-              <p className="text-[13px] font-bold">No match for “{term.trim()}”.</p>
+              <p className="text-[13px] font-bold">{t("header.noMatch", { term: term.trim() })}</p>
               <p className="mt-0.5 text-[12px] text-[color:var(--color-ink-muted)]">
-                We can source it for you from abroad.
+                {t("header.noMatchHint")}
               </p>
               <Link
                 href={`/request?name=${encodeURIComponent(term.trim())}`}
@@ -241,51 +243,51 @@ export function Header({ onOpenMenu }: { onOpenMenu?(): void }) {
                 onClick={() => setShowSuggestions(false)}
                 className="mt-2.5 inline-flex h-9 items-center rounded-[var(--radius-sm)] bg-[color:var(--color-brand)] px-3.5 text-[13px] font-bold text-white"
               >
-                Request this product
+                {t("listing.requestProduct")}
               </Link>
             </div>
           ) : null}
         </div>
 
         {/* ---- actions ---- */}
-        <nav aria-label="Account and cart" className="ml-auto flex shrink-0 items-center gap-0.5 lg:gap-1">
+        <nav aria-label={t("header.accountAndCart")} className="ml-auto flex shrink-0 items-center gap-0.5 lg:gap-1">
           <div ref={accountRef} className="relative">
             <button
               type="button"
               onClick={() => (isAuthenticated ? setAccountOpen((open) => !open) : openAuthPrompt())}
-              aria-label={isAuthenticated ? "Your account" : "Sign in"}
+              aria-label={isAuthenticated ? t("header.yourAccount") : t("header.signIn")}
               aria-expanded={isAuthenticated ? accountOpen : undefined}
               className="flex h-11 items-center gap-1.5 rounded-[var(--radius-sm)] px-2 text-[13px] font-semibold text-white hover:bg-white/10"
             >
               <UserIcon className="h-5 w-5" />
               <span className="hidden max-w-[110px] truncate lg:inline">
-                {isAuthenticated ? user?.name.split(" ")[0] : "Sign in"}
+                {isAuthenticated ? user?.name.split(" ")[0] : t("header.signIn")}
               </span>
             </button>
 
             {accountOpen && isAuthenticated ? (
               <div className="fade-in absolute right-0 top-[calc(100%+8px)] w-60 overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-white py-1 shadow-[var(--shadow-pop)]">
                 <p className="border-b border-[color:var(--color-line)] px-4 py-2.5 text-xs text-[color:var(--color-ink-muted)]">
-                  Signed in as
+                  {t("header.signedInAs")}
                   <br />
                   <span className="font-bold text-[color:var(--color-ink)]">{user?.email}</span>
                 </p>
-                <MenuLink href="/account" onClick={() => setAccountOpen(false)}>My account</MenuLink>
-                <MenuLink href="/account/orders" onClick={() => setAccountOpen(false)}>My orders</MenuLink>
-                <MenuLink href="/account/requests" onClick={() => setAccountOpen(false)}>My requests</MenuLink>
-                <MenuLink href="/wishlist" onClick={() => setAccountOpen(false)}>Saved items</MenuLink>
-                <MenuLink href="/account/messages" onClick={() => setAccountOpen(false)}>Messages</MenuLink>
+                <MenuLink href="/account" onClick={() => setAccountOpen(false)}>{t("header.myAccount")}</MenuLink>
+                <MenuLink href="/account/orders" onClick={() => setAccountOpen(false)}>{t("header.myOrders")}</MenuLink>
+                <MenuLink href="/account/requests" onClick={() => setAccountOpen(false)}>{t("header.myRequests")}</MenuLink>
+                <MenuLink href="/wishlist" onClick={() => setAccountOpen(false)}>{t("header.savedItems")}</MenuLink>
+                <MenuLink href="/account/messages" onClick={() => setAccountOpen(false)}>{t("header.messages")}</MenuLink>
                 {user?.role === "vendor" ? (
-                  <MenuLink href="/vendor/dashboard" onClick={() => setAccountOpen(false)}>Seller console</MenuLink>
+                  <MenuLink href="/vendor/dashboard" onClick={() => setAccountOpen(false)}>{t("header.sellerConsole")}</MenuLink>
                 ) : (
-                  <MenuLink href="/sell" onClick={() => setAccountOpen(false)}>Sell with {BRAND.name}</MenuLink>
+                  <MenuLink href="/sell" onClick={() => setAccountOpen(false)}>{t("header.sellWith", { brand: BRAND.name })}</MenuLink>
                 )}
                 <button
                   type="button"
                   onClick={() => { setAccountOpen(false); logout(); }}
                   className="block w-full border-t border-[color:var(--color-line)] px-4 py-2.5 text-left text-sm font-semibold text-[color:var(--color-sale)] hover:bg-[color:var(--color-surface-alt)]"
                 >
-                  Sign out
+                  {t("header.logout")}
                 </button>
               </div>
             ) : null}
@@ -295,9 +297,9 @@ export function Header({ onOpenMenu }: { onOpenMenu?(): void }) {
               are rows in the menu and tabs in the bottom bar. Eight icon
               actions do not fit a 320px bar without every one of them
               becoming too small to hit, and the cart is the one that stays. */}
-          <HeaderAction href="/account/orders" label="Orders" icon={<BoxIcon className="h-5 w-5" />} display="hidden lg:flex" />
-          <HeaderAction href="/wishlist" label="Saved items" icon={<HeartIcon className="h-5 w-5" />} badge={wishlist.count} display="hidden lg:flex" />
-          <HeaderAction href="/cart" label="Cart" icon={<CartIcon className="h-5 w-5" />} badge={cart.count} />
+          <HeaderAction href="/account/orders" label={t("header.orders")} icon={<BoxIcon className="h-5 w-5" />} display="hidden lg:flex" />
+          <HeaderAction href="/wishlist" label={t("header.savedItems")} icon={<HeartIcon className="h-5 w-5" />} badge={wishlist.count} display="hidden lg:flex" />
+          <HeaderAction href="/cart" label={t("header.cart")} icon={<CartIcon className="h-5 w-5" />} badge={cart.count} />
         </nav>
       </div>
 

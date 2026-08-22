@@ -1,5 +1,7 @@
 "use client";
 
+import { BRAND } from "@/lib/brand";
+import { useT } from "@/lib/i18n";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -27,6 +29,7 @@ const DELIVERY_FEE = 3000;
  * than one delivery.
  */
 export default function CartPage() {
+  const t = useT();
   const cart = useCart();
 
   // What the server would actually charge. Quantity tiers live there, so the
@@ -42,12 +45,12 @@ export default function CartPage() {
         <div className="pb-tabbar">
           <EmptyState
             icon={<CartIcon className="h-9 w-9" />}
-            title="Your cart is empty"
-            message="Browse the marketplace and add something you like — no account needed."
+            title={t("cart.empty")}
+            message={t("cart.emptyHint")}
             action={
               <>
-                <ButtonLink href="/shop/local" size="lg">Shop in Tanzania</ButtonLink>
-                <ButtonLink href="/shop/abroad" size="lg" variant="secondary">Order from abroad</ButtonLink>
+                <ButtonLink href="/shop/local" size="lg">{t("cart.shopInCountry", { country: BRAND.country })}</ButtonLink>
+                <ButtonLink href="/shop/abroad" size="lg" variant="secondary">{t("cart.orderAbroad")}</ButtonLink>
               </>
             }
           />
@@ -143,12 +146,12 @@ export default function CartPage() {
                     ) : null}
 
                     <p className="mt-0.5 text-[11px] text-[color:var(--color-ink-faint)]">
-                      Sold by {option?.seller ?? product.vendor?.name ?? "2KONECT"}
+                      {t("cart.soldByName", { name: option?.seller ?? product.vendor?.name ?? BRAND.name })}
                     </p>
 
                     {sourcing?.is_local && product.stock > 0 && product.stock <= 5 ? (
                       <p className="mt-0.5 text-[11px] font-semibold text-[color:var(--color-warn)]">
-                        Only {product.stock} left
+                        {t("cart.onlyLeft", { count: product.stock })}
                       </p>
                     ) : null}
 
@@ -159,12 +162,12 @@ export default function CartPage() {
                         rather than being squeezed off the row. */}
                     <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-2">
                       <div className="flex h-10 items-center rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)]">
-                        <StepButton label="Decrease quantity" onClick={() => cart.setQuantity(key, quantity - 1)}>
+                        <StepButton label={t("common.decreaseQuantity")} onClick={() => cart.setQuantity(key, quantity - 1)}>
                           −
                         </StepButton>
                         <span className="w-9 text-center text-[13px] font-bold tabular-nums">{quantity}</span>
                         <StepButton
-                          label="Increase quantity"
+                          label={t("common.increaseQuantity")}
                           disabled={quantity >= ceiling}
                           onClick={() => cart.setQuantity(key, quantity + 1)}
                         >
@@ -178,14 +181,14 @@ export default function CartPage() {
                           onClick={() => { void wishlist.toggle(product.id); cart.remove(key); }}
                           className="text-[color:var(--color-brand)] hover:underline"
                         >
-                          Save for later
+                          {t("cart.saveForLater")}
                         </button>
                         <button
                           type="button"
                           onClick={() => cart.remove(key)}
                           className="text-[color:var(--color-ink-muted)] hover:text-[color:var(--color-sale)] hover:underline"
                         >
-                          Remove
+                          {t("common.remove")}
                         </button>
                       </div>
                     </div>
@@ -198,18 +201,18 @@ export default function CartPage() {
           {/* ---- summary ---- */}
           <aside className="lg:sticky lg:top-[calc(var(--header-height)+16px)] lg:self-start">
             <div className="rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4">
-              <h2 className="mb-3 text-[15px] font-black">Order summary</h2>
+              <h2 className="mb-3 text-[15px] font-black">{t("cart.orderSummary")}</h2>
 
               <dl className="space-y-2 text-[13px]">
                 <SummaryRow
-                  label={`Subtotal (${cart.count} ${cart.count === 1 ? "item" : "items"})`}
+                  label={cart.count === 1 ? t("cart.subtotalItemOne") : t("cart.subtotalItems", { count: cart.count })}
                   value={formatMoney(subtotal)}
                 />
-                <SummaryRow label="Delivery" value={formatMoney(DELIVERY_FEE)} />
+                <SummaryRow label={t("cart.delivery")} value={formatMoney(DELIVERY_FEE)} />
               </dl>
 
               <div className="mt-3 flex items-baseline justify-between border-t border-[color:var(--color-line)] pt-3">
-                <span className="text-[14px] font-black">Total</span>
+                <span className="text-[14px] font-black">{t("cart.total")}</span>
                 <span className="text-[22px] font-black tracking-[-0.02em]">{formatMoney(total)}</span>
               </div>
 
@@ -221,13 +224,15 @@ export default function CartPage() {
               {mixed ? (
                 <div className="mt-3 space-y-px overflow-hidden rounded-[var(--radius-sm)] border border-[color:var(--color-line)]">
                   <p className="bg-[color:var(--color-surface-alt)] px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-[color:var(--color-ink-faint)]">
-                    Arriving in two deliveries
+                    {t("cart.twoDeliveries")}
                   </p>
 
                   <div className="flex items-center justify-between gap-3 bg-[color:var(--color-local-soft)] px-3 py-2.5">
                     <span className="flex items-center gap-1.5 text-[12.5px] font-bold text-[color:var(--color-local)]">
                       <span aria-hidden="true">🇹🇿</span>
-                      {localLines.length} {localLines.length === 1 ? "item" : "items"} in Tanzania
+                      {localLines.length === 1
+                        ? t("cart.itemInCountry", { country: BRAND.country })
+                        : t("cart.itemsInCountry", { count: localLines.length, country: BRAND.country })}
                     </span>
                     <span className="shrink-0 text-[12.5px] font-bold text-[color:var(--color-local)]">
                       {localWindow ?? "—"}
@@ -237,7 +242,9 @@ export default function CartPage() {
                   <div className="flex items-center justify-between gap-3 bg-[color:var(--color-import-soft)] px-3 py-2.5">
                     <span className="flex items-center gap-1.5 text-[12.5px] font-bold text-[color:var(--color-import)]">
                       <span aria-hidden="true">🌍</span>
-                      {importLines.length} {importLines.length === 1 ? "item" : "items"} from abroad
+                      {importLines.length === 1
+                        ? t("cart.itemFromAbroad")
+                        : t("cart.itemsFromAbroad", { count: importLines.length })}
                     </span>
                     <span className="shrink-0 text-[12.5px] font-bold text-[color:var(--color-import)]">
                       {importWindow ?? "—"}
@@ -245,18 +252,18 @@ export default function CartPage() {
                   </div>
 
                   <p className="bg-white px-3 py-2 text-[11.5px] leading-snug text-[color:var(--color-ink-muted)]">
-                    Each part is tracked separately, and you are not charged twice for delivery.
+                    {t("cart.trackedSeparately")}
                   </p>
                 </div>
               ) : slowest > 0 ? (
                 <p className="mt-2 text-[12px] text-[color:var(--color-ink-muted)]">
-                  Everything arrives within{" "}
-                  <span className="font-bold text-[color:var(--color-ink)]">{slowest} days</span>.
+                  {t("cart.everythingWithin")}{" "}
+                  <span className="font-bold text-[color:var(--color-ink)]">{t("cart.daysUnit", { count: slowest })}</span>.
                 </p>
               ) : null}
 
               <Button size="lg" className="mt-3 w-full" onClick={() => router.push("/checkout")}>
-                Checkout
+                {t("cart.checkoutShort")}
               </Button>
 
               <Link
@@ -264,7 +271,7 @@ export default function CartPage() {
                 prefetch={false}
                 className="mt-2 block text-center text-[13px] font-semibold text-[color:var(--color-brand)] hover:underline"
               >
-                Keep shopping
+                {t("cart.keepShopping")}
               </Link>
             </div>
           </aside>

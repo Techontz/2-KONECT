@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -41,6 +42,7 @@ export default function CheckoutPage() {
 }
 
 function CheckoutContent() {
+  const t = useT();
   const { user, isAuthenticated, ready, requireAuth } = useAuth();
   const hydrated = useHydrated();
   const cart = useCart();
@@ -121,9 +123,9 @@ function CheckoutContent() {
   if (cart.ready && cart.lines.length === 0) {
     return (
       <EmptyState
-        title="There is nothing to check out"
-        message="Your cart is empty. Add something first."
-        action={<ButtonLink href="/shop" size="lg">Browse products</ButtonLink>}
+        title={t("checkout.nothingToCheckout")}
+        message={t("checkout.cartEmpty")}
+        action={<ButtonLink href="/shop" size="lg">{t("checkout.browseProducts")}</ButtonLink>}
       />
     );
   }
@@ -131,9 +133,9 @@ function CheckoutContent() {
   if (hydrated && ready && !isAuthenticated) {
     return (
       <EmptyState
-        title="Sign in to place your order"
-        message="Your cart is saved — signing in only takes a moment and lets you track the order afterwards."
-        action={<Button size="lg" onClick={() => void requireAuth()}>Sign in to continue</Button>}
+        title={t("checkout.signInTitle")}
+        message={t("checkout.signInHint")}
+        action={<Button size="lg" onClick={() => void requireAuth()}>{t("checkout.signInAction")}</Button>}
       />
     );
   }
@@ -168,33 +170,33 @@ function CheckoutContent() {
       cart.clear();
       router.push(`/account/orders/${encodeURIComponent(result.reference)}?placed=1`);
     } catch (err) {
-      setError(apiError(err, "We couldn’t place your order. Please try again."));
+      setError(apiError(err, t("checkout.failed")));
       setPlacing(false);
     }
   }
 
   return (
     <div className="shell py-4 pb-tabbar">
-      <h1 className="mb-4 text-[22px] font-black tracking-[-0.02em] md:text-[28px]">Checkout</h1>
+      <h1 className="mb-4 text-[22px] font-black tracking-[-0.02em] md:text-[28px]">{t("checkout.title")}</h1>
 
       <form onSubmit={placeOrder} className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_356px]">
         <div className="space-y-3">
           {/* ---- delivery ---- */}
           <section className="rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-[15px] font-black">Delivery details</h2>
+              <h2 className="text-[15px] font-black">{t("checkout.deliveryDetails")}</h2>
               <Link
                 href="/account/addresses"
                 className="text-[12px] font-bold text-[color:var(--color-brand)] hover:underline"
               >
-                Manage addresses
+                {t("checkout.manageAddresses")}
               </Link>
             </div>
 
             {saved.length > 0 ? (
               <fieldset className="mb-3">
                 <legend className="mb-2 text-[12px] font-bold text-[color:var(--color-ink-muted)]">
-                  Deliver to
+                  {t("checkout.deliverTo")}
                 </legend>
 
                 <div className="grid gap-2 sm:grid-cols-2">
@@ -244,7 +246,7 @@ function CheckoutContent() {
                       checked={selectedId === null}
                       onChange={() => { setSelectedId(null); setAddress(""); }}
                     />
-                    <span className="text-[13px] font-semibold">Deliver somewhere else</span>
+                    <span className="text-[13px] font-semibold">{t("checkout.deliverElsewhere")}</span>
                   </label>
                 </div>
               </fieldset>
@@ -252,11 +254,11 @@ function CheckoutContent() {
 
             <div className="space-y-3">
               <Field
-                label="Delivery address"
+                label={t("checkout.deliveryAddress")}
                 value={address}
                 onChange={(event) => setAddress(event.target.value)}
                 required
-                placeholder="Street, area, landmark — anything a rider needs to find you"
+                placeholder={t("checkout.addressPlaceholder")}
                 multiline
               />
               <button
@@ -265,29 +267,29 @@ function CheckoutContent() {
                 className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] px-3 py-2 text-[13px] font-bold text-[color:var(--color-brand)] hover:bg-[color:var(--color-brand-50)]"
               >
                 <MapPinIcon className="h-4 w-4 shrink-0" />
-                {address.trim() ? "Change location on map" : "Pick on map"}
+                {address.trim() ? t("checkout.changeLocation") : t("checkout.pickOnMap")}
               </button>
 
               <Field
-                label="Phone number"
+                label={t("checkout.phone")}
                 value={phone}
                 onChange={(event) => setPhone(event.target.value)}
                 required
                 inputMode="tel"
-                placeholder="07XX XXX XXX"
+                placeholder={t("checkout.phonePlaceholder")}
               />
             </div>
           </section>
 
           {/* ---- payment ---- */}
           <section className="rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4">
-            <h2 className="mb-3 text-[15px] font-black">Payment</h2>
+            <h2 className="mb-3 text-[15px] font-black">{t("checkout.payment")}</h2>
 
             <div className="space-y-2">
               <PaymentOption
                 checked
-                title="Cash on delivery"
-                body="Pay the rider when your order reaches you."
+                title={t("payment.cashOnDelivery")}
+                body={t("payment.cashOnDeliveryHint")}
               />
 
               {/* Shown so shoppers know these are coming, but not selectable —
@@ -295,16 +297,16 @@ function CheckoutContent() {
                   pretends otherwise creates an order nobody has paid for. */}
               <PaymentOption
                 unavailable
-                title="Lipa Namba"
-                body="Pay directly to the 2KONECT till number."
-                badge="Coming soon"
+                title={t("payment.lipaNamba")}
+                body={t("payment.lipaNambaHint", { brand: BRAND.name })}
+                badge={t("payment.comingSoon")}
               />
 
               <PaymentOption
                 unavailable
-                title="Mobile money"
-                body="Pay from your mobile wallet at checkout."
-                badge="Coming soon"
+                title={t("payment.mobileMoney")}
+                body={t("payment.mobileMoneyHint")}
+                badge={t("payment.comingSoon")}
               >
                 <span className="mt-2 flex flex-wrap gap-2">
                   {["M-Pesa", "Tigo Pesa", "Airtel Money", "HaloPesa"].map((option) => (
@@ -329,7 +331,7 @@ function CheckoutContent() {
           {/* ---- items, each with its own arrival ---- */}
           <section className="rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4">
             <h2 className="mb-3 text-[15px] font-black">
-              Your items ({cart.count})
+              {t("checkout.yourItemsCount", { count: cart.count })}
             </h2>
             <ul className="divide-y divide-[color:var(--color-line)]">
               {cart.lines.map((line) => {
@@ -353,7 +355,7 @@ function CheckoutContent() {
                       {sourcing ? (
                         <span className="mt-0.5 flex items-center gap-1 text-[11px] font-semibold text-[color:var(--color-ink-soft)]">
                           <ClockIcon className="h-3 w-3" />
-                          {sourcing.is_local ? "Delivered in" : "Arrives in"} {sourcing.lead_time.label}
+                          {sourcing.is_local ? t("checkout.deliveredIn") : t("checkout.arrivesIn")} {sourcing.lead_time.label}
                         </span>
                       ) : null}
                     </span>
@@ -370,21 +372,21 @@ function CheckoutContent() {
         {/* ---- summary ---- */}
         <aside className="lg:sticky lg:top-[calc(var(--header-height)+16px)] lg:self-start">
           <div className="rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4">
-            <h2 className="mb-3 text-[15px] font-black">Summary</h2>
+            <h2 className="mb-3 text-[15px] font-black">{t("checkout.summary")}</h2>
 
             <dl className="space-y-2 text-[13px]">
               <div className="flex justify-between gap-3">
-                <dt className="text-[color:var(--color-ink-muted)]">Subtotal</dt>
+                <dt className="text-[color:var(--color-ink-muted)]">{t("checkout.subtotal")}</dt>
                 <dd className="font-semibold">{formatMoney(cart.subtotal)}</dd>
               </div>
               <div className="flex justify-between gap-3">
-                <dt className="text-[color:var(--color-ink-muted)]">Delivery</dt>
+                <dt className="text-[color:var(--color-ink-muted)]">{t("checkout.delivery")}</dt>
                 <dd className="font-semibold">{formatMoney(DELIVERY_FEE)}</dd>
               </div>
             </dl>
 
             <div className="mt-3 flex items-baseline justify-between border-t border-[color:var(--color-line)] pt-3">
-              <span className="text-[15px] font-black">Total</span>
+              <span className="text-[15px] font-black">{t("checkout.total")}</span>
               <span className="text-[22px] font-black tracking-[-0.02em]">{formatMoney(total)}</span>
             </div>
 
@@ -393,15 +395,15 @@ function CheckoutContent() {
             {slowest > 0 ? (
               <div className="mt-3 rounded-[var(--radius-sm)] bg-[color:var(--color-brand-50)] p-3">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-brand)]">
-                  Estimated arrival
+                  {t("checkout.estimatedArrival")}
                 </p>
-                <p className="mt-0.5 text-[15px] font-black">by {arrivalDate(slowest)}</p>
+                <p className="mt-0.5 text-[15px] font-black">{t("checkout.byDate", { date: arrivalDate(slowest) })}</p>
                 <p className="mt-0.5 text-[12px] text-[color:var(--color-ink-muted)]">
                   {importCount > 0 && importCount < cart.lines.length
-                    ? "Local items arrive sooner — you can track each part separately."
+                    ? t("checkout.localSooner")
                     : importCount > 0
-                      ? "We import it, clear it and deliver it. You can follow every step."
-                      : "Delivered to your address across Dar es Salaam."}
+                      ? t("checkout.weImportIt")
+                      : t("checkout.deliveredAcrossCity", { city: BRAND.city })}
                 </p>
               </div>
             ) : null}
@@ -409,12 +411,12 @@ function CheckoutContent() {
             {error ? <Notice tone="danger" className="mt-3">{error}</Notice> : null}
 
             <Button type="submit" size="lg" className="mt-3 w-full" loading={placing}>
-              {placing ? "Placing your order" : "Place order"}
+              {placing ? t("checkout.placing") : t("checkout.placeOrder")}
             </Button>
 
             <p className="mt-2 text-center text-[11px] leading-relaxed text-[color:var(--color-ink-faint)]">
-              By placing this order you agree to {BRAND.name}’s{" "}
-              <Link href="/legal/terms" className="underline">terms</Link>.
+              {t("checkout.termsPrefix", { brand: BRAND.name })}{" "}
+              <Link href="/legal/terms" className="underline">{t("checkout.termsWord", { brand: BRAND.name })}</Link>.
             </p>
           </div>
         </aside>

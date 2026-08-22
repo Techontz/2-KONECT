@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -28,6 +29,7 @@ export function BannerRow({
   side: HeroBanner | null;
   loading?: boolean;
 }) {
+  const t = useT();
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
 
@@ -73,7 +75,7 @@ export function BannerRow({
       {current ? (
         <section
           aria-roledescription="carousel"
-          aria-label="Featured campaigns"
+          aria-label={t("home.featuredCampaigns")}
           className="group relative overflow-hidden rounded-[var(--radius-lg)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)]"
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
@@ -154,11 +156,12 @@ function BannerImage({
 }
 
 function Arrow({ side, onClick }: { side: "left" | "right"; onClick(): void }) {
+  const t = useT();
   return (
     <button
       type="button"
       onClick={onClick}
-      aria-label={side === "left" ? "Previous campaign" : "Next campaign"}
+      aria-label={side === "left" ? t("home.previousCampaign") : t("home.nextCampaign")}
       className={`absolute top-1/2 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-[color:var(--color-brand)] shadow-[var(--shadow-card)] transition-opacity hover:bg-white sm:flex ${
         side === "left" ? "left-3" : "right-3"
       } opacity-0 group-hover:opacity-100 focus-visible:opacity-100`}

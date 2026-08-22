@@ -1,6 +1,7 @@
 "use client";
 
 import { BRAND } from "@/lib/brand";
+import { useT } from "@/lib/i18n";
 import { useHomeFeed } from "@/lib/queries";
 import { SiteChrome } from "@/components/layout/SiteChrome";
 import { BannerRow } from "@/components/home/BannerRow";
@@ -54,6 +55,7 @@ function normaliseWindows(windows: Record<string, number>): Record<number, numbe
 }
 
 export default function HomeView() {
+  const t = useT();
   const { data: feed, loading, error: failed } = useHomeFeed();
 
   if (failed) {
@@ -61,9 +63,9 @@ export default function HomeView() {
       <SiteChrome>
         <div className="shell py-6">
           <EmptyState
-            title="We couldn’t load the storefront"
-            message="Check your connection and try again. If this keeps happening, our team is already on it."
-            action={<Button onClick={() => window.location.reload()}>Try again</Button>}
+            title={t("home.loadFailed")}
+            message={t("home.loadFailedFull")}
+            action={<Button onClick={() => window.location.reload()}>{t("common.retry")}</Button>}
           />
         </div>
       </SiteChrome>
@@ -81,10 +83,10 @@ export default function HomeView() {
   sections.push(
     <ProductShelf
       key="local"
-      eyebrow={<><span aria-hidden="true">🇹🇿</span> In stock now</>}
+      eyebrow={<><span aria-hidden="true">🇹🇿</span> {t("home.inStockNow")}</>}
       accent="local"
-      title="Available in Tanzania"
-      subtitle="Ready to ship — delivered in days, not weeks."
+      title={t("home.availableIn", { country: BRAND.country })}
+      subtitle={t("home.availableInHint")}
       products={feed?.local ?? []}
       viewAllHref="/shop/local"
       loading={loading}
@@ -94,10 +96,10 @@ export default function HomeView() {
   sections.push(
     <ProductShelf
       key="imports"
-      eyebrow={<><span aria-hidden="true">🌍</span> Sourced worldwide</>}
+      eyebrow={<><span aria-hidden="true">🌍</span> {t("home.sourcedWorldwide")}</>}
       accent="import"
-      title="Order from abroad"
-      subtitle="Lower prices. We import it and track it all the way in."
+      title={t("home.orderAbroad")}
+      subtitle={t("home.orderAbroadHint")}
       products={feed?.imports ?? []}
       viewAllHref="/shop/abroad"
       loading={loading}
@@ -121,9 +123,9 @@ export default function HomeView() {
     <ProductShelf
       key="deals"
       accent="brand"
-      eyebrow="Best savings"
-      title="Today’s deals"
-      subtitle="The biggest price drops across the catalogue."
+      eyebrow={t("home.bestSavings")}
+      title={t("home.todaysDeals")}
+      subtitle={t("home.todaysDealsHint")}
       products={feed?.deals ?? []}
       viewAllHref="/deals"
       loading={loading}
@@ -135,9 +137,9 @@ export default function HomeView() {
       <ProductShelf
         key="verified"
         accent="brand"
-        eyebrow="Checked by us"
-        title="From verified sellers"
-        subtitle="Businesses we have reviewed and approved."
+        eyebrow={t("home.checkedByUs")}
+        title={t("home.verifiedSellers")}
+        subtitle={t("home.verifiedSellersHint")}
         products={feed?.verified ?? []}
         viewAllHref="/shop?verified=1"
       />,

@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import type { SellerAttribute } from "@/lib/vendor";
 
 export interface VariantDraft {
@@ -38,6 +39,7 @@ export function VariantEditor({
   onChange(next: VariantDraft[]): void;
   productPrice: number;
 }) {
+  const t = useT();
   // Only a curated list can become a choice.
   const selectable = attributes.filter((attribute) => (attribute.values?.length ?? 0) > 0);
 
@@ -100,16 +102,14 @@ export function VariantEditor({
 
   return (
     <section className="rounded-[var(--radius-md)] bg-[color:var(--color-surface)] p-4">
-      <h2 className="text-[15px] font-extrabold">Options and variants</h2>
+      <h2 className="text-[15px] font-extrabold">{t("productForm.optionsVariants")}</h2>
       <p className="mb-3 text-[11px] text-[color:var(--color-ink-muted)]">
-        Optional. Use this when the same product comes in choices a buyer has to
-        make — a colour, a size, a storage capacity. Each combination keeps its
-        own stock, and can set its own price.
+        {t("productForm.optionsVariantsHint")}
       </p>
 
       <fieldset>
         <legend className="mb-1.5 text-[12px] font-semibold text-[color:var(--color-ink-muted)]">
-          What does this product vary on?
+          {t("productForm.variesOn")}
         </legend>
         <div className="flex flex-wrap gap-1.5">
           {selectable.map((attribute) => (
@@ -161,7 +161,7 @@ export function VariantEditor({
 
                 <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_1fr_1.3fr_44px]">
                   <label className="block">
-                    <span className="mb-1 block text-[11px] font-semibold text-[color:var(--color-ink-muted)]">Stock</span>
+                    <span className="mb-1 block text-[11px] font-semibold text-[color:var(--color-ink-muted)]">{t("productForm.stock")}</span>
                     <input
                       type="number" min={0} inputMode="numeric" value={variant.stock}
                       onChange={(e) => update(index, { stock: e.target.value === "" ? "" : Number(e.target.value) })}
@@ -170,11 +170,11 @@ export function VariantEditor({
                   </label>
                   <label className="block">
                     <span className="mb-1 block text-[11px] font-semibold text-[color:var(--color-ink-muted)]">
-                      Price <span className="font-normal">(optional)</span>
+                      {t("productForm.price")} <span className="font-normal">{t("productForm.optionalWord")}</span>
                     </span>
                     <input
                       type="number" min={0} step="0.01" inputMode="decimal"
-                      placeholder={String(productPrice || "Same as product")}
+                      placeholder={productPrice ? String(productPrice) : t("productForm.sameAsProduct")}
                       value={variant.price}
                       onChange={(e) => update(index, { price: e.target.value === "" ? "" : Number(e.target.value) })}
                       className="h-11 w-full rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] bg-white px-3 text-sm outline-none focus:border-[color:var(--color-brand)]"
@@ -182,7 +182,7 @@ export function VariantEditor({
                   </label>
                   <label className="block">
                     <span className="mb-1 block text-[11px] font-semibold text-[color:var(--color-ink-muted)]">
-                      SKU <span className="font-normal">(optional)</span>
+                      SKU <span className="font-normal">{t("productForm.optionalWord")}</span>
                     </span>
                     <input
                       type="text" maxLength={64} value={variant.sku}
@@ -193,7 +193,7 @@ export function VariantEditor({
                   <button
                     type="button"
                     onClick={() => onChange(variants.filter((_, i) => i !== index))}
-                    aria-label={`Remove variant ${index + 1}`}
+                    aria-label={t("productForm.removeVariant", { n: index + 1 })}
                     className="tap h-11 w-11 shrink-0 self-end rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] text-[18px] font-bold text-[color:var(--color-ink-muted)] hover:border-[color:var(--color-sale)] hover:text-[color:var(--color-sale)]"
                   >
                     ×
@@ -202,15 +202,15 @@ export function VariantEditor({
 
                 {duplicates[index] ? (
                   <p role="alert" className="mt-1.5 text-[11.5px] font-semibold text-[color:var(--color-sale)]">
-                    Another row already covers this combination.
+                    {t("productForm.duplicateCombo")}
                   </p>
                 ) : incomplete(variant, axes) ? (
                   <p className="mt-1.5 text-[11.5px] text-[color:var(--color-ink-faint)]">
-                    Choose a value for every option.
+                    {t("productForm.chooseEveryOption")}
                   </p>
                 ) : (
                   <p className="mt-1.5 text-[11.5px] text-[color:var(--color-ink-faint)]">
-                    {variant.price === "" ? "Uses the product price." : "Has its own price."}
+                    {variant.price === "" ? t("productForm.usesProductPrice") : t("productForm.hasOwnPrice")}
                   </p>
                 )}
               </div>
@@ -223,20 +223,19 @@ export function VariantEditor({
               onClick={generate}
               className="tap h-11 rounded-[var(--radius-sm)] border border-[color:var(--color-brand)] bg-[color:var(--color-brand)] px-4 text-[13px] font-bold text-white"
             >
-              Generate all {possible} combinations
+              {t("productForm.generateAll", { count: possible })}
             </button>
             <button
               type="button"
               onClick={addRow}
               className="tap h-11 rounded-[var(--radius-sm)] border border-dashed border-[color:var(--color-line-strong)] px-4 text-[13px] font-bold text-[color:var(--color-brand)] hover:border-[color:var(--color-brand)]"
             >
-              {variants.length ? "Add one" : "Add a combination"}
+              {variants.length ? t("productForm.addOne") : t("productForm.addCombination")}
             </button>
           </div>
 
           <p className="mt-1.5 text-[11.5px] text-[color:var(--color-ink-faint)]">
-            Generating keeps the rows you already have. Delete any combination
-            you do not sell — a shopper cannot choose one that is not listed.
+            {t("productForm.generateHint")}
           </p>
         </>
       ) : null}

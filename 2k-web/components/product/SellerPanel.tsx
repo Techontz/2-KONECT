@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import Link from "next/link";
 import { BRAND } from "@/lib/brand";
 import type { ProductDetail, ProductVendor } from "@/lib/types";
@@ -22,6 +23,7 @@ export function SellerPanel({
   product: ProductDetail;
   onChat(): void;
 }) {
+  const t = useT();
   return (
     <section className="rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4">
       <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-[color:var(--color-ink-faint)]">
@@ -56,7 +58,7 @@ export function SellerPanel({
             {vendor.is_verified ? (
               <VerifiedBadge size="sm" />
             ) : (
-              <span className="text-[11px] text-[color:var(--color-ink-faint)]">Approved seller</span>
+              <span className="text-[11px] text-[color:var(--color-ink-faint)]">{t("seller.approvedSeller")}</span>
             )}
           </span>
         </span>
@@ -112,9 +114,10 @@ export function SellerActions({
   product: ProductDetail;
   onChat(): void;
 }) {
+  const t = useT();
   const waLink = vendor.whatsapp
     ? `${vendor.whatsapp}${vendor.whatsapp.includes("?") ? "&" : "?"}text=${encodeURIComponent(
-        `Hi, I'm interested in "${product.name}" on ${BRAND.name}.`,
+        t("product.sellerGreeting", { name: product.name, brand: BRAND.name }),
       )}`
     : null;
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
@@ -24,6 +25,7 @@ export default function ShopPage() {
 }
 
 function ShopContent() {
+  const t = useT();
   const params = useSearchParams();
   const verified = params.get("verified") === "1";
 
@@ -34,10 +36,10 @@ function ShopContent() {
   const maxDays = Number.isFinite(days) && days >= 1 && days <= 120 ? days : undefined;
 
   const heading = verified
-    ? "From verified sellers"
+    ? t("home.verifiedSellers")
     : maxDays
-      ? `Arriving within ${maxDays} days`
-      : "Shop everything";
+      ? t("listing.arrivingWithin", { days: maxDays })
+      : t("listing.shopEverything");
 
   return (
     <ListingView

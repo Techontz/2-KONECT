@@ -1,5 +1,7 @@
 "use client";
 
+import { BRAND } from "@/lib/brand";
+import { useT } from "@/lib/i18n";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
@@ -17,6 +19,7 @@ import { Button, EmptyState, Notice, Skeleton } from "@/components/ui/Primitives
  * nothing.
  */
 export default function VendorWalletPage() {
+  const t = useT();
   const [wallet, setWallet] = useState<VendorWallet | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -52,7 +55,7 @@ export default function VendorWalletPage() {
       setAccount("");
       load();
     } catch (err) {
-      setError(apiError(err, "We couldn’t submit that payout request."));
+      setError(apiError(err, t("seller.payoutFailed")));
     } finally {
       setBusy(false);
     }
@@ -73,7 +76,7 @@ export default function VendorWalletPage() {
         >
           ← Store settings
         </Link>
-        <h1 className="mt-1 text-[24px] font-black tracking-[-0.025em]">Wallet</h1>
+        <h1 className="mt-1 text-[24px] font-black tracking-[-0.025em]">{t("seller.wallet")}</h1>
         <p className="text-[13px] text-[color:var(--color-ink-muted)]">
           What you have earned, and the payouts you have asked for.
         </p>
@@ -83,9 +86,9 @@ export default function VendorWalletPage() {
 
       {failed ? (
         <EmptyState
-          title="We couldn’t load your wallet"
-          message="Check your connection and try again."
-          action={<Button onClick={load}>Try again</Button>}
+          title={t("seller.walletLoadFailed")}
+          message={t("common.offline")}
+          action={<Button onClick={load}>{t("common.retry")}</Button>}
         />
       ) : wallet === null ? (
         <Skeleton className="h-40 rounded-[var(--radius-md)]" />
@@ -124,7 +127,7 @@ export default function VendorWalletPage() {
               onSubmit={submit}
               className="rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4"
             >
-              <h2 className="text-[15px] font-black">Request a payout</h2>
+              <h2 className="text-[15px] font-black">{t("seller.requestPayout")}</h2>
               <p className="mt-0.5 text-[13px] text-[color:var(--color-ink-muted)]">
                 The amount leaves your balance straight away and is recorded as pending
                 until it is paid.
@@ -132,7 +135,7 @@ export default function VendorWalletPage() {
 
               <div className="mt-3 grid gap-3 sm:grid-cols-3">
                 <label className="block">
-                  <span className="mb-1.5 block text-[13px] font-bold">Amount (TZS)</span>
+                  <span className="mb-1.5 block text-[13px] font-bold">{t("seller.amount", { currency: BRAND.currency })}</span>
                   <input
                     type="number"
                     required
@@ -146,13 +149,13 @@ export default function VendorWalletPage() {
                 </label>
 
                 <label className="block">
-                  <span className="mb-1.5 block text-[13px] font-bold">Send to</span>
+                  <span className="mb-1.5 block text-[13px] font-bold">{t("seller.sendTo")}</span>
                   <select
                     value={method}
                     onChange={(event) => setMethod(event.target.value)}
                     className={`${FIELD} h-12`}
                   >
-                    {["M-Pesa", "Tigo Pesa", "Airtel Money", "HaloPesa", "Bank transfer"].map((option) => (
+                    {["M-Pesa", "Tigo Pesa", "Airtel Money", "HaloPesa", t("seller.bankTransfer")].map((option) => (
                       <option key={option} value={option}>{option}</option>
                     ))}
                   </select>
@@ -160,13 +163,13 @@ export default function VendorWalletPage() {
 
                 <label className="block">
                   <span className="mb-1.5 block text-[13px] font-bold">
-                    {method === "Bank transfer" ? "Account number" : "Phone number"}
+                    {method === t("seller.bankTransfer") ? t("seller.accountNumber") : t("seller.phoneNumber")}
                   </span>
                   <input
                     required
                     value={account}
                     onChange={(event) => setAccount(event.target.value)}
-                    placeholder={method === "Bank transfer" ? "0123456789" : "07XX XXX XXX"}
+                    placeholder={method === t("seller.bankTransfer") ? "0123456789" : "07XX XXX XXX"}
                     className={`${FIELD} h-12`}
                   />
                 </label>
@@ -176,7 +179,7 @@ export default function VendorWalletPage() {
 
               <div className="mt-3 flex flex-wrap gap-2">
                 <Button type="submit" loading={busy}>
-                  {busy ? "Sending" : "Request payout"}
+                  {busy ? t("seller.sending") : t("seller.requestPayoutBtn")}
                 </Button>
                 <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
                   Cancel
@@ -193,8 +196,8 @@ export default function VendorWalletPage() {
 
             {wallet.payouts.length === 0 ? (
               <EmptyState
-                title="No payouts yet"
-                message="When you request one it appears here with its status."
+                title={t("seller.noPayouts")}
+                message={t("seller.noPayoutsHint")}
               />
             ) : (
               <ul className="divide-y divide-[color:var(--color-line)]">

@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import { SiteChrome } from "@/components/layout/SiteChrome";
 import { ListingView } from "@/components/product/ListingView";
 
@@ -15,12 +16,13 @@ import { ListingView } from "@/components/product/ListingView";
  * itself.
  */
 export default function DealsPage() {
+  const t = useT();
   return (
     <SiteChrome>
       <ListingView
         baseQuery={{ on_sale: true, in_stock: true, sort: "discount" }}
-        heading="Deals"
-        emptyMessage="No deals are running right now. Check back soon."
+        heading={t("listing.dealsHeading")}
+        emptyMessage={t("listing.dealsEmpty")}
       />
     </SiteChrome>
   );

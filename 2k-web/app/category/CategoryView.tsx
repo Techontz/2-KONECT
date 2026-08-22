@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import Link from "next/link";
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
@@ -26,6 +27,7 @@ export default function CategoryView() {
 }
 
 function CategoryContent() {
+  const t = useT();
   const params = useSearchParams();
   const categoryId = Number(params.get("id"));
   const subcategoryId = params.get("subcategory") ? Number(params.get("subcategory")) : undefined;
@@ -36,9 +38,9 @@ function CategoryContent() {
   if (missing) {
     return (
       <EmptyState
-        title="We couldn’t find that category"
-        message="It may have been renamed or removed. Browse everything instead."
-        action={<Link href="/shop" className="font-bold text-[color:var(--color-brand)] hover:underline">Browse all products</Link>}
+        title={t("listing.categoryMissing")}
+        message={t("listing.categoryMissingHint")}
+        action={<Link href="/shop" className="font-bold text-[color:var(--color-brand)] hover:underline">{t("listing.browseAllProducts")}</Link>}
       />
     );
   }
@@ -55,7 +57,7 @@ function CategoryContent() {
             <div className="rail gap-2 py-3">
               <SubcategoryTile
                 href={`/category?id=${categoryId}`}
-                label="All"
+                label={t("filters.all")}
                 image={detail.category.image}
                 active={!subcategoryId}
               />
@@ -74,13 +76,13 @@ function CategoryContent() {
         </div>
       ) : null}
 
-      <nav aria-label="Breadcrumb" className="shell pt-3 text-[12px] text-[color:var(--color-ink-muted)]">
+      <nav aria-label={t("listing.breadcrumb")} className="shell pt-3 text-[12px] text-[color:var(--color-ink-muted)]">
         <ol className="flex flex-wrap items-center gap-1.5">
-          <li><Link href="/" className="crumb hover:underline">Home</Link></li>
+          <li><Link href="/" className="crumb hover:underline">{t("common.home")}</Link></li>
           <li aria-hidden="true">›</li>
           <li>
             <Link href={`/category?id=${categoryId}`} className="crumb hover:underline">
-              {detail?.category.name.trim() ?? "Category"}
+              {detail?.category.name.trim() ?? t("listing.categoryFallback")}
             </Link>
           </li>
           {activeSub ? (
@@ -94,7 +96,7 @@ function CategoryContent() {
 
       <ListingView
         baseQuery={{ category_id: categoryId, subcategory_id: subcategoryId }}
-        heading={activeSub?.name.trim() ?? detail?.category.name.trim() ?? "Products"}
+        heading={activeSub?.name.trim() ?? detail?.category.name.trim() ?? t("listing.productsFallback")}
       />
     </>
   );

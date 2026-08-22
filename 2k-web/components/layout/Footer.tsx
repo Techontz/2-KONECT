@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import { BRAND } from "@/lib/brand";
+import { useT } from "@/lib/i18n";
 import type { Category } from "@/lib/types";
 import { Logo } from "@/components/brand/Logo";
 import { LanguageSwitcher } from "./LanguageSwitcher";
@@ -16,44 +17,49 @@ import { LanguageSwitcher } from "./LanguageSwitcher";
  * brand rather than trailing off into grey.
  */
 export function Footer({ categories = [] }: { categories?: Category[] }) {
+  const t = useT();
   const year = new Date().getFullYear();
 
-  const columns: { title: string; links: { href: string; label: string }[] }[] = [
+  const columns: { id: string; title: string; links: { href: string; label: string }[] }[] = [
     {
-      title: "Shop",
+      id: "shop",
+      title: t("footer.shop"),
       links: [
-        { href: "/shop/local", label: "Available in Tanzania" },
-        { href: "/shop/abroad", label: "Order from abroad" },
-        { href: "/deals", label: "Deals" },
-        { href: "/shop", label: "All products" },
-        { href: "/vendors", label: "Sellers" },
+        { href: "/shop/local", label: t("footer.availableIn", { country: BRAND.country }) },
+        { href: "/shop/abroad", label: t("footer.orderAbroad") },
+        { href: "/deals", label: t("footer.deals") },
+        { href: "/shop", label: t("footer.allProducts") },
+        { href: "/vendors", label: t("footer.sellers") },
       ],
     },
     {
-      title: "Services",
+      id: "services",
+      title: t("footer.services"),
       links: [
-        { href: "/request", label: "Request a product" },
-        { href: "/track", label: "Track your order" },
-        { href: "/sell", label: `Sell with ${BRAND.name}` },
-        { href: "/account/deliveries", label: "2KONECT Rides" },
+        { href: "/request", label: t("footer.requestProduct") },
+        { href: "/track", label: t("footer.trackOrder") },
+        { href: "/sell", label: t("footer.sellWith", { brand: BRAND.name }) },
+        { href: "/account/deliveries", label: t("footer.rides", { brand: BRAND.name }) },
       ],
     },
     {
-      title: "Help",
+      id: "help",
+      title: t("footer.help"),
       links: [
-        { href: "/help", label: "Help centre" },
-        { href: "/help/delivery", label: "Delivery & shipping" },
-        { href: "/help/returns", label: "Returns" },
-        { href: "/help/contact", label: "Contact us" },
+        { href: "/help", label: t("footer.helpCentre") },
+        { href: "/help/delivery", label: t("footer.deliveryShipping") },
+        { href: "/help/returns", label: t("footer.returnsLink") },
+        { href: "/help/contact", label: t("footer.contactUs") },
       ],
     },
     {
-      title: "Company",
+      id: "company",
+      title: t("footer.company"),
       links: [
-        { href: "/about", label: `About ${BRAND.name}` },
-        { href: "/legal/terms", label: "Terms" },
-        { href: "/legal/privacy", label: "Privacy" },
-        { href: "/legal/cookies", label: "Cookies" },
+        { href: "/about", label: t("footer.about", { brand: BRAND.name }) },
+        { href: "/legal/terms", label: t("footer.terms") },
+        { href: "/legal/privacy", label: t("footer.privacyLink") },
+        { href: "/legal/cookies", label: t("footer.cookiesLink") },
       ],
     },
   ];
@@ -66,12 +72,12 @@ export function Footer({ categories = [] }: { categories?: Category[] }) {
           <div>
             <Logo tone="dark" size="lg" />
             <p className="mt-3 max-w-sm text-[14px] leading-relaxed text-white/75">
-              {BRAND.promise}
+              {t("footer.promise")}
             </p>
 
             <dl className="mt-5 space-y-1.5 text-[13px] text-white/75">
               <div className="flex gap-2">
-                <dt className="sr-only">Email</dt>
+                <dt className="sr-only">{t("footer.email")}</dt>
                 <dd>
                   <a className="hover:text-white" href={`mailto:${BRAND.supportEmail}`}>
                     {BRAND.supportEmail}
@@ -79,7 +85,7 @@ export function Footer({ categories = [] }: { categories?: Category[] }) {
                 </dd>
               </div>
               <div className="flex gap-2">
-                <dt className="sr-only">Phone</dt>
+                <dt className="sr-only">{t("footer.phone")}</dt>
                 <dd>
                   <a className="hover:text-white" href={`tel:${BRAND.supportPhone.replace(/\s/g, "")}`}>
                     {BRAND.supportPhone}
@@ -87,7 +93,7 @@ export function Footer({ categories = [] }: { categories?: Category[] }) {
                 </dd>
               </div>
               <div className="flex gap-2">
-                <dt className="sr-only">Address</dt>
+                <dt className="sr-only">{t("footer.address")}</dt>
                 <dd>{BRAND.city}, {BRAND.country}</dd>
               </div>
             </dl>
@@ -100,7 +106,7 @@ export function Footer({ categories = [] }: { categories?: Category[] }) {
           {/* ---- links ---- */}
           <div className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-4">
             {columns.map((column) => (
-              <nav key={column.title} aria-label={column.title}>
+              <nav key={column.id} aria-label={column.title}>
                 <h2 className="text-[12px] font-bold uppercase tracking-wider text-white/55">
                   {column.title}
                 </h2>
@@ -124,9 +130,9 @@ export function Footer({ categories = [] }: { categories?: Category[] }) {
 
         {/* ---- categories, for crawlers as much as for shoppers ---- */}
         {categories.length > 0 ? (
-          <nav aria-label="Popular categories" className="mt-10 border-t border-white/12 pt-6">
+          <nav aria-label={t("footer.popularCategories")} className="mt-10 border-t border-white/12 pt-6">
             <h2 className="text-[12px] font-bold uppercase tracking-wider text-white/55">
-              Popular categories
+              {t("footer.popularCategories")}
             </h2>
             <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
               {categories.slice(0, 14).map((category) => (
@@ -147,9 +153,9 @@ export function Footer({ categories = [] }: { categories?: Category[] }) {
 
       <div className="border-t border-white/12">
         <div className="shell flex flex-col gap-2 py-5 text-[12px] text-white/60 sm:flex-row sm:items-center sm:justify-between">
-          <p>© {year} {BRAND.name}. All rights reserved.</p>
+          <p>{t("footer.rights", { year, brand: BRAND.name })}</p>
           <p>
-            Built by{" "}
+            {t("footer.builtBy")}{" "}
             <a
               href="https://techon.co.tz"
               target="_blank"

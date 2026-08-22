@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { useT } from "@/lib/i18n";
 import { useCart } from "@/lib/store/cart";
 
 /**
@@ -17,20 +18,21 @@ import { useCart } from "@/lib/store/cart";
  * parked underneath this.
  */
 export function MobileTabBar() {
+  const t = useT();
   const pathname = usePathname();
   const cart = useCart();
 
   const tabs = [
-    { href: "/", label: "Home", icon: HomeIcon, match: (p: string) => p === "/" },
-    { href: "/shop", label: "Shop", icon: GridIcon, match: (p: string) => p.startsWith("/shop") || p.startsWith("/category") || p.startsWith("/search") },
-    { href: "/cart", label: "Cart", icon: CartIcon, badge: cart.count, match: (p: string) => p.startsWith("/cart") },
-    { href: "/account/orders", label: "Orders", icon: BoxIcon, match: (p: string) => p.startsWith("/account/orders") || p.startsWith("/track") },
-    { href: "/account", label: "Account", icon: UserIcon, match: (p: string) => p === "/account" || p.startsWith("/account/") },
+    { href: "/", label: t("nav.home"), icon: HomeIcon, match: (p: string) => p === "/" },
+    { href: "/shop", label: t("nav.shop"), icon: GridIcon, match: (p: string) => p.startsWith("/shop") || p.startsWith("/category") || p.startsWith("/search") },
+    { href: "/cart", label: t("nav.cart"), icon: CartIcon, badge: cart.count, match: (p: string) => p.startsWith("/cart") },
+    { href: "/account/orders", label: t("nav.orders"), icon: BoxIcon, match: (p: string) => p.startsWith("/account/orders") || p.startsWith("/track") },
+    { href: "/account", label: t("nav.account"), icon: UserIcon, match: (p: string) => p === "/account" || p.startsWith("/account/") },
   ];
 
   return (
     <nav
-      aria-label="Main"
+      aria-label={t("nav.main")}
       className="fixed inset-x-0 bottom-0 z-40 border-t border-[color:var(--color-line)] bg-[color:var(--color-surface)] pb-[env(safe-area-inset-bottom,0px)] lg:hidden"
     >
       <ul className="flex h-[62px] items-stretch">

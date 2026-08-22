@@ -1,4 +1,8 @@
+"use client";
+
 import Link from "next/link";
+
+import { useT } from "@/lib/i18n";
 
 /**
  * The heading block every homepage section shares.
@@ -15,7 +19,7 @@ export function SectionHead({
   title,
   subtitle,
   href,
-  linkLabel = "View all",
+  linkLabel,
   accent = "brand",
 }: {
   id?: string;
@@ -26,6 +30,7 @@ export function SectionHead({
   linkLabel?: string;
   accent?: "brand" | "local" | "import";
 }) {
+  const t = useT();
   const eyebrowTone = {
     brand: "text-[color:var(--color-ink-faint)]",
     local: "text-[color:var(--color-local)]",
@@ -61,7 +66,7 @@ export function SectionHead({
           prefetch
           className="tap shrink-0 whitespace-nowrap rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] px-3 py-1.5 text-[12px] font-bold text-[color:var(--color-brand)] transition-colors hover:bg-[color:var(--color-brand-50)] sm:text-[13px]"
         >
-          {linkLabel}
+          {linkLabel ?? t("common.viewAll")}
         </Link>
       ) : null}
     </div>

@@ -1,5 +1,7 @@
 "use client";
 
+import { BRAND } from "@/lib/brand";
+import { useT } from "@/lib/i18n";
 import { SiteChrome } from "@/components/layout/SiteChrome";
 import { ListingView } from "@/components/product/ListingView";
 
@@ -17,12 +19,13 @@ import { ListingView } from "@/components/product/ListingView";
  * products below the fold to do it.
  */
 export default function LocalShopPage() {
+  const t = useT();
   return (
     <SiteChrome>
       <ListingView
         baseQuery={{ availability: "local" }}
-        heading="Available in Tanzania"
-        emptyMessage="No local stock matched those filters. Try ordering from abroad, or ask us to source it."
+        heading={t("listing.localHeading", { country: BRAND.country })}
+        emptyMessage={t("listing.localEmpty")}
       />
     </SiteChrome>
   );

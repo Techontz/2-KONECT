@@ -1,5 +1,7 @@
 "use client";
 
+import { BRAND } from "@/lib/brand";
+import { useT } from "@/lib/i18n";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
@@ -35,6 +37,7 @@ export default function OrderDetailPage() {
 }
 
 function OrderDetail() {
+  const t = useT();
   const params = useParams<{ reference: string }>();
   const search = useSearchParams();
   const reference = decodeURIComponent(String(params.reference ?? ""));
@@ -63,9 +66,9 @@ function OrderDetail() {
   if (hydrated && ready && !isAuthenticated) {
     return (
       <EmptyState
-        title="Sign in to track this order"
-        message="Order tracking is tied to the account that placed it."
-        action={<Button size="lg" onClick={() => void requireAuth()}>Sign in</Button>}
+        title={t("orders.detailSignInTitle")}
+        message={t("orders.detailSignInHint")}
+        action={<Button size="lg" onClick={() => void requireAuth()}>{t("orders.signIn")}</Button>}
       />
     );
   }
@@ -73,9 +76,9 @@ function OrderDetail() {
   if (missing) {
     return (
       <EmptyState
-        title="We couldn’t find that order"
-        message={`No order matching ${reference} on this account. Check the reference, or look through your order history.`}
-        action={<ButtonLink href="/account/orders">Your orders</ButtonLink>}
+        title={t("orders.notFound")}
+        message={t("orders.notFoundHint", { reference })}
+        action={<ButtonLink href="/account/orders">{t("orders.yourOrders")}</ButtonLink>}
       />
     );
   }
@@ -90,7 +93,7 @@ function OrderDetail() {
   }
 
   async function cancel() {
-    if (!window.confirm("Cancel this order? Anything reserved goes back on sale.")) return;
+    if (!window.confirm(t("orders.cancelConfirmLong"))) return;
 
     setBusy(true);
     setError(null);
@@ -98,7 +101,7 @@ function OrderDetail() {
       await shop.cancelOrder(reference);
       load();
     } catch (err) {
-      setError(apiError(err, "We couldn’t cancel this order."));
+      setError(apiError(err, t("orders.cancelFailed")));
     } finally {
       setBusy(false);
     }
@@ -108,9 +111,9 @@ function OrderDetail() {
 
   return (
     <div className="shell py-4 pb-tabbar">
-      <nav aria-label="Breadcrumb" className="mb-2 text-[12px] text-[color:var(--color-ink-muted)]">
+      <nav aria-label={t("orders.breadcrumb")} className="mb-2 text-[12px] text-[color:var(--color-ink-muted)]">
         <Link href="/account/orders" prefetch={false} className="crumb hover:text-[color:var(--color-brand)]">
-          ← Your orders
+          {t("orders.backToOrders")}
         </Link>
       </nav>
 
@@ -144,7 +147,7 @@ function OrderDetail() {
           <div className="text-right">
             <p className="text-[24px] font-black tracking-[-0.02em]">{formatMoney(order.total)}</p>
             <p className="text-[12px] text-[color:var(--color-ink-muted)]">
-              {order.payment_method === "cash_on_delivery" ? "Cash on delivery" : order.payment_method}
+              {order.payment_method === "cash_on_delivery" ? t("orders.cashOnDelivery") : order.payment_method}
             </p>
           </div>
         </div>
@@ -154,7 +157,7 @@ function OrderDetail() {
           <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-[var(--radius-sm)] bg-[color:var(--color-brand-50)] px-4 py-3">
             <div>
               <p className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-brand)]">
-                Estimated arrival
+                {t("orders.estimatedArrival")}
               </p>
               <p className="text-[16px] font-black">{formatDate(fulfilment.estimated_arrival_at)}</p>
             </div>
@@ -179,21 +182,21 @@ function OrderDetail() {
 
         <div className="mt-4 flex flex-wrap gap-2">
           {order.can_request_delivery ? (
-            <Button onClick={() => setDeliveryOpen(true)}>Arrange delivery</Button>
+            <Button onClick={() => setDeliveryOpen(true)}>{t("orders.arrangeDeliveryBtn")}</Button>
           ) : null}
           {order.can_cancel ? (
             <Button variant="secondary" onClick={cancel} loading={busy}>
-              Cancel order
+              {t("orders.cancel")}
             </Button>
           ) : null}
-          <ButtonLink href="/account/messages" variant="ghost">Need help?</ButtonLink>
+          <ButtonLink href="/account/messages" variant="ghost">{t("orders.needHelp")}</ButtonLink>
         </div>
       </header>
 
       <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         {/* ---- the journey ---- */}
         <section className="overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)]">
-          <h2 className="px-4 pt-4 text-[16px] font-black">Order journey</h2>
+          <h2 className="px-4 pt-4 text-[16px] font-black">{t("orders.journey")}</h2>
           {fulfilment ? (
             <JourneyTimeline timeline={order.timeline} fulfilment={fulfilment} className="mt-1" />
           ) : null}
@@ -202,7 +205,7 @@ function OrderDetail() {
         <div className="space-y-3">
           {/* ---- what was ordered ---- */}
           <section className="rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4">
-            <h2 className="mb-3 text-[16px] font-black">Items</h2>
+            <h2 className="mb-3 text-[16px] font-black">{t("orders.items")}</h2>
             <ul className="divide-y divide-[color:var(--color-line)]">
               {order.items.map((item) => (
                 <li key={item.id} className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
@@ -241,10 +244,10 @@ function OrderDetail() {
             </ul>
 
             <dl className="mt-3 space-y-1.5 border-t border-[color:var(--color-line)] pt-3 text-[13px]">
-              <Row label="Subtotal" value={formatMoney(order.subtotal)} />
-              <Row label="Delivery" value={formatMoney(order.delivery_fee)} />
+              <Row label={t("orders.subtotal")} value={formatMoney(order.subtotal)} />
+              <Row label={t("orders.delivery")} value={formatMoney(order.delivery_fee)} />
               <div className="flex justify-between gap-3 border-t border-[color:var(--color-line)] pt-1.5">
-                <dt className="font-black">Total</dt>
+                <dt className="font-black">{t("orders.total")}</dt>
                 <dd className="text-[17px] font-black">{formatMoney(order.total)}</dd>
               </div>
             </dl>
@@ -252,12 +255,12 @@ function OrderDetail() {
 
           {/* ---- where it goes ---- */}
           <section className="rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4">
-            <h2 className="mb-2 text-[16px] font-black">Delivery</h2>
+            <h2 className="mb-2 text-[16px] font-black">{t("orders.delivery")}</h2>
             <dl className="space-y-2 text-[13px]">
               {order.delivery_address ? (
                 <div>
                   <dt className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-ink-faint)]">
-                    Address
+                    {t("orders.address")}
                   </dt>
                   <dd className="mt-0.5 leading-relaxed">{order.delivery_address}</dd>
                 </div>
@@ -304,26 +307,26 @@ function OrderDetail() {
                     order.delivery_request.preferred_window,
                   ]
                     .filter(Boolean)
-                    .join(" · ") || "We will confirm a time with you."}
+                    .join(" · ") || t("orders.confirmTime")}
                 </p>
                 {order.delivery_request.courier_name ? (
                   <p className="mt-1 text-[12px]">
-                    Rider: <span className="font-bold">{order.delivery_request.courier_name}</span>
+                    {t("orders.rider")} <span className="font-bold">{order.delivery_request.courier_name}</span>
                     {order.delivery_request.courier_phone ? ` · ${order.delivery_request.courier_phone}` : ""}
                   </p>
                 ) : null}
                 <p className="mt-1 text-[12px] font-semibold">
-                  Reference {order.delivery_request.reference}
+                  {t("orders.referenceLabel", { reference: order.delivery_request.reference })}
                 </p>
               </div>
             ) : order.can_request_delivery ? (
               <div className="mt-3 rounded-[var(--radius-sm)] border border-[color:var(--color-brand-200)] bg-[color:var(--color-brand-50)] p-3">
-                <p className="text-[13px] font-bold">Your order is in Tanzania.</p>
+                <p className="text-[13px] font-bold">{t("orders.arrivedInCountry", { country: BRAND.country })}</p>
                 <p className="mt-0.5 text-[12px] text-[color:var(--color-ink-muted)]">
-                  Choose how you want it: a 2KONECT rider brings it to you, or you collect it.
+                  {t("orders.chooseHow", { brand: BRAND.name })}
                 </p>
                 <Button className="mt-2.5 w-full" onClick={() => setDeliveryOpen(true)}>
-                  Arrange delivery
+                  {t("orders.arrangeDeliveryBtn")}
                 </Button>
               </div>
             ) : null}
@@ -352,19 +355,20 @@ function OrderDetail() {
  * the ordinary order screen.
  */
 function OrderConfirmation({ order }: { order: Order }) {
+  const t = useT();
   const arrival = order.fulfilment?.estimated_arrival_at;
   const isImport = order.fulfilment?.is_local === false;
 
   const next = isImport
     ? [
-        "We place the order with the supplier and pay for it.",
-        `We bring it into ${order.fulfilment?.destination?.name ?? "Tanzania"} and clear it.`,
-        "When it lands, you choose delivery or collection.",
+        t("orders.nextImport1"),
+        t("orders.nextImport2", { country: order.fulfilment?.destination?.name ?? BRAND.country }),
+        t("orders.nextImport3"),
       ]
     : [
-        "The seller confirms and prepares your order.",
-        "It is handed to a rider for delivery.",
-        "You pay the rider when it reaches you.",
+        t("orders.nextLocal1"),
+        t("orders.nextLocal2"),
+        t("orders.nextLocal3"),
       ];
 
   return (
@@ -379,17 +383,17 @@ function OrderConfirmation({ order }: { order: Order }) {
 
         <div className="min-w-0 flex-1">
           <h2 className="text-[20px] font-black tracking-[-0.02em] text-white sm:text-[24px]">
-            Order confirmed
+            {t("orders.confirmed")}
           </h2>
           <p className="mt-0.5 text-[13px] text-white/75">
-            Thank you — we have your order and we will keep this page updated at every step.
+            {t("orders.confirmedHint")}
           </p>
         </div>
 
         {arrival ? (
           <div className="rounded-[var(--radius-sm)] bg-white/12 px-4 py-2.5">
             <p className="text-[10px] font-bold uppercase tracking-wider text-white/65">
-              Estimated arrival
+              {t("orders.estimatedArrival")}
             </p>
             <p className="text-[16px] font-black text-white">{formatDate(arrival)}</p>
           </div>

@@ -355,3 +355,16 @@ input[type="number"]::-webkit-inner-spin-button {
   margin: 0;
 }
 input[type="number"] { -moz-appearance: textfield; }
+
+/* ---------------------------------------------------------------------------
+   Pre-hydration language guard. See lib/i18n/boot.ts.
+
+   Set only when a returning visitor has stored a language other than English,
+   and cleared the moment React has applied it (or after 800ms regardless).
+   `visibility` rather than `display` so the page still lays out underneath and
+   the brand background still paints — this hides the wrong words, it does not
+   blank the screen.
+--------------------------------------------------------------------------- */
+html[data-lang-pending] body {
+  visibility: hidden;
+}

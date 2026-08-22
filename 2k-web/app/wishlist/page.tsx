@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import shop from "@/lib/shop";
@@ -26,6 +27,7 @@ export default function WishlistPage() {
 }
 
 function WishlistContent() {
+  const t = useT();
   const { isAuthenticated, ready, openAuthPrompt } = useAuth();
   const wishlist = useWishlist();
 
@@ -87,9 +89,9 @@ function WishlistContent() {
     return (
       <EmptyState
         icon={<HeartIcon className="h-9 w-9" />}
-        title="Nothing saved yet"
-        message="Tap the heart on any product to keep it here for later — no account needed."
-        action={<ButtonLink href="/shop" size="lg">Browse products</ButtonLink>}
+        title={t("cart.nothingSaved")}
+        message={t("cart.nothingSavedHint")}
+        action={<ButtonLink href="/shop" size="lg">{t("cart.browseProducts")}</ButtonLink>}
       />
     );
   }

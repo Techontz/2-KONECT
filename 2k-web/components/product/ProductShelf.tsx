@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ProductCard as ProductCardModel } from "@/lib/types";
@@ -139,12 +140,13 @@ function RailArrow({
   disabled: boolean;
   onClick(): void;
 }) {
+  const t = useT();
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      aria-label={side === "left" ? "Scroll left" : "Scroll right"}
+      aria-label={side === "left" ? t("common.scrollLeft") : t("common.scrollRight")}
       className={`absolute top-1/2 z-10 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-[color:var(--color-line)] bg-white shadow-[var(--shadow-card)] transition-opacity md:flex ${
         side === "left" ? "left-1" : "right-1"
       } ${disabled ? "pointer-events-none opacity-0" : "opacity-100 hover:shadow-[var(--shadow-hover)]"}`}

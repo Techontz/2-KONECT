@@ -57,6 +57,54 @@ export function formatAmount(
   });
 }
 
+/**
+ * `250K` / `2.5M` — an amount short enough to sit on a filter chip, without
+ * the currency label.
+ *
+ * Chips carry a ladder of round numbers, so the compact form is exact rather
+ * than an approximation: 2,500,000 renders as `2.5M`. Anything that would need
+ * more than one decimal to stay truthful keeps its full digits instead of
+ * being rounded into a number the catalogue does not contain.
+ */
+export function compactAmount(
+  baseAmount: number,
+  currency: CurrencyCode = BRAND.currency as CurrencyCode
+): string {
+  const value = convert(baseAmount, currency);
+
+  const unit =
+    value >= 1_000_000 ? { divisor: 1_000_000, suffix: "M" }
+    : value >= 1_000 ? { divisor: 1_000, suffix: "K" }
+    : null;
+
+  if (!unit) return formatAmount(baseAmount, currency);
+
+  const scaled = value / unit.divisor;
+  const rounded = Math.round(scaled * 10) / 10;
+  // Falling back to the full number keeps the chip honest when rounding would
+  // misstate the cap the shopper is actually applying.
+  if (Math.abs(rounded * unit.divisor - value) > 0.5) {
+    return formatAmount(baseAmount, currency);
+  }
+
+  return `${Number.isInteger(rounded) ? rounded : rounded.toFixed(1)}${unit.suffix}`;
+}
+
+/** `TZS 250K` — the compact amount with its currency, for prose and labels. */
+export function formatCompactMoney(
+  baseAmount: number,
+  currency: CurrencyCode = BRAND.currency as CurrencyCode
+): string {
+  const compact = compactAmount(baseAmount, currency);
+  return currency === "USD" ? `$${compact}` : `${currency} ${compact}`;
+}
+
+/** Digits only, as the shopper would type them: `1500000` -> `1,500,000`. */
+export function groupDigits(value: string): string {
+  const digits = value.replace(/\D/g, "").replace(/^0+(?=\d)/, "");
+  return digits ? Number(digits).toLocaleString("en-US") : "";
+}
+
 export function formatCount(value: number): string {
   if (value >= 1000) return `${(value / 1000).toFixed(value % 1000 === 0 ? 0 : 1)}k`;
   return String(value);

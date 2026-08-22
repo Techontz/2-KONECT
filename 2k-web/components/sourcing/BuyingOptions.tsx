@@ -1,5 +1,7 @@
 "use client";
 
+import { BRAND } from "@/lib/brand";
+import { useT } from "@/lib/i18n";
 import { formatMoney } from "@/lib/format";
 import type { BuyingOption } from "@/lib/types";
 import { CheckIcon, ClockIcon } from "./icons";
@@ -29,6 +31,7 @@ export function BuyingOptions({
   onSelect(index: number): void;
   className?: string;
 }) {
+  const t = useT();
   if (options.length < 2) return null;
 
   const prices = options.map((option) => option.price.current);
@@ -86,7 +89,7 @@ export function BuyingOptions({
                   <span aria-hidden="true">
                     {local ? option.sourcing.destination?.flag ?? "🇹🇿" : "🌍"}
                   </span>
-                  {local ? "Buy in Tanzania" : "Order from abroad"}
+                  {local ? t("product.buyInCountry", { country: BRAND.country }) : t("home.orderAbroad")}
                 </span>
 
                 <span
@@ -117,20 +120,20 @@ export function BuyingOptions({
 
               <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[color:var(--color-ink-muted)]">
                 <ClockIcon className="h-3.5 w-3.5" />
-                {local ? "Delivered in" : "Arrives in"} {option.sourcing.lead_time.label}
+                {local ? t("product.deliveredIn") : t("product.arrivesIn")} {option.sourcing.lead_time.label}
               </span>
 
               {/* The trade-off, said plainly on the option it applies to. */}
               <span className="flex flex-wrap gap-1">
                 {isCheapest && saving > 0 ? (
-                  <Flag tone="save">Save {formatMoney(saving)}</Flag>
+                  <Flag tone="save">{t("product.saveAmount", { amount: formatMoney(saving) })}</Flag>
                 ) : null}
-                {isFastest && extraWait > 0 ? <Flag tone="fast">Fastest</Flag> : null}
-                {!option.in_stock ? <Flag tone="out">Out of stock</Flag> : null}
+                {isFastest && extraWait > 0 ? <Flag tone="fast">{t("product.fastest")}</Flag> : null}
+                {!option.in_stock ? <Flag tone="out">{t("product.outOfStock")}</Flag> : null}
               </span>
 
               <span className="text-[11px] text-[color:var(--color-ink-faint)]">
-                Sold by {option.seller}
+                {t("product.soldByName", { name: option.seller })}
               </span>
             </button>
           );

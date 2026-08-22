@@ -1,13 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 
+import { BRAND } from "@/lib/brand";
+import { useT } from "@/lib/i18n";
 import { type ProductQuery } from "@/lib/shop";
 import { usePagedListing } from "@/lib/queries";
-import { formatMoney } from "@/lib/format";
 import type { Availability, ListingFilters, ProductCard as ProductCardModel } from "@/lib/types";
-import { Button, EmptyState } from "@/components/ui/Primitives";
+import { boolParam, currentSearchParams, numberParam, writeSearchParams } from "@/lib/urlState";
+import { Button, EmptyState, Skeleton } from "@/components/ui/Primitives";
+import { PriceFilter } from "./PriceFilter";
 import { ProductGrid } from "./ProductShelf";
 
 /**
@@ -19,35 +23,90 @@ import { ProductGrid } from "./ProductShelf";
  *
  * Results are cached against the query that produced them, so going back to a
  * grid — from a product, or by flipping a tab back to one already seen —
- * repaints the products immediately and checks for changes behind them. It
- * previously refetched from scratch and showed a skeleton every time, which on
- * the production API meant several seconds of blank grid to arrive back
- * somewhere the shopper had just been.
+ * repaints the products immediately and checks for changes behind them.
  *
  * The availability filter is the first control on the page and the only one
  * that is always visible, because "is it here, or is it coming?" is the
  * question that changes the answer most on this marketplace.
+ *
+ * ---- filters live in the URL ----
+ *
+ * Every control writes itself into the query string, so a filtered grid is a
+ * place rather than a mood: it survives a refresh, it can be sent to someone,
+ * and coming back from a product lands on the same twelve results rather than
+ * on the unfiltered catalogue. The write goes through the browser's own
+ * `replaceState` (see lib/urlState) so it costs no navigation.
+ *
+ * `baseQuery` stays the page's own identity — the category, the search term,
+ * the seller. When it changes the filters are re-read from the address bar,
+ * which is what makes both directions agree: state writes the URL, and a
+ * navigation lets the URL write the state.
  */
 
 const SORTS = [
-  { value: "relevance", label: "Recommended" },
-  { value: "newest", label: "Newest" },
-  { value: "price_asc", label: "Price: low to high" },
-  { value: "price_desc", label: "Price: high to low" },
-  { value: "rating", label: "Top rated" },
-  { value: "discount", label: "Biggest discount" },
+  { value: "relevance", key: "listing.sortRecommended" },
+  { value: "newest", key: "listing.sortNewest" },
+  { value: "price_asc", key: "listing.sortPriceAsc" },
+  { value: "price_desc", key: "listing.sortPriceDesc" },
+  { value: "rating", key: "listing.sortRating" },
+  { value: "discount", key: "listing.sortDiscount" },
 ] as const;
 
-export function ListingView({
-  baseQuery,
-  heading,
-  emptyMessage,
-  /** Hide the availability toggle where the page itself already is one. */
-}: {
+/** Everything the panel owns, read out of a query string. */
+function readFilters(params: URLSearchParams, base: ProductQuery) {
+  const sort = params.get("sort") as ProductQuery["sort"] | null;
+
+  return {
+    sort: SORTS.some((option) => option.value === sort)
+      ? (sort as ProductQuery["sort"])
+      : base.sort ?? "relevance",
+    subcategoryId: numberParam(params, "type") ?? base.subcategory_id,
+    availability: (["local", "import"] as const).find((value) => value === params.get("availability"))
+      ?? base.availability,
+    origin: params.get("origin") ?? base.source_country,
+    verifiedOnly: boolParam(params, "verified") ?? Boolean(base.verified),
+    inStockOnly: boolParam(params, "in_stock") ?? false,
+    onSaleOnly: boolParam(params, "on_sale") ?? false,
+    maxDays: numberParam(params, "max_days") ?? base.max_days,
+    priceCap: numberParam(params, "max_price"),
+  };
+}
+
+interface ListingProps {
   baseQuery: ProductQuery;
   heading: string;
   emptyMessage?: string;
-}) {
+}
+
+/**
+ * Reading the query string is what makes the filters shareable, and any
+ * component that does it has to sit inside a Suspense boundary or the route
+ * cannot be prerendered. The boundary lives here rather than in each of the
+ * six pages that render a listing, so a new one cannot forget it — the build
+ * fails on that, and it failed on exactly that when this was left to callers.
+ *
+ * The pages that already have their own boundary keep it; nesting is free.
+ */
+export function ListingView(props: ListingProps) {
+  return (
+    <Suspense fallback={<div className="shell py-6"><Skeleton className="h-40 w-full" /></div>}>
+      <Listing {...props} />
+    </Suspense>
+  );
+}
+
+function Listing({ baseQuery, heading, emptyMessage }: ListingProps) {
+  const t = useT();
+
+  // The params as they were when this listing mounted, for the initial state.
+  // Read through the hook rather than off `window` so the first client render
+  // already has them.
+  const searchParams = useSearchParams();
+  const seed = useRef<ReturnType<typeof readFilters> | null>(null);
+  if (seed.current === null) {
+    seed.current = readFilters(new URLSearchParams(searchParams.toString()), baseQuery);
+  }
+
   // What the shopper typed, carried into the sourcing desk if nothing matches.
   const requestHref = baseQuery.q
     ? `/request?name=${encodeURIComponent(baseQuery.q)}`
@@ -56,28 +115,68 @@ export function ListingView({
   const [loadingMore, setLoadingMore] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  const [sort, setSort] = useState<ProductQuery["sort"]>("relevance");
-  const [subcategoryId, setSubcategoryId] = useState<number | undefined>(baseQuery.subcategory_id);
-  const [availability, setAvailability] = useState<Availability | undefined>(baseQuery.availability);
-  const [origin, setOrigin] = useState<string | undefined>(baseQuery.source_country);
-  const [verifiedOnly, setVerifiedOnly] = useState(Boolean(baseQuery.verified));
-  const [inStockOnly, setInStockOnly] = useState(false);
-  const [onSaleOnly, setOnSaleOnly] = useState(false);
-  const [maxDays, setMaxDays] = useState<number | undefined>(baseQuery.max_days);
-  const [priceCap, setPriceCap] = useState<number | undefined>();
+  const [sort, setSort] = useState<ProductQuery["sort"]>(seed.current.sort);
+  const [subcategoryId, setSubcategoryId] = useState(seed.current.subcategoryId);
+  const [availability, setAvailability] = useState<Availability | undefined>(seed.current.availability);
+  const [origin, setOrigin] = useState<string | undefined>(seed.current.origin);
+  const [verifiedOnly, setVerifiedOnly] = useState(seed.current.verifiedOnly);
+  const [inStockOnly, setInStockOnly] = useState(seed.current.inStockOnly);
+  const [onSaleOnly, setOnSaleOnly] = useState(seed.current.onSaleOnly);
+  const [maxDays, setMaxDays] = useState(seed.current.maxDays);
+  const [priceCap, setPriceCap] = useState(seed.current.priceCap);
 
   // Serialised so the effect re-runs when the caller changes category/search
   // without needing the object identity to be stable.
   const baseKey = JSON.stringify(baseQuery);
+  const lastBaseKey = useRef(baseKey);
 
+  // A new page: re-read the filters from the address bar. Reading the URL
+  // rather than resetting to `baseQuery` is what lets a link arrive with
+  // filters already applied, and stops a filter the shopper has navigated away
+  // from being resurrected from stale state.
   useEffect(() => {
-    setSubcategoryId(baseQuery.subcategory_id);
-    setAvailability(baseQuery.availability);
-    setVerifiedOnly(Boolean(baseQuery.verified));
-    setOrigin(baseQuery.source_country);
-    setMaxDays(baseQuery.max_days);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (lastBaseKey.current === baseKey) return;
+    lastBaseKey.current = baseKey;
+
+    const next = readFilters(currentSearchParams(), JSON.parse(baseKey) as ProductQuery);
+    setSort(next.sort);
+    setSubcategoryId(next.subcategoryId);
+    setAvailability(next.availability);
+    setOrigin(next.origin);
+    setVerifiedOnly(next.verifiedOnly);
+    setInStockOnly(next.inStockOnly);
+    setOnSaleOnly(next.onSaleOnly);
+    setMaxDays(next.maxDays);
+    setPriceCap(next.priceCap);
   }, [baseKey]);
+
+  // ...and the other direction.
+  //
+  // A filter is written under its own name whenever it is switched on. The
+  // three that are *not* are the ones some route states another way:
+  // `/shop/local` is already an availability, `/shop/abroad?country=CN` is
+  // already an origin, `/category?subcategory=33` is already a type. Those are
+  // suppressed when they merely restate the page, so the URL does not say the
+  // same thing twice.
+  //
+  // `verified`, `max_days` and `sort` are deliberately not treated that way
+  // even though they also reach `baseQuery`: `/shop` reads them from these
+  // exact keys, so suppressing them as "already in the base" would delete the
+  // page's own address — a refresh then landed on the unfiltered catalogue.
+  useEffect(() => {
+    writeSearchParams({
+      sort: sort && sort !== "relevance" ? sort : undefined,
+      verified: verifiedOnly || undefined,
+      max_days: maxDays,
+      max_price: priceCap,
+      in_stock: inStockOnly || undefined,
+      on_sale: onSaleOnly || undefined,
+      type: subcategoryId !== baseQuery.subcategory_id ? subcategoryId : undefined,
+      availability: availability !== baseQuery.availability ? availability : undefined,
+      origin: origin !== baseQuery.source_country ? origin : undefined,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [baseKey, sort, subcategoryId, availability, origin, verifiedOnly, inStockOnly, onSaleOnly, maxDays, priceCap]);
 
   const query = useMemo<ProductQuery>(
     () => ({
@@ -127,7 +226,7 @@ export function ListingView({
     setOnSaleOnly(false);
     setMaxDays(baseQuery.max_days);
     setPriceCap(undefined);
-    setSort("relevance");
+    setSort(baseQuery.sort ?? "relevance");
   }
 
   const activeFilterCount =
@@ -139,6 +238,8 @@ export function ListingView({
     (onSaleOnly ? 1 : 0) +
     (maxDays !== baseQuery.max_days ? 1 : 0) +
     (priceCap ? 1 : 0);
+
+  const countLabel = total === 1 ? t("listing.productCountOne") : t("listing.productCount", { count: total.toLocaleString() });
 
   const panel = (
     <FilterPanel
@@ -177,24 +278,21 @@ export function ListingView({
         <div className="rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)]">
           <EmptyState
             icon={<SearchIcon className="h-9 w-9" />}
-            title="We don’t carry that yet"
-            message={
-              emptyMessage ??
-              "Nothing in the catalogue matches. Tell us what you need and our sourcing team will find it, price it and bring it in."
-            }
+            title={t("listing.dontCarry")}
+            message={emptyMessage ?? t("listing.dontCarryHint")}
             action={
               <>
                 <Link
                   href={requestHref}
                   className="inline-flex h-12 items-center justify-center rounded-[var(--radius-sm)] bg-[color:var(--color-brand)] px-6 text-sm font-bold text-white shadow-[var(--shadow-brand)]"
                 >
-                  Ask us to source it
+                  {t("listing.askToSource")}
                 </Link>
                 <Link
                   href="/shop"
                   className="inline-flex h-12 items-center justify-center rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] px-6 text-sm font-bold"
                 >
-                  Browse everything
+                  {t("listing.browseEverything")}
                 </Link>
               </>
             }
@@ -211,16 +309,12 @@ export function ListingView({
           exactly one h1 for assistive technology and for search, but it does
           not need a paragraph explaining the marketplace — the tabs directly
           beneath say which half of it you are looking at, and every card
-          repeats the answer. The explanation lives on the homepage and in
-          /help, where somebody who wants it can find it. */}
+          repeats the answer. */}
       <h1 className="mb-2.5 text-[17px] font-extrabold tracking-[-0.025em] text-[color:var(--color-brand)] sm:text-[20px]">
         {heading}
       </h1>
 
-      {/* The tabs sit above everything, on every width and on every listing.
-          They are how this catalogue is read — All, what is already here, and
-          what we would bring in — and since the explanatory blocks came off
-          these pages they are also the only thing that has to say it. */}
+      {/* The tabs sit above everything, on every width and on every listing. */}
       {filters?.availability ? (
         <AvailabilityToggle
           options={filters.availability}
@@ -240,7 +334,7 @@ export function ListingView({
         <div className="min-w-0">
           <div className="mb-3 flex items-center gap-2">
             <p className="min-w-0 flex-1 text-[13px] text-[color:var(--color-ink-muted)]">
-              {loading ? "Searching…" : `${total.toLocaleString()} ${total === 1 ? "product" : "products"}`}
+              {loading ? t("listing.searching") : countLabel}
             </p>
 
             <button
@@ -249,7 +343,7 @@ export function ListingView({
               className="flex h-10 items-center gap-1.5 rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] px-3 text-[13px] font-bold lg:hidden"
             >
               <FilterIcon className="h-4 w-4" />
-              Filters
+              {t("filters.open")}
               {activeFilterCount > 0 ? (
                 <span className="rounded-full bg-[color:var(--color-brand)] px-1.5 text-[10px] text-white">
                   {activeFilterCount}
@@ -258,15 +352,15 @@ export function ListingView({
             </button>
 
             <label className="flex h-10 items-center gap-1.5 rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] bg-[color:var(--color-surface)] px-2.5 text-[13px]">
-              <span className="hidden text-[color:var(--color-ink-muted)] sm:inline">Sort</span>
+              <span className="hidden text-[color:var(--color-ink-muted)] sm:inline">{t("listing.sort")}</span>
               <select
                 value={sort}
                 onChange={(event) => setSort(event.target.value as ProductQuery["sort"])}
-                aria-label="Sort products"
+                aria-label={t("listing.sortAria")}
                 className="max-w-[150px] bg-transparent font-bold outline-none"
               >
                 {SORTS.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
+                  <option key={option.value} value={option.value}>{t(option.key)}</option>
                 ))}
               </select>
             </label>
@@ -274,26 +368,26 @@ export function ListingView({
 
           {failed ? (
             <EmptyState
-              title="We couldn’t load these products"
-              message="Check your connection and try again."
-              action={<Button onClick={listing.refresh}>Try again</Button>}
+              title={t("listing.loadFailed")}
+              message={t("listing.loadFailedHint")}
+              action={<Button onClick={listing.refresh}>{t("common.retry")}</Button>}
             />
           ) : !loading && products.length === 0 ? (
             /* Nothing found is an opportunity, not a dead end: this is exactly
                the moment the sourcing desk is worth offering. */
             <EmptyState
-              title="Nothing matched those filters"
-              message={emptyMessage ?? "Try removing a filter — or ask us to source it for you."}
+              title={t("listing.nothingMatched")}
+              message={emptyMessage ?? t("listing.nothingMatchedHint")}
               action={
                 <>
                   {activeFilterCount > 0 ? (
-                    <Button variant="secondary" onClick={resetFilters}>Clear filters</Button>
+                    <Button variant="secondary" onClick={resetFilters}>{t("listing.clearFilters")}</Button>
                   ) : null}
                   <Link
                     href={requestHref}
                     className="inline-flex h-11 items-center justify-center rounded-[var(--radius-sm)] bg-[color:var(--color-brand)] px-5 text-sm font-bold text-white"
                   >
-                    Request this product
+                    {t("listing.requestProduct")}
                   </Link>
                 </>
               }
@@ -310,7 +404,7 @@ export function ListingView({
                     loading={loadingMore}
                     onClick={() => void showMore()}
                   >
-                    {loadingMore ? "Loading" : "Show more"}
+                    {loadingMore ? t("listing.loadingMore") : t("listing.showMoreShort")}
                   </Button>
                 </div>
               ) : null}
@@ -321,15 +415,15 @@ export function ListingView({
 
       {/* ---- filters as a sheet on a phone ---- */}
       {filtersOpen ? (
-        <div className="fixed inset-0 z-[80] lg:hidden" role="dialog" aria-modal="true" aria-label="Filters">
+        <div className="fixed inset-0 z-[80] lg:hidden" role="dialog" aria-modal="true" aria-label={t("filters.title")}>
           <div className="fade-in absolute inset-0 bg-black/50" onClick={() => setFiltersOpen(false)} />
           <div className="sheet-up absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-[var(--radius-lg)] bg-white">
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[color:var(--color-line)] bg-white px-4 py-3">
-              <span className="text-[15px] font-black">Filters</span>
+              <span className="text-[15px] font-black">{t("filters.title")}</span>
               <button
                 type="button"
                 onClick={() => setFiltersOpen(false)}
-                aria-label="Close filters"
+                aria-label={t("filters.close")}
                 className="-mr-2 flex h-11 w-11 items-center justify-center"
               >
                 <CloseIcon className="h-5 w-5" />
@@ -340,7 +434,7 @@ export function ListingView({
 
             <div className="sticky bottom-0 border-t border-[color:var(--color-line)] bg-white p-4">
               <Button size="lg" className="w-full" onClick={() => setFiltersOpen(false)}>
-                Show {total.toLocaleString()} {total === 1 ? "product" : "products"}
+                {total === 1 ? t("filters.applyOne") : t("filters.apply", { count: total.toLocaleString() })}
               </Button>
             </div>
           </div>
@@ -367,13 +461,14 @@ function AvailabilityToggle({
   onChange(value: Availability | undefined): void;
   className?: string;
 }) {
+  const t = useT();
   const total = options.reduce((sum, option) => sum + option.count, 0);
 
   const segments: { key: string; label: string; icon: string; count: number; value: Availability | undefined; tone?: Availability }[] = [
-    { key: "all", label: "All", icon: "", count: total, value: undefined },
+    { key: "all", label: t("filters.all"), icon: "", count: total, value: undefined },
     ...options.map((option) => ({
       key: option.value,
-      label: option.value === "local" ? "In Tanzania" : "From abroad",
+      label: option.value === "local" ? t("filters.inCountry", { country: BRAND.country }) : t("filters.fromAbroad"),
       icon: option.value === "local" ? "🇹🇿" : "🌍",
       count: option.count,
       value: option.value,
@@ -384,7 +479,7 @@ function AvailabilityToggle({
   return (
     <div
       role="group"
-      aria-label="Where the product is"
+      aria-label={t("filters.whereIsIt")}
       className={`grid grid-cols-3 gap-1.5 rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-1.5 ${className}`}
     >
       {segments.map((segment) => {
@@ -462,6 +557,8 @@ function FilterPanel({
   onReset(): void;
   activeFilterCount: number;
 }) {
+  const t = useT();
+
   const priceMax = Math.ceil(filters?.price.max ?? 0);
   const priceMin = Math.floor(filters?.price.min ?? 0);
   const origins = filters?.origins ?? [];
@@ -474,18 +571,26 @@ function FilterPanel({
           onClick={onReset}
           className="text-[12px] font-bold text-[color:var(--color-brand)] hover:underline"
         >
-          Clear all filters ({activeFilterCount})
+          {t("filters.clearAllCount", { count: activeFilterCount })}
         </button>
       ) : null}
 
+      {/* Price leads the panel. It is the filter shoppers reach for first, and
+          the one the old single slider served worst. */}
+      {priceMax > priceMin ? (
+        <Group title={t("filters.maxPrice")}>
+          <PriceFilter min={priceMin} max={priceMax} value={priceCap} onChange={setPriceCap} />
+        </Group>
+      ) : null}
+
       {/* How soon it can be here. Reads as a promise rather than a number. */}
-      <Group title="Delivery time">
+      <Group title={t("filters.deliveryTime")}>
         <div className="flex flex-wrap gap-1.5">
           {[
-            { label: "Any", value: undefined },
-            { label: "Within 3 days", value: 3 },
-            { label: "Within 1 week", value: 7 },
-            { label: "Within 2 weeks", value: 14 },
+            { label: t("filters.anyTime"), value: undefined },
+            { label: t("filters.within3Days"), value: 3 },
+            { label: t("filters.withinWeek"), value: 7 },
+            { label: t("filters.withinTwoWeeks"), value: 14 },
           ].map((option) => (
             <Chip
               key={option.label}
@@ -499,9 +604,9 @@ function FilterPanel({
       </Group>
 
       {origins.length > 1 ? (
-        <Group title="Ships from">
+        <Group title={t("filters.shipsFrom")}>
           <div className="flex flex-wrap gap-1.5">
-            <Chip active={!origin} onClick={() => setOrigin(undefined)}>Anywhere</Chip>
+            <Chip active={!origin} onClick={() => setOrigin(undefined)}>{t("filters.anywhere")}</Chip>
             {origins.map((country) => (
               <Chip
                 key={country.code}
@@ -516,41 +621,20 @@ function FilterPanel({
         </Group>
       ) : null}
 
-      <Group title="Trust">
-        <Check checked={verifiedOnly} onChange={setVerifiedOnly} label="Verified sellers only" />
-        <Check checked={inStockOnly} onChange={setInStockOnly} label="In stock now" />
-        <Check checked={onSaleOnly} onChange={setOnSaleOnly} label="On sale" />
+      <Group title={t("filters.trust")}>
+        <Check checked={verifiedOnly} onChange={setVerifiedOnly} label={t("filters.verifiedOnly")} />
+        <Check checked={inStockOnly} onChange={setInStockOnly} label={t("filters.inStockNow")} />
+        <Check checked={onSaleOnly} onChange={setOnSaleOnly} label={t("filters.onSale")} />
       </Group>
 
-      {priceMax > priceMin ? (
-        <Group title="Max price">
-          <input
-            type="range"
-            min={priceMin}
-            max={priceMax}
-            step={Math.max(1000, Math.round((priceMax - priceMin) / 100))}
-            value={priceCap ?? priceMax}
-            onChange={(event) => {
-              const next = Number(event.target.value);
-              setPriceCap(next >= priceMax ? undefined : next);
-            }}
-            aria-label="Maximum price"
-            className="w-full accent-[color:var(--color-brand)]"
-          />
-          <p className="mt-1 text-[12px] font-semibold">
-            Up to {formatMoney(priceCap ?? priceMax)}
-          </p>
-        </Group>
-      ) : null}
-
       {filters && filters.subcategories.length > 0 ? (
-        <Group title="Type">
+        <Group title={t("filters.type")}>
           <ul className="max-h-64 space-y-0.5 overflow-y-auto pr-1">
             <li>
               <FilterRow
                 active={subcategoryId === undefined}
                 onClick={() => setSubcategoryId(undefined)}
-                label="All types"
+                label={t("filters.allTypes")}
               />
             </li>
             {filters.subcategories.map((sub) => (
@@ -570,7 +654,11 @@ function FilterPanel({
       {/* A one-line reminder of which tab is active, for anyone who has
           scrolled the filter panel far enough that the tabs are off screen. */}
       <p className="text-[11px] leading-relaxed text-[color:var(--color-ink-faint)]">
-        Showing {availability === "import" ? "products sourced from abroad" : availability === "local" ? "products already in Tanzania" : "everything, wherever it is"}.
+        {availability === "import"
+          ? t("filters.showingImport")
+          : availability === "local"
+            ? t("filters.showingLocal", { country: BRAND.country })
+            : t("filters.showingAll")}
       </p>
     </div>
   );

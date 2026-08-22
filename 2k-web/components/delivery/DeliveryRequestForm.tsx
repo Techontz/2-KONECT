@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import { useEffect, useState } from "react";
 
 import { apiError } from "@/lib/api";
@@ -35,6 +36,7 @@ export function DeliveryRequestForm({
   defaultAddress?: string;
   onDone(): void;
 }) {
+  const t = useT();
   const [options, setOptions] = useState<DeliveryOptions | null>(null);
   const [mode, setMode] = useState<"delivery" | "pickup">("delivery");
   const [name, setName] = useState(defaultName);
@@ -60,8 +62,8 @@ export function DeliveryRequestForm({
         setPickupPoint(data.pickup_points[0]?.name ?? "");
         setWindow(data.windows[0] ?? "");
       })
-      .catch((err) => setError(apiError(err, "We couldn’t load the delivery options.")));
-  }, [open, orderReference]);
+      .catch((err) => setError(apiError(err, t("delivery.loadFailed"))));
+  }, [open, orderReference, t]);
 
   // The page behind must not scroll while the sheet owns the screen.
   useEffect(() => {
@@ -102,13 +104,13 @@ export function DeliveryRequestForm({
 
       onDone();
     } catch (err) {
-      setError(apiError(err, "We couldn’t arrange that delivery."));
+      setError(apiError(err, t("delivery.arrangeFailed")));
       setSubmitting(false);
     }
   }
 
   return (
-    <div className="fixed inset-0 z-[95]" role="dialog" aria-modal="true" aria-label="Arrange delivery">
+    <div className="fixed inset-0 z-[95]" role="dialog" aria-modal="true" aria-label={t("delivery.arrangeDelivery")}>
       <div className="fade-in absolute inset-0 bg-black/55" onClick={onClose} />
 
       <div className="sheet-up absolute inset-x-0 bottom-0 max-h-[92vh] overflow-y-auto rounded-t-[var(--radius-lg)] bg-white sm:inset-0 sm:m-auto sm:h-fit sm:max-w-lg sm:rounded-[var(--radius-lg)]">
@@ -117,12 +119,12 @@ export function DeliveryRequestForm({
             <p className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-brand)]">
               2KONECT Rides
             </p>
-            <h2 className="text-[16px] font-black">Arrange delivery</h2>
+            <h2 className="text-[16px] font-black">{t("delivery.arrangeDelivery")}</h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t("common.close")}
             className="-mr-2 flex h-11 w-11 items-center justify-center"
           >
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
@@ -141,7 +143,7 @@ export function DeliveryRequestForm({
           </div>
         ) : !options.available ? (
           <div className="p-4">
-            <Notice tone="info" title="Not there yet">
+            <Notice tone="info" title={t("delivery.notThereYet")}>
               This order has not arrived in Tanzania. We will tell you the moment it
               lands, and you can arrange delivery then.
             </Notice>
@@ -149,7 +151,7 @@ export function DeliveryRequestForm({
         ) : (
           <form onSubmit={submit} className="space-y-4 p-4">
             <fieldset>
-              <legend className="mb-2 text-[13px] font-bold">How do you want it?</legend>
+              <legend className="mb-2 text-[13px] font-bold">{t("delivery.howDoYouWantIt")}</legend>
               <div className="grid gap-2 sm:grid-cols-2">
                 {options.modes.map((option) => {
                   const active = mode === option.value;
@@ -181,22 +183,22 @@ export function DeliveryRequestForm({
             </fieldset>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <TextField label="Who is receiving it?" value={name} onChange={setName} required placeholder="Full name" />
-              <TextField label="Phone" value={phone} onChange={setPhone} required inputMode="tel" placeholder="07XX XXX XXX" />
+              <TextField label={t("delivery.whoReceiving")} value={name} onChange={setName} required placeholder={t("delivery.fullName")} />
+              <TextField label={t("delivery.phone")} value={phone} onChange={setPhone} required inputMode="tel" placeholder={t("checkout.phonePlaceholder")} />
             </div>
 
             {mode === "delivery" ? (
               <TextField
-                label="Delivery address"
+                label={t("delivery.deliveryAddress")}
                 value={address}
                 onChange={setAddress}
                 required
                 multiline
-                placeholder="Street, area, landmark"
+                placeholder={t("delivery.addressPlaceholder")}
               />
             ) : (
               <label className="block">
-                <span className="mb-1.5 block text-[13px] font-bold">Collect from</span>
+                <span className="mb-1.5 block text-[13px] font-bold">{t("delivery.collectFrom")}</span>
                 <select
                   value={pickupPoint}
                   onChange={(event) => setPickupPoint(event.target.value)}
@@ -213,7 +215,7 @@ export function DeliveryRequestForm({
 
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block">
-                <span className="mb-1.5 block text-[13px] font-bold">Preferred day</span>
+                <span className="mb-1.5 block text-[13px] font-bold">{t("delivery.preferredDay")}</span>
                 <input
                   type="date"
                   value={date}
@@ -223,7 +225,7 @@ export function DeliveryRequestForm({
                 />
               </label>
               <label className="block">
-                <span className="mb-1.5 block text-[13px] font-bold">Time</span>
+                <span className="mb-1.5 block text-[13px] font-bold">{t("delivery.time")}</span>
                 <select
                   value={window_}
                   onChange={(event) => setWindow(event.target.value)}
@@ -236,17 +238,17 @@ export function DeliveryRequestForm({
               </label>
             </div>
 
-            <TextField label="Anything else? (optional)" value={notes} onChange={setNotes} multiline placeholder="Gate colour, floor, who to call…" />
+            <TextField label={t("delivery.anythingElse")} value={notes} onChange={setNotes} multiline placeholder={t("delivery.anythingElsePlaceholder")} />
 
             {error ? <Notice tone="danger">{error}</Notice> : null}
 
             <div className="flex items-center justify-between gap-3 border-t border-[color:var(--color-line)] pt-3">
               <p className="text-[13px]">
-                <span className="text-[color:var(--color-ink-muted)]">Delivery fee</span>{" "}
+                <span className="text-[color:var(--color-ink-muted)]">{t("delivery.deliveryFee")}</span>{" "}
                 <span className="font-black">{fee > 0 ? formatMoney(fee) : "Free"}</span>
               </p>
               <Button type="submit" size="lg" loading={submitting}>
-                {submitting ? "Sending" : "Confirm"}
+                {submitting ? t("delivery.sending") : t("delivery.confirm")}
               </Button>
             </div>
           </form>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import { useCallback, useEffect, useState } from "react";
 import { formatDate, formatMoney } from "@/lib/format";
 import vendorApi, { type VendorOrder } from "@/lib/vendor";
@@ -13,12 +14,12 @@ import { Button, EmptyState, Skeleton, Tag } from "@/components/ui/Primitives";
  */
 
 const TABS = [
-  { value: "", label: "All" },
-  { value: "pending", label: "New" },
-  { value: "processing", label: "Preparing" },
-  { value: "shipped", label: "Shipped" },
-  { value: "completed", label: "Completed" },
-  { value: "cancelled", label: "Cancelled" },
+  { value: "", label: "seller.tabAll" },
+  { value: "pending", label: "seller.tabNew" },
+  { value: "processing", label: "seller.statusPreparing" },
+  { value: "shipped", label: "seller.statusShipped" },
+  { value: "completed", label: "seller.statusCompleted" },
+  { value: "cancelled", label: "seller.statusCancelled" },
 ] as const;
 
 /**
@@ -34,6 +35,7 @@ const STATUS_TONE: Record<string, "success" | "warn" | "brand" | "sale" | "neutr
 };
 
 export default function VendorOrdersPage() {
+  const t = useT();
   const [orders, setOrders] = useState<VendorOrder[]>([]);
   const [status, setStatus] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -47,11 +49,11 @@ export default function VendorOrdersPage() {
       const data = await vendorApi.orders({ status: status || undefined });
       setOrders(data.orders);
     } catch {
-      setError("We couldn't load your orders.");
+      setError(t("seller.ordersLoadFailed"));
     } finally {
       setLoading(false);
     }
-  }, [status]);
+  }, [status, t]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -63,7 +65,7 @@ export default function VendorOrdersPage() {
       // the server's view is the one worth trusting.
       await load();
     } catch {
-      setError("That order could not be updated.");
+      setError(t("seller.orderUpdateFailed"));
       setWorking(null);
     } finally {
       setWorking(null);
@@ -73,7 +75,7 @@ export default function VendorOrdersPage() {
   return (
     <div className="space-y-4 p-4 lg:p-6">
       <header>
-        <h1 className="text-[24px] font-black tracking-tight">Orders</h1>
+        <h1 className="text-[24px] font-black tracking-tight">{t("seller.orders")}</h1>
         <p className="text-[13px] text-[color:var(--color-ink-muted)]">
           Fulfil orders and keep customers updated.
         </p>
@@ -91,7 +93,7 @@ export default function VendorOrdersPage() {
                 : "border-[color:var(--color-line-strong)] bg-[color:var(--color-surface)]"
             }`}
           >
-            {tab.label}
+            {t(tab.label)}
           </button>
         ))}
       </div>
@@ -108,8 +110,8 @@ export default function VendorOrdersPage() {
         </div>
       ) : orders.length === 0 ? (
         <EmptyState
-          title="No orders here"
-          message={status ? "Nothing at this stage right now." : "Orders from customers will appear here."}
+          title={t("seller.noOrdersHere")}
+          message={status ? t("seller.noOrdersHint") : "Orders from customers will appear here."}
         />
       ) : (
         <div className="space-y-2">
@@ -143,7 +145,7 @@ export default function VendorOrdersPage() {
                   </span>
 
                   <div className="min-w-0 flex-1">
-                    <p className="clamp-2 text-[13px] font-semibold">{order.product?.name ?? "Product removed"}</p>
+                    <p className="clamp-2 text-[13px] font-semibold">{order.product?.name ?? t("seller.productRemoved")}</p>
                     <p className="text-[12px] text-[color:var(--color-ink-muted)]">
                       {order.quantity} × {formatMoney(order.price)}
                     </p>
@@ -153,12 +155,12 @@ export default function VendorOrdersPage() {
 
                 <dl className="mt-3 grid gap-x-4 gap-y-1 border-t border-[color:var(--color-line)] pt-3 text-[12px] sm:grid-cols-2">
                   <div className="flex gap-2">
-                    <dt className="shrink-0 text-[color:var(--color-ink-muted)]">Customer</dt>
+                    <dt className="shrink-0 text-[color:var(--color-ink-muted)]">{t("seller.customer")}</dt>
                     <dd className="clamp-1 font-semibold">{order.customer.name}</dd>
                   </div>
                   {order.customer.phone ? (
                     <div className="flex gap-2">
-                      <dt className="shrink-0 text-[color:var(--color-ink-muted)]">Phone</dt>
+                      <dt className="shrink-0 text-[color:var(--color-ink-muted)]">{t("seller.phone")}</dt>
                       <dd>
                         <a href={`tel:${order.customer.phone}`} className="font-semibold text-[color:var(--color-brand)] hover:underline">
                           {order.customer.phone}
@@ -168,7 +170,7 @@ export default function VendorOrdersPage() {
                   ) : null}
                   {order.address ? (
                     <div className="flex gap-2 sm:col-span-2">
-                      <dt className="shrink-0 text-[color:var(--color-ink-muted)]">Deliver to</dt>
+                      <dt className="shrink-0 text-[color:var(--color-ink-muted)]">{t("seller.deliverTo")}</dt>
                       <dd className="clamp-2">{order.address}</dd>
                     </div>
                   ) : null}
@@ -182,7 +184,7 @@ export default function VendorOrdersPage() {
                         disabled={working === order.id}
                         onClick={() => advance(order, next.value)}
                       >
-                        {working === order.id ? "Updating…" : next.label}
+                        {working === order.id ? t("seller.updating") : next.label}
                       </Button>
                     ) : null}
 
@@ -192,7 +194,7 @@ export default function VendorOrdersPage() {
                         variant="ghost"
                         disabled={working === order.id}
                         onClick={() => {
-                          if (window.confirm("Cancel this order? The stock returns to your inventory.")) {
+                          if (window.confirm(t("seller.cancelOrderConfirm"))) {
                             void advance(order, "cancelled");
                           }
                         }}

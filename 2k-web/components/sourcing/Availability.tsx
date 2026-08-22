@@ -1,7 +1,59 @@
 "use client";
 
+import { BRAND } from "@/lib/brand";
+import { useT, type Translate } from "@/lib/i18n";
 import type { Sourcing } from "@/lib/types";
 import { ClockIcon, GlobeIcon, PinIcon, PlaneIcon, ShipIcon, TruckIcon } from "./icons";
+
+/**
+ * The sourcing copy, said in the reader's language.
+ *
+ * The API sends these three lines already written — "In Tanzania",
+ * "Available in Tanzania", "In stock locally and ready to ship." — which is
+ * fine while the storefront is English and wrong the moment it is not: the
+ * page around them would turn Kiswahili and they would not.
+ *
+ * Every one of them is derivable from structured fields the same payload
+ * already carries (`is_local`, `origin`, `lead_time.min/max`,
+ * `shipping_method.code`), so they are rebuilt here rather than translated on
+ * the server. That keeps the API contract untouched — no deployment is needed
+ * for the storefront to speak a new language — and the server's own string
+ * stays as the fallback if a shape ever turns up that this does not know.
+ */
+export function sourcingCopy(sourcing: Sourcing, tr: Translate) {
+  const label = sourcing.is_local
+    ? tr("product.sourceLabelLocal", { country: sourcing.destination?.name ?? BRAND.country })
+    : tr("product.sourceLabelImport");
+
+  const headline = sourcing.is_local
+    ? tr("product.headlineLocal", { country: sourcing.destination?.name ?? BRAND.country })
+    : sourcing.origin
+      ? tr("product.headlineFrom", { country: sourcing.origin.name })
+      : tr("product.headlineIntl");
+
+  const summary = sourcing.is_local
+    ? tr("product.summaryLocal")
+    : tr("product.summaryImport");
+
+  return { label, headline, summary };
+}
+
+/** "1–3 days" / "3 days" / "1 day", from the numbers rather than the string. */
+export function leadTimeLabel(lead: Sourcing["lead_time"], tr: Translate): string {
+  if (lead.min !== lead.max) return tr("product.daysRange", { min: lead.min, max: lead.max });
+  return lead.min === 1 ? tr("product.dayOne") : tr("product.daysExact", { count: lead.min });
+}
+
+/** The freight mode, keyed off its code so the server's English is not shown. */
+export function shippingMethodLabel(
+  method: NonNullable<Sourcing["shipping_method"]>,
+  tr: Translate,
+): string {
+  if (method.code === "air") return tr("product.methodAir");
+  if (method.code === "sea") return tr("product.methodSea");
+  if (method.code === "road") return tr("product.methodRoad");
+  return method.label;
+}
 
 /* ==========================================================================
    Where is it, and when do I get it?
@@ -59,6 +111,7 @@ export function AvailabilityStrip({
   sourcing: Sourcing;
   className?: string;
 }) {
+  const tr = useT();
   const t = tone(sourcing);
 
   return (
@@ -75,11 +128,11 @@ export function AvailabilityStrip({
           : sourcing.origin?.flag ?? "🌍"}
       </span>
       <span className="truncate">
-        {sourcing.is_local ? sourcing.label : sourcing.origin?.name ?? sourcing.label}
+        {sourcing.is_local ? sourcingCopy(sourcing, tr).label : sourcing.origin?.name ?? sourcingCopy(sourcing, tr).label}
       </span>
       <span aria-hidden="true" className="opacity-40">·</span>
       <span className="shrink-0 whitespace-nowrap font-semibold">
-        {sourcing.lead_time.label}
+        {leadTimeLabel(sourcing.lead_time, tr)}
       </span>
     </p>
   );
@@ -100,6 +153,7 @@ export function AvailabilityBadge({
   size?: "sm" | "md";
   className?: string;
 }) {
+  const tr = useT();
   const t = tone(sourcing);
   const text = size === "sm" ? "text-[10px]" : "text-[11px]";
 
@@ -110,7 +164,7 @@ export function AvailabilityBadge({
       <span aria-hidden="true" className="text-[11px] leading-none">
         {sourcing.is_local ? sourcing.destination?.flag ?? "🇹🇿" : "🌍"}
       </span>
-      <span className="truncate">{sourcing.label}</span>
+      <span className="truncate">{sourcingCopy(sourcing, tr).label}</span>
     </span>
   );
 }
@@ -130,6 +184,7 @@ export function DeliveryEstimate({
   size?: "sm" | "md";
   className?: string;
 }) {
+  const tr = useT();
   const text = size === "sm" ? "text-[10px]" : "text-[11px]";
 
   return (
@@ -138,7 +193,7 @@ export function DeliveryEstimate({
     >
       <ClockIcon className={size === "sm" ? "h-3 w-3" : "h-3.5 w-3.5"} />
       <span>
-        {sourcing.is_local ? "Delivery" : "Arrives"} {sourcing.lead_time.label}
+        {sourcing.is_local ? tr("product.delivery") : tr("product.arrives")} {leadTimeLabel(sourcing.lead_time, tr)}
       </span>
     </span>
   );
@@ -162,12 +217,13 @@ export function AvailabilityPanel({
   stock: number;
   className?: string;
 }) {
+  const tr = useT();
   const t = tone(sourcing);
   const local = sourcing.is_local;
 
   return (
     <section
-      aria-label="Availability and delivery"
+      aria-label={tr("product.availabilityAndDelivery")}
       className={`overflow-hidden rounded-[var(--radius-md)] border ${t.line} ${t.soft} ${className}`}
     >
       <div className="flex items-start gap-3 p-4">
@@ -180,53 +236,53 @@ export function AvailabilityPanel({
         <div className="min-w-0 flex-1">
           <p className={`flex flex-wrap items-center gap-1.5 text-[15px] font-extrabold ${t.text}`}>
             <span aria-hidden="true">{local ? sourcing.destination?.flag ?? "🇹🇿" : sourcing.origin?.flag ?? "🌍"}</span>
-            {sourcing.headline}
+            {sourcingCopy(sourcing, tr).headline}
           </p>
           <p className="mt-0.5 text-[13px] leading-snug text-[color:var(--color-ink-soft)]">
-            {sourcing.summary}
+            {sourcingCopy(sourcing, tr).summary}
           </p>
         </div>
       </div>
 
       <dl className="grid grid-cols-2 gap-px border-t border-white/70 bg-white/70 text-[12px]">
         <Fact
-          label={local ? "Delivery time" : "Estimated arrival"}
-          value={sourcing.lead_time.label}
+          label={local ? tr("product.deliveryTime") : tr("product.estimatedArrival")}
+          value={leadTimeLabel(sourcing.lead_time, tr)}
           icon={<ClockIcon className="h-3.5 w-3.5" />}
         />
 
         {local ? (
           <Fact
-            label="Stock"
+            label={tr("product.stock")}
             value={
               inStock
                 ? stock <= 5
-                  ? `Only ${stock} left`
-                  : "In stock"
-                : "Out of stock"
+                  ? tr("product.onlyLeftShort", { count: stock })
+                  : tr("product.inStock")
+                : tr("product.outOfStock")
             }
             icon={<PinIcon className="h-3.5 w-3.5" />}
             emphasis={!inStock ? "warn" : undefined}
           />
         ) : (
           <Fact
-            label="Ships from"
-            value={sourcing.origin ? `${sourcing.origin.flag} ${sourcing.origin.name}` : "International"}
+            label={tr("product.shipsFrom")}
+            value={sourcing.origin ? `${sourcing.origin.flag} ${sourcing.origin.name}` : tr("product.international")}
             icon={<GlobeIcon className="h-3.5 w-3.5" />}
           />
         )}
 
         {!local && sourcing.shipping_method ? (
           <Fact
-            label="Method"
-            value={sourcing.shipping_method.label}
+            label={tr("product.method")}
+            value={shippingMethodLabel(sourcing.shipping_method, tr)}
             icon={<TransitIcon sourcing={sourcing} className="h-3.5 w-3.5" />}
           />
         ) : null}
 
         {sourcing.fulfilment_location ? (
           <Fact
-            label={local ? "Ships from" : "Delivered from"}
+            label={local ? tr("product.shipsFrom") : tr("product.deliveredFrom")}
             value={sourcing.fulfilment_location}
             icon={<PinIcon className="h-3.5 w-3.5" />}
           />
@@ -234,11 +290,13 @@ export function AvailabilityPanel({
       </dl>
 
       {/* What happens after payment. An import is an unfamiliar purchase, so
+
+
           the steps are spelled out rather than left to be discovered. */}
       <p className="border-t border-white/70 bg-white/70 px-4 py-2.5 text-[12px] leading-relaxed text-[color:var(--color-ink-muted)]">
         {local
-          ? "Pay, and the seller ships it to your address. You can follow it from your orders."
-          : `We place the order, bring it into ${sourcing.destination?.name ?? "Tanzania"}, and tell you at every step. When it lands you choose delivery or collection.`}
+          ? tr("product.localAfterPay")
+          : tr("product.importAfterPay", { country: sourcing.destination?.name ?? BRAND.country })}
       </p>
     </section>
   );

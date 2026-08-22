@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import Link from "next/link";
 
 import { useCategories } from "@/lib/queries";
@@ -14,6 +15,7 @@ import { EmptyState, Skeleton } from "@/components/ui/Primitives";
  * follows to reach the depth of the catalogue.
  */
 export default function CategoriesPage() {
+  const t = useT();
   // Shared with the header's category tree: whichever loads first, the other
   // reads it from the cache rather than asking again.
   const { data: categories, error: failed } = useCategories();
@@ -22,16 +24,16 @@ export default function CategoriesPage() {
     <SiteChrome>
       <div className="shell py-5 pb-tabbar">
         <h1 className="text-[24px] font-black tracking-[-0.025em] sm:text-[30px]">
-          Browse every category
+          {t("listing.browseEveryCategory")}
         </h1>
         <p className="mt-1 text-[14px] text-[color:var(--color-ink-muted)]">
-          Local stock and imported options in each one.
+          {t("listing.browseEveryCategoryHint")}
         </p>
 
         {failed ? (
           <EmptyState
-            title="We couldn’t load the categories"
-            message="Check your connection and try again."
+            title={t("listing.categoriesFailed")}
+            message={t("listing.loadFailedHint")}
           />
         ) : (
           <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -61,7 +63,7 @@ export default function CategoriesPage() {
                           {category.name.trim()}
                         </span>
                         <span className="text-[12px] text-[color:var(--color-ink-faint)]">
-                          {category.product_count.toLocaleString()} products
+                          {t("listing.productsCount", { count: category.product_count.toLocaleString() })}
                         </span>
                       </span>
                     </Link>

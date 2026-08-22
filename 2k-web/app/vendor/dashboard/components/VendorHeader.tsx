@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
+
 /**
  * Compact store header used by the legacy vendor sub-pages (messages,
  * settings, wallet). The dashboard, products and orders screens carry their
@@ -15,7 +17,8 @@ export default function VendorHeader({
     is_approved?: boolean | number | null;
   } | null;
 }) {
-  const name = vendor?.business_name ?? "Your store";
+  const t = useT();
+  const name = vendor?.business_name ?? t("seller.yourStore");
 
   return (
     <header className="mb-4 flex items-center gap-3 rounded-[var(--radius-md)] bg-[color:var(--color-surface)] p-4">

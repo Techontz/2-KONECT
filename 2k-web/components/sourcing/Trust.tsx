@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import { BRAND } from "@/lib/brand";
 import { CheckIcon, LockIcon, ShieldIcon, TruckIcon } from "./icons";
 
@@ -21,18 +22,19 @@ import { CheckIcon, LockIcon, ShieldIcon, TruckIcon } from "./icons";
  */
 export function VerifiedBadge({
   size = "md",
-  label = "Verified seller",
+  label,
   className = "",
 }: {
   size?: "sm" | "md";
   label?: string;
   className?: string;
 }) {
+  const t = useT();
   const compact = size === "sm";
 
   return (
     <span
-      title="This seller has been checked by 2KONECT."
+      title={t("seller.checkedBy", { brand: BRAND.name })}
       className={`inline-flex items-center gap-1 rounded-[var(--radius-xs)] bg-[color:var(--color-brand-100)] px-1.5 py-[3px] font-bold text-[color:var(--color-brand)] ${
         compact ? "text-[10px]" : "text-[11px]"
       } ${className}`}
@@ -45,7 +47,7 @@ export function VerifiedBadge({
       >
         <CheckIcon className={compact ? "h-2 w-2" : "h-2.5 w-2.5"} />
       </span>
-      {label}
+      {label ?? t("product.verifiedSeller")}
     </span>
   );
 }
@@ -62,14 +64,15 @@ export function isOfficialSeller(name: string | null | undefined): boolean {
 }
 
 export function OfficialBadge({ className = "" }: { className?: string }) {
+  const t = useT();
   return (
     <span
-      title={`Sold and fulfilled by ${BRAND.name}.`}
+      title={t("product.soldFulfilledBy", { brand: BRAND.name })}
       className={`inline-flex items-center gap-1 rounded-[var(--radius-xs)] bg-[color:var(--color-brand)] px-1.5 py-[3px] text-[10px] font-bold uppercase tracking-wide text-white ${className}`}
     >
       {/* Just "Official": the seller's name is already beside it, and
           repeating the brand twice in two centimetres reads as a stutter. */}
-      Official
+      {t("product.official")}
     </span>
   );
 }
@@ -81,13 +84,16 @@ export function OfficialBadge({ className = "" }: { className?: string }) {
  * platform actually does — no "100% genuine", no guarantee it cannot honour.
  */
 export function TrustRow({ isLocal, className = "" }: { isLocal: boolean; className?: string }) {
+  const t = useT();
   const items = [
-    { icon: <LockIcon className="h-4 w-4" />, label: "Secure checkout" },
+    { icon: <LockIcon className="h-4 w-4" />, label: t("product.secureCheckout") },
     {
       icon: <TruckIcon className="h-4 w-4" />,
-      label: isLocal ? "Delivered across Tanzania" : "Import handled by 2KONECT",
+      label: isLocal
+        ? t("product.deliveredAcross", { country: BRAND.country })
+        : t("product.importHandledBy", { brand: BRAND.name }),
     },
-    { icon: <ShieldIcon className="h-4 w-4" />, label: "Tracked at every step" },
+    { icon: <ShieldIcon className="h-4 w-4" />, label: t("product.trackedEveryStep") },
   ];
 
   return (

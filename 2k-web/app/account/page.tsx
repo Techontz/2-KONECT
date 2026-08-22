@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -22,6 +23,7 @@ export default function AccountPage() {
 }
 
 function AccountContent() {
+  const t = useT();
   const { user, isAuthenticated, ready, logout, requireAuth } = useAuth();
   const hydrated = useHydrated();
   const wishlist = useWishlist();
@@ -50,35 +52,38 @@ function AccountContent() {
   if (hydrated && ready && !isAuthenticated) {
     return (
       <EmptyState
-        title="Sign in to your account"
-        message="Your orders, saved items, addresses and sourcing requests all live here."
-        action={<Button size="lg" onClick={() => void requireAuth()}>Sign in</Button>}
+        title={t("account.signInTitle")}
+        message={t("account.signInHint")}
+        action={<Button size="lg" onClick={() => void requireAuth()}>{t("account.signIn")}</Button>}
       />
     );
   }
 
-  const sections: { title: string; links: { href: string; label: string; note: string }[] }[] = [
+  const sections: { id: string; title: string; links: { href: string; label: string; note: string }[] }[] = [
     {
-      title: "Orders & delivery",
+      id: "orders",
+      title: t("account.ordersDelivery"),
       links: [
-        { href: "/account/orders", label: "My orders", note: "Track every order, step by step" },
-        { href: "/account/deliveries", label: "Deliveries", note: "2KONECT Rides jobs and collections" },
-        { href: "/track", label: "Track by reference", note: "Look up an order number" },
+        { href: "/account/orders", label: t("account.myOrders"), note: t("account.myOrdersNote") },
+        { href: "/account/deliveries", label: t("account.deliveries"), note: t("account.deliveriesNote", { brand: BRAND.name }) },
+        { href: "/track", label: t("account.trackByReference"), note: t("account.trackByReferenceNote") },
       ],
     },
     {
-      title: "Sourcing",
+      id: "sourcing",
+      title: t("account.sourcing"),
       links: [
-        { href: "/account/requests", label: "My requests", note: "Products we are sourcing for you" },
-        { href: "/request", label: "Request a product", note: "Ask us to find something new" },
+        { href: "/account/requests", label: t("account.myRequests"), note: t("account.myRequestsNote") },
+        { href: "/request", label: t("account.requestProduct"), note: t("account.requestProductNote") },
       ],
     },
     {
-      title: "Your details",
+      id: "details",
+      title: t("account.yourDetails"),
       links: [
-        { href: "/account/addresses", label: "Addresses", note: "Where your orders are delivered" },
-        { href: "/wishlist", label: "Saved items", note: "Products you kept for later" },
-        { href: "/account/messages", label: "Messages", note: "Conversations with sellers" },
+        { href: "/account/addresses", label: t("account.addresses"), note: t("account.addressesNote") },
+        { href: "/wishlist", label: t("account.savedItems"), note: t("account.savedItemsNote") },
+        { href: "/account/messages", label: t("account.messages"), note: t("account.messagesNote") },
       ],
     },
   ];
@@ -100,15 +105,15 @@ function AccountContent() {
       </section>
 
       <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile label="Active orders" value={activeCount} href="/account/orders" accent />
-        <StatTile label="All orders" value={orderCount} href="/account/orders" />
-        <StatTile label="Requests" value={requestCount} href="/account/requests" />
-        <StatTile label="Saved" value={wishlist.count} href="/wishlist" />
+        <StatTile label={t("account.activeOrders")} value={activeCount} href="/account/orders" accent />
+        <StatTile label={t("account.allOrders")} value={orderCount} href="/account/orders" />
+        <StatTile label={t("account.requests")} value={requestCount} href="/account/requests" />
+        <StatTile label={t("account.saved")} value={wishlist.count} href="/wishlist" />
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
         {sections.map((section) => (
-          <section key={section.title}>
+          <section key={section.id}>
             <h2 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-ink-faint)]">
               {section.title}
             </h2>
@@ -155,7 +160,7 @@ function AccountContent() {
       </section>
 
       <div className="mt-5">
-        <Button variant="secondary" onClick={logout}>Sign out</Button>
+        <Button variant="secondary" onClick={logout}>{t("account.logout")}</Button>
       </div>
     </div>
   );

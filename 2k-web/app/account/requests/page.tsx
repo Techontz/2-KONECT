@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import { useCallback, useEffect, useState } from "react";
 
 import { apiError } from "@/lib/api";
@@ -19,6 +20,7 @@ import { Button, ButtonLink, EmptyState, Notice, Skeleton } from "@/components/u
  * spelled out.
  */
 export default function RequestsPage() {
+  const t = useT();
   const { isAuthenticated, ready, requireAuth } = useAuth();
   const hydrated = useHydrated();
   const [requests, setRequests] = useState<SourcingRequest[] | null>(null);
@@ -39,23 +41,23 @@ export default function RequestsPage() {
     return (
       <SiteChrome>
         <EmptyState
-          title="Sign in to see your requests"
-          message="Requests made while signed in appear here with their progress."
-          action={<Button size="lg" onClick={() => void requireAuth()}>Sign in</Button>}
+          title={t("requests.signInTitle")}
+          message={t("requests.signInHint")}
+          action={<Button size="lg" onClick={() => void requireAuth()}>{t("requests.signIn")}</Button>}
         />
       </SiteChrome>
     );
   }
 
   async function cancel(reference: string) {
-    if (!window.confirm("Withdraw this request?")) return;
+    if (!window.confirm(t("requests.withdrawConfirm"))) return;
 
     setError(null);
     try {
       await shop.cancelRequest(reference);
       load();
     } catch (err) {
-      setError(apiError(err, "We couldn’t cancel that request."));
+      setError(apiError(err, t("requests.cancelFailed")));
     }
   }
 
@@ -64,12 +66,12 @@ export default function RequestsPage() {
       <div className="shell py-4 pb-tabbar">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-[22px] font-black tracking-[-0.02em] md:text-[28px]">Your requests</h1>
+            <h1 className="text-[22px] font-black tracking-[-0.02em] md:text-[28px]">{t("requests.yourRequests")}</h1>
             <p className="mt-1 text-[14px] text-[color:var(--color-ink-muted)]">
-              Products our sourcing team is finding for you.
+              {t("requests.yourRequestsHint")}
             </p>
           </div>
-          <ButtonLink href="/request">New request</ButtonLink>
+          <ButtonLink href="/request">{t("requests.newRequest")}</ButtonLink>
         </div>
 
         {error ? <Notice tone="danger" className="mt-3">{error}</Notice> : null}
@@ -77,9 +79,9 @@ export default function RequestsPage() {
         <div className="mt-4 space-y-3">
           {failed ? (
             <EmptyState
-              title="We couldn’t load your requests"
-              message="Check your connection and try again."
-              action={<Button onClick={load}>Try again</Button>}
+              title={t("requests.loadFailed")}
+              message={t("common.offline")}
+              action={<Button onClick={load}>{t("common.retry")}</Button>}
             />
           ) : requests === null ? (
             Array.from({ length: 2 }).map((_, index) => (
@@ -88,9 +90,9 @@ export default function RequestsPage() {
           ) : requests.length === 0 ? (
             <EmptyState
               icon={<SearchIcon className="h-9 w-9" />}
-              title="No requests yet"
-              message="If the catalogue doesn’t carry what you need, ask us — we source products from suppliers worldwide."
-              action={<ButtonLink href="/request" size="lg">Request a product</ButtonLink>}
+              title={t("requests.empty")}
+              message={t("requests.emptyHint")}
+              action={<ButtonLink href="/request" size="lg">{t("requests.requestProduct")}</ButtonLink>}
             />
           ) : (
             requests.map((request) => (
@@ -104,6 +106,7 @@ export default function RequestsPage() {
 }
 
 function RequestCard({ request, onCancel }: { request: SourcingRequest; onCancel(): void }) {
+  const t = useT();
   const percent = request.step > 0 ? (request.step / request.total_steps) * 100 : 0;
   const cancellable = ["submitted", "reviewing", "sourcing", "quoted"].includes(request.status);
 
@@ -128,8 +131,8 @@ function RequestCard({ request, onCancel }: { request: SourcingRequest; onCancel
             <div className="min-w-0">
               <p className="text-[15px] font-extrabold">{request.name}</p>
               <p className="mt-0.5 text-[12px] text-[color:var(--color-ink-muted)]">
-                {request.reference} · {request.quantity}{" "}
-                {request.quantity === 1 ? "unit" : "units"}
+                {request.reference} ·{" "}
+                {request.quantity === 1 ? t("requests.unitOne") : t("requests.units", { count: request.quantity })}
                 {request.created_at ? ` · ${formatDate(request.created_at)}` : ""}
               </p>
             </div>

@@ -1,5 +1,7 @@
 "use client";
 
+import { BRAND } from "@/lib/brand";
+import { useT } from "@/lib/i18n";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
@@ -20,6 +22,7 @@ import { Button, ButtonLink, EmptyState, Notice, Skeleton } from "@/components/u
  * one package, where it is going, when, and who is bringing it.
  */
 export default function DeliveriesPage() {
+  const t = useT();
   const { isAuthenticated, ready, requireAuth } = useAuth();
   const hydrated = useHydrated();
   const [requests, setRequests] = useState<DeliveryRequest[] | null>(null);
@@ -40,23 +43,23 @@ export default function DeliveriesPage() {
     return (
       <SiteChrome>
         <EmptyState
-          title="Sign in to see your deliveries"
-          message="Delivery jobs are tied to the account that ordered them."
-          action={<Button size="lg" onClick={() => void requireAuth()}>Sign in</Button>}
+          title={t("deliveries.signInTitle")}
+          message={t("deliveries.signInHint")}
+          action={<Button size="lg" onClick={() => void requireAuth()}>{t("deliveries.signIn")}</Button>}
         />
       </SiteChrome>
     );
   }
 
   async function cancel(reference: string) {
-    if (!window.confirm("Cancel this delivery?")) return;
+    if (!window.confirm(t("deliveries.cancelConfirm"))) return;
 
     setError(null);
     try {
       await shop.cancelDelivery(reference);
       load();
     } catch (err) {
-      setError(apiError(err, "We couldn’t cancel that delivery."));
+      setError(apiError(err, t("deliveries.cancelFailed")));
     }
   }
 
@@ -78,9 +81,9 @@ export default function DeliveriesPage() {
         <div className="mt-4 space-y-3">
           {failed ? (
             <EmptyState
-              title="We couldn’t load your deliveries"
-              message="Check your connection and try again."
-              action={<Button onClick={load}>Try again</Button>}
+              title={t("deliveries.loadFailed")}
+              message={t("common.offline")}
+              action={<Button onClick={load}>{t("common.retry")}</Button>}
             />
           ) : requests === null ? (
             Array.from({ length: 2 }).map((_, index) => (
@@ -89,9 +92,9 @@ export default function DeliveriesPage() {
           ) : requests.length === 0 ? (
             <EmptyState
               icon={<TruckIcon className="h-9 w-9" />}
-              title="No deliveries yet"
-              message="When an imported order reaches Tanzania you can arrange delivery or collection from the order page."
-              action={<ButtonLink href="/account/orders" size="lg">Your orders</ButtonLink>}
+              title={t("deliveries.empty")}
+              message={t("deliveries.emptyHint", { country: BRAND.country })}
+              action={<ButtonLink href="/account/orders" size="lg">{t("deliveries.yourOrders")}</ButtonLink>}
             />
           ) : (
             requests.map((request) => (
@@ -108,7 +111,7 @@ export default function DeliveriesPage() {
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div className="min-w-0">
                         <p className="text-[15px] font-extrabold">
-                          {request.mode === "pickup" ? "Collection" : "Delivery"} · {request.reference}
+                          {request.mode === "pickup" ? t("deliveries.collection") : t("deliveries.delivery")} · {request.reference}
                         </p>
                         {request.order_reference ? (
                           <Link
@@ -116,7 +119,7 @@ export default function DeliveriesPage() {
                             prefetch={false}
                             className="text-[12px] font-semibold text-[color:var(--color-brand)] hover:underline"
                           >
-                            Order {request.order_reference}
+                            {t("deliveries.orderRef", { reference: request.order_reference })}
                           </Link>
                         ) : null}
                       </div>

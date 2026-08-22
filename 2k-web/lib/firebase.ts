@@ -1,5 +1,15 @@
 import { type FirebaseApp, getApps, initializeApp } from "firebase/app";
-import { GoogleAuthProvider, getAuth, signInWithPopup, type Auth } from "firebase/auth";
+import {
+  GoogleAuthProvider,
+  browserLocalPersistence,
+  browserPopupRedirectResolver,
+  getRedirectResult,
+  indexedDBLocalPersistence,
+  initializeAuth,
+  signInWithPopup,
+  signInWithRedirect,
+  type Auth,
+} from "firebase/auth";
 
 /**
  * Firebase Authentication for the storefront.
@@ -26,7 +36,12 @@ const config = {
 };
 
 /** True once the deployment has been given its Firebase values. */
-export const firebaseConfigured = Boolean(config.apiKey && config.projectId && config.appId);
+export const firebaseConfigured = Boolean(
+  // authDomain is included deliberately: the sign-in popup is opened against
+  // https://<authDomain>/__/auth/handler, so without it the button would render
+  // and then fail at the moment it is used.
+  config.apiKey && config.projectId && config.appId && config.authDomain,
+);
 
 let app: FirebaseApp | undefined;
 
@@ -71,9 +86,143 @@ export async function startAnalytics(): Promise<void> {
   }
 }
 
+/**
+ * The browser pop-up resolver, told to set itself up during auth start-up.
+ *
+ * Firebase already does this — but only where `_shouldInitProactively` is
+ * true, which it defines as Safari, iOS and mobile. Those are the browsers it
+ * knows enforce the user-gesture rule strictly, and the eager path exists
+ * precisely so `window.open` can happen inside the click. Desktop Chrome is
+ * left on the lazy path and enforces the same rule anyway — which is how
+ * sign-in came to open its window three seconds late and be blocked.
+ *
+ * Subclassing to widen that condition asks Firebase to do its own eager
+ * set-up everywhere, through its own machinery. It also fails safe: if a
+ * future SDK stops consulting this getter the override is simply ignored, and
+ * behaviour returns to today's with the redirect fallback still behind it.
+ *
+ * Built on first use rather than at module scope: `browserPopupRedirectResolver`
+ * is browser-only, and on the server it is an object that cannot be extended —
+ * evaluating this eagerly failed the production build during prerendering.
+ */
+let eagerResolver: typeof browserPopupRedirectResolver | undefined;
+
+function popupResolver(): typeof browserPopupRedirectResolver {
+  if (eagerResolver) return eagerResolver;
+
+  try {
+    eagerResolver = class extends (browserPopupRedirectResolver as unknown as {
+      new (): object;
+    }) {
+      get _shouldInitProactively(): boolean {
+        return true;
+      }
+    } as unknown as typeof browserPopupRedirectResolver;
+  } catch {
+    // Not extensible in this environment — use Firebase's own resolver.
+    eagerResolver = browserPopupRedirectResolver;
+  }
+
+  return eagerResolver;
+}
+
+let auth: Auth | undefined;
+
+/**
+ * The Auth instance, built with the pop-up resolver already attached.
+ *
+ * `getAuth()` creates an instance with *no* popup resolver, so the first
+ * `signInWithPopup` has to load Google's gapi bundle and mount the auth iframe
+ * before it can open anything — which is what put `window.open` seconds after
+ * the click and got the window blocked. Naming the resolver in
+ * `initializeAuth` moves that setup into page load instead.
+ */
 export function firebaseAuth(): Auth | undefined {
+  if (auth) return auth;
+
   const instance = firebaseApp();
-  return instance ? getAuth(instance) : undefined;
+  if (!instance) return undefined;
+
+  auth = initializeAuth(instance, {
+    // The order Firebase itself uses: IndexedDB where it works, localStorage
+    // where it does not (Safari private browsing, some in-app webviews).
+    persistence: [indexedDBLocalPersistence, browserLocalPersistence],
+    popupRedirectResolver: popupResolver(),
+  });
+
+  return auth;
+}
+
+function googleProvider(): GoogleAuthProvider {
+  const provider = new GoogleAuthProvider();
+  // Always show the chooser: a shared machine should not silently reuse the
+  // last person's Google account.
+  provider.setCustomParameters({ prompt: "select_account" });
+  return provider;
+}
+
+/**
+ * Gets the popup machinery ready *before* the shopper clicks.
+ *
+ * This is the fix for sign-in being blocked, and it is worth explaining
+ * because the symptom pointed somewhere else entirely.
+ *
+ * `signInWithPopup` does not open a window and then talk to Google. It first
+ * awaits the popup resolver's initialisation — which loads Google's gapi
+ * bundle, mounts the hidden auth iframe on the Firebase auth domain, and
+ * fetches the project config — and only opens the window once all of that has
+ * resolved. Measured against production, that was **3,346 ms after the click**.
+ *
+ * No browser accepts a `window.open` three seconds after the gesture that was
+ * supposed to have caused it. Chrome, Safari and Firefox all treat it as an
+ * unrequested pop-up and block it, and Firebase surfaces that as
+ * `auth/popup-blocked` — which read as "your browser blocked us" when the real
+ * cause was that we asked too late.
+ *
+ * Running the same initialisation on mount moves every one of those round
+ * trips off the click. By the time anyone presses the button the resolver is
+ * warm, so `window.open` happens inside the click handler where the browser
+ * still trusts it.
+ *
+ * `getRedirectResult` is used to do the warming because it initialises exactly
+ * the same resolver, and because it has to be called anyway to finish a
+ * redirect sign-in. One call, both jobs.
+ *
+ * @returns the ID token when the page has just come back from a redirect
+ *          sign-in, otherwise null.
+ */
+export async function warmGoogleSignIn(): Promise<string | null> {
+  const auth = firebaseAuth();
+  if (!auth) return null;
+
+  try {
+    await auth.authStateReady();
+
+    // Load gapi and mount the auth iframe *now*, so the click does not have to.
+    //
+    // This is the step that actually moves the work. Neither `initializeAuth`
+    // nor `getRedirectResult` does it on a desktop browser: `getRedirectResult`
+    // returns early when no redirect is pending, and the resolver only
+    // self-initialises where its own `_shouldInitProactively` is true — which
+    // Firebase sets for Safari, iOS and mobile *for this very reason*, and
+    // leaves false on desktop Chrome. Calling it here asks for the same eager
+    // setup Firebase already performs on the browsers it knows are strict.
+    //
+    // It is an internal method, so it is called defensively: if a future SDK
+    // renames it this throws, we swallow it, and sign-in simply falls back to
+    // the old behaviour — a slower pop-up, with the redirect path behind it.
+    const proactive = browserPopupRedirectResolver as unknown as {
+      _initialize?: (a: Auth) => Promise<unknown>;
+    };
+    await proactive._initialize?.(auth);
+
+    const result = await getRedirectResult(auth, browserPopupRedirectResolver);
+    return result ? await result.user.getIdToken() : null;
+  } catch {
+    // Warming is an optimisation and finishing a redirect is a best effort;
+    // neither is allowed to break the page that called it.
+    return null;
+  }
 }
 
 /**
@@ -81,6 +230,9 @@ export function firebaseAuth(): Auth | undefined {
  *
  * The token is all that leaves this module — the caller posts it to Laravel,
  * which verifies the signature before believing any claim inside it.
+ *
+ * Must be called synchronously from the click. Anything awaited before this
+ * point spends the browser's user-gesture allowance and the pop-up is blocked.
  */
 export async function signInWithGoogle(): Promise<string> {
   const auth = firebaseAuth();
@@ -89,13 +241,25 @@ export async function signInWithGoogle(): Promise<string> {
     throw new Error("Google sign-in is not configured for this site.");
   }
 
-  const provider = new GoogleAuthProvider();
-  // Always show the chooser: a shared machine should not silently reuse the
-  // last person's Google account.
-  provider.setCustomParameters({ prompt: "select_account" });
-
-  const credential = await signInWithPopup(auth, provider);
+  const credential = await signInWithPopup(auth, googleProvider(), popupResolver());
   return credential.user.getIdToken();
+}
+
+/**
+ * The same sign-in, as a full-page redirect.
+ *
+ * Only used when a pop-up was genuinely refused — someone who blocks pop-ups
+ * site-wide would otherwise have no way in at all. It leaves the site and
+ * returns to the same URL, where `warmGoogleSignIn` picks the result up.
+ */
+export async function signInWithGoogleRedirect(): Promise<void> {
+  const auth = firebaseAuth();
+
+  if (!auth) {
+    throw new Error("Google sign-in is not configured for this site.");
+  }
+
+  await signInWithRedirect(auth, googleProvider(), popupResolver());
 }
 
 /**

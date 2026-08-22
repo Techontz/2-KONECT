@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -40,6 +41,7 @@ export function ProductCard({
   product: ProductCardModel;
   className?: string;
 }) {
+  const t = useT();
   const { add, quantityOf } = useCart();
   const wishlist = useWishlist();
   const [added, setAdded] = useState(false);
@@ -114,10 +116,10 @@ export function ProductCard({
               <Tag tone="sale">−{product.price.discount_percent}%</Tag>
             ) : null}
             {sourcing?.is_local && product.badges.low_stock ? (
-              <Tag tone="warn">Only {product.stock} left</Tag>
+              <Tag tone="warn">{t("product.onlyLeftShort", { count: product.stock })}</Tag>
             ) : null}
             {sourcing?.is_local && product.badges.out_of_stock ? (
-              <Tag tone="neutral">Sold out</Tag>
+              <Tag tone="neutral">{t("product.soldOut")}</Tag>
             ) : null}
           </div>
 
@@ -127,7 +129,9 @@ export function ProductCard({
           <button
             type="button"
             onClick={handleWishlist}
-            aria-label={saved ? `Remove ${product.name} from your saved items` : `Save ${product.name}`}
+            aria-label={saved
+              ? t("product.removeFromSaved", { name: product.name })
+              : t("product.saveItem", { name: product.name })}
             aria-pressed={saved}
             className="absolute right-1.5 top-1.5 flex h-11 w-11 items-center justify-center rounded-full bg-white/92 text-[color:var(--color-ink)] shadow-[var(--shadow-card)] backdrop-blur transition-colors hover:bg-white sm:right-2 sm:top-2 sm:h-9 sm:w-9"
           >
@@ -141,7 +145,7 @@ export function ProductCard({
             type="button"
             onClick={handleAdd}
             disabled={!buyable}
-            aria-label={`Add ${product.name} to cart`}
+            aria-label={t("product.addNamedToCart", { name: product.name })}
             className="absolute bottom-1.5 right-1.5 flex h-11 w-11 items-center justify-center rounded-full bg-[color:var(--color-brand)] text-white shadow-[var(--shadow-brand)] transition-all hover:bg-[color:var(--color-brand-strong)] disabled:cursor-not-allowed disabled:bg-[color:var(--color-line-strong)] disabled:shadow-none sm:bottom-2 sm:right-2 sm:h-10 sm:w-10"
           >
             {added ? <CheckIcon className="h-4 w-4" /> : <PlusIcon className="h-4 w-4" />}
@@ -194,7 +198,7 @@ export function ProductCard({
           <div className="mt-1.5">
             {product.price_from ? (
               <span className="mr-1 align-middle text-[10px] font-bold uppercase tracking-wide text-[color:var(--color-ink-faint)]">
-                From
+                {t("product.from")}
               </span>
             ) : null}
             <span className="align-middle">

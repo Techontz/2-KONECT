@@ -1,5 +1,6 @@
 "use client";
 
+import { useT, type Translate } from "@/lib/i18n";
 import { formatMoney } from "@/lib/format";
 
 export interface TierDraft {
@@ -26,7 +27,8 @@ export function PriceTierEditor({
   tiers: TierDraft[];
   onChange(next: TierDraft[]): void;
 }) {
-  const problems = validate(tiers);
+  const t = useT();
+  const problems = validate(tiers, t);
 
   const update = (index: number, patch: Partial<TierDraft>) =>
     onChange(tiers.map((tier, i) => (i === index ? { ...tier, ...patch } : tier)));
@@ -41,18 +43,17 @@ export function PriceTierEditor({
 
   return (
     <section className="rounded-[var(--radius-md)] bg-[color:var(--color-surface)] p-4">
-      <h2 className="text-[15px] font-extrabold">Bulk pricing</h2>
+      <h2 className="text-[15px] font-extrabold">{t("productForm.bulkPricing")}</h2>
       <p className="mb-3 text-[11px] text-[color:var(--color-ink-muted)]">
-        Optional. Charge less per unit when someone buys more. Leave this empty
-        and the product keeps one price at every quantity.
+        {t("productForm.bulkPricingHint")}
       </p>
 
       {tiers.length > 0 ? (
         <div className="grid gap-2">
           <div className="hidden gap-2 text-[11px] font-bold uppercase tracking-wide text-[color:var(--color-ink-faint)] sm:grid sm:grid-cols-[1fr_1fr_1.2fr_44px]">
-            <span>From (units)</span>
-            <span>To (blank = no limit)</span>
-            <span>Price each</span>
+            <span>{t("productForm.fromUnits")}</span>
+            <span>{t("productForm.toBlank")}</span>
+            <span>{t("productForm.priceEach")}</span>
             <span />
           </div>
 
@@ -61,21 +62,21 @@ export function PriceTierEditor({
               <div className="grid gap-2 sm:grid-cols-[1fr_1fr_1.2fr_44px]">
                 <input
                   type="number" min={1} inputMode="numeric"
-                  aria-label={`Tier ${index + 1} minimum quantity`}
+                  aria-label={t("productForm.tierMin", { n: index + 1 })}
                   value={tier.min_quantity}
                   onChange={(e) => update(index, { min_quantity: e.target.value === "" ? "" : Number(e.target.value) })}
                   className="h-11 w-full rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] bg-white px-3 text-sm outline-none focus:border-[color:var(--color-brand)]"
                 />
                 <input
-                  type="number" min={1} inputMode="numeric" placeholder="No limit"
-                  aria-label={`Tier ${index + 1} maximum quantity`}
+                  type="number" min={1} inputMode="numeric" placeholder={t("productForm.noLimit")}
+                  aria-label={t("productForm.tierMax", { n: index + 1 })}
                   value={tier.max_quantity}
                   onChange={(e) => update(index, { max_quantity: e.target.value === "" ? "" : Number(e.target.value) })}
                   className="h-11 w-full rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] bg-white px-3 text-sm outline-none focus:border-[color:var(--color-brand)]"
                 />
                 <input
                   type="number" min={0} step="0.01" inputMode="decimal"
-                  aria-label={`Tier ${index + 1} unit price`}
+                  aria-label={t("productForm.tierPrice", { n: index + 1 })}
                   value={tier.unit_price}
                   onChange={(e) => update(index, { unit_price: e.target.value === "" ? "" : Number(e.target.value) })}
                   className="h-11 w-full rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] bg-white px-3 text-sm outline-none focus:border-[color:var(--color-brand)]"
@@ -83,7 +84,7 @@ export function PriceTierEditor({
                 <button
                   type="button"
                   onClick={() => onChange(tiers.filter((_, i) => i !== index))}
-                  aria-label={`Remove tier ${index + 1}`}
+                  aria-label={t("productForm.removeTier", { n: index + 1 })}
                   className="tap h-11 w-11 shrink-0 rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] text-[18px] font-bold text-[color:var(--color-ink-muted)] hover:border-[color:var(--color-sale)] hover:text-[color:var(--color-sale)]"
                 >
                   ×
@@ -96,7 +97,7 @@ export function PriceTierEditor({
                 </p>
               ) : (
                 <p className="mt-1 text-[11.5px] text-[color:var(--color-ink-faint)]">
-                  {describe(tier)}
+                  {describe(tier, t)}
                 </p>
               )}
             </div>
@@ -109,18 +110,18 @@ export function PriceTierEditor({
         onClick={add}
         className="tap mt-3 h-11 rounded-[var(--radius-sm)] border border-dashed border-[color:var(--color-line-strong)] px-4 text-[13px] font-bold text-[color:var(--color-brand)] hover:border-[color:var(--color-brand)]"
       >
-        {tiers.length ? "Add another tier" : "Add quantity pricing"}
+        {tiers.length ? t("productForm.addAnotherTier") : t("productForm.addQuantityPricing")}
       </button>
     </section>
   );
 }
 
-function describe(tier: TierDraft): string {
-  if (tier.min_quantity === "" || tier.unit_price === "") return "Fill in the quantity and the price.";
+function describe(tier: TierDraft, t: Translate): string {
+  if (tier.min_quantity === "" || tier.unit_price === "") return t("productForm.tierIncomplete");
   const range = tier.max_quantity === ""
-    ? `${Number(tier.min_quantity).toLocaleString()} or more`
+    ? t("productForm.tierOrMore", { count: Number(tier.min_quantity).toLocaleString() })
     : `${Number(tier.min_quantity).toLocaleString()}–${Number(tier.max_quantity).toLocaleString()}`;
-  return `${range} → ${formatMoney(Number(tier.unit_price))} each`;
+  return t("productForm.tierEach", { range, price: formatMoney(Number(tier.unit_price)) });
 }
 
 /**
@@ -128,7 +129,7 @@ function describe(tier: TierDraft): string {
  *
  * @returns a message per row index, or an empty string where the row is fine
  */
-export function validate(tiers: TierDraft[]): string[] {
+export function validate(tiers: TierDraft[], t: Translate): string[] {
   const out = tiers.map(() => "");
 
   const filled = tiers
@@ -136,11 +137,11 @@ export function validate(tiers: TierDraft[]): string[] {
     .filter(({ tier }) => tier.min_quantity !== "");
 
   filled.forEach(({ tier, index }) => {
-    if (Number(tier.min_quantity) < 1) out[index] = "A tier must start at one unit or more.";
+    if (Number(tier.min_quantity) < 1) out[index] = t("productForm.tierMinOne");
     else if (tier.max_quantity !== "" && Number(tier.max_quantity) < Number(tier.min_quantity)) {
-      out[index] = "The maximum cannot be below the minimum.";
+      out[index] = t("productForm.tierMaxBelowMin");
     } else if (tier.unit_price !== "" && Number(tier.unit_price) < 0) {
-      out[index] = "A price cannot be negative.";
+      out[index] = t("productForm.tierNegative");
     }
   });
 
@@ -151,9 +152,9 @@ export function validate(tiers: TierDraft[]): string[] {
     const previous = sorted[position - 1].tier;
 
     if (previous.max_quantity === "") {
-      out[index] = "Only the last tier can be open-ended.";
+      out[index] = t("productForm.tierOnlyLastOpen");
     } else if (Number(tier.min_quantity) <= Number(previous.max_quantity)) {
-      out[index] = `Overlaps the tier ending at ${Number(previous.max_quantity).toLocaleString()}.`;
+      out[index] = t("productForm.tierOverlaps", { max: Number(previous.max_quantity).toLocaleString() });
     }
   });
 

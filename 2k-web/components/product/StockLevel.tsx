@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
+
 /**
  * How many are left, said the same way everywhere.
  *
@@ -24,12 +26,13 @@ export function StockLevel({
   size?: "sm" | "md";
   className?: string;
 }) {
+  const t = useT();
   const text = size === "sm" ? "text-[10.5px] leading-[15px]" : "text-[13px]";
 
   if (toOrder) {
     return (
       <span className={`${text} font-medium text-[color:var(--color-import)] ${className}`}>
-        Made to order
+        {t("product.madeToOrder")}
       </span>
     );
   }
@@ -37,7 +40,7 @@ export function StockLevel({
   if (stock <= 0) {
     return (
       <span className={`${text} font-bold text-[color:var(--color-sale)] ${className}`}>
-        Out of stock
+        {t("product.outOfStock")}
       </span>
     );
   }
@@ -47,14 +50,14 @@ export function StockLevel({
   if (stock <= 5) {
     return (
       <span className={`${text} font-bold text-[color:var(--color-warn-ink,#8a5a00)] ${className}`}>
-        {stock === 1 ? "Only 1 left" : `Only ${stock} left`}
+        {stock === 1 ? t("product.onlyOneLeft") : t("product.onlyLeftShort", { count: stock })}
       </span>
     );
   }
 
   return (
     <span className={`${text} font-medium text-[color:var(--color-ink-faint)] ${className}`}>
-      {stock.toLocaleString()} in stock
+      {t("product.inStockCount", { count: stock.toLocaleString() })}
     </span>
   );
 }

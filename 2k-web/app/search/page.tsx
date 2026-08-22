@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
@@ -25,6 +26,7 @@ export default function SearchPage() {
 }
 
 function SearchContent() {
+  const t = useT();
   const params = useSearchParams();
   const term = params.get("q")?.trim() ?? "";
   const sort = (params.get("sort") as ProductQuery["sort"]) ?? undefined;
@@ -35,12 +37,12 @@ function SearchContent() {
   // link here to browse a subcategory or a seller — so it browses rather than
   // demanding a query.
   const heading = term
-    ? `Results for “${term}”`
+    ? t("search.resultsFor", { term })
     : sort === "rating"
-      ? "Top rated"
+      ? t("listing.topRated")
       : vendorId
-        ? "Seller’s products"
-        : "Browse products";
+        ? t("listing.sellerProducts")
+        : t("listing.browseProducts");
 
   return (
     <ListingView
@@ -53,8 +55,8 @@ function SearchContent() {
       heading={heading}
       emptyMessage={
         term
-          ? `We couldn’t find anything matching “${term}”. Check the spelling, try a broader word — or ask us to source it.`
-          : "Try removing a filter, or ask us to source what you need."
+          ? t("listing.searchEmpty", { term })
+          : t("listing.browseEmpty")
       }
     />
   );

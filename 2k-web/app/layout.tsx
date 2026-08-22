@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import { BRAND } from "@/lib/brand";
 import { SITE_URL } from "@/lib/site";
 import { Providers } from "@/components/layout/Providers";
+import { LANGUAGE_BOOT } from "@/lib/i18n/boot";
 import "./globals.css";
 
 /**
@@ -92,6 +93,13 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={brandFont.variable}>
+      <head>
+        {/* Runs before the first paint. See lib/i18n/boot.ts — it exists so a
+            shopper who has chosen Kiswahili is not shown a screen of English
+            first. Inline and synchronous on purpose; it reads one localStorage
+            key and sets one attribute, and it keeps every page static. */}
+        <script dangerouslySetInnerHTML={{ __html: LANGUAGE_BOOT }} />
+      </head>
       <body>
         <Providers>{children}</Providers>
       </body>

@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
+import { BRAND } from "@/lib/brand";
+import { useT } from "@/lib/i18n";
 import { prefetchCategoryPage } from "@/lib/queries";
 import type { Category } from "@/lib/types";
 
@@ -14,6 +16,7 @@ import type { Category } from "@/lib/types";
  * desk. Those are first-class navigation, not links buried in a footer.
  */
 export function CategoryNav({ categories }: { categories: Category[] }) {
+  const t = useT();
   const [openId, setOpenId] = useState<number | null>(null);
   const [allOpen, setAllOpen] = useState(false);
   const barRef = useRef<HTMLDivElement>(null);
@@ -53,7 +56,7 @@ export function CategoryNav({ categories }: { categories: Category[] }) {
       className="relative border-b border-[color:var(--color-line)] bg-[color:var(--color-surface)]"
       onMouseLeave={() => { setOpenId(null); setAllOpen(false); }}
     >
-      <nav aria-label="Categories" className="shell flex h-11 items-center gap-1 text-[13px] font-semibold">
+      <nav aria-label={t("nav.categories")} className="shell flex h-11 items-center gap-1 text-[13px] font-semibold">
         <button
           type="button"
           onMouseEnter={() => { setAllOpen(true); setOpenId(null); }}
@@ -62,14 +65,14 @@ export function CategoryNav({ categories }: { categories: Category[] }) {
           className="flex h-8 items-center gap-1.5 rounded-[var(--radius-sm)] bg-[color:var(--color-brand)] px-3 text-white"
         >
           <GridIcon className="h-4 w-4" />
-          All categories
+          {t("nav.allCategories")}
         </button>
 
         <NavPill href="/shop/local" accent="local">
-          <span aria-hidden="true">🇹🇿</span> In Tanzania
+          <span aria-hidden="true">🇹🇿</span> {t("nav.inCountry", { country: BRAND.country })}
         </NavPill>
         <NavPill href="/shop/abroad" accent="import">
-          <span aria-hidden="true">🌍</span> From abroad
+          <span aria-hidden="true">🌍</span> {t("nav.fromAbroad")}
         </NavPill>
 
         <span aria-hidden="true" className="mx-1 h-5 w-px bg-[color:var(--color-line)]" />
@@ -91,8 +94,8 @@ export function CategoryNav({ categories }: { categories: Category[] }) {
         ))}
 
         <span className="ml-auto flex items-center gap-1">
-          <NavPill href="/deals">Deals</NavPill>
-          <NavPill href="/request" accent="brand">Request a product</NavPill>
+          <NavPill href="/deals">{t("nav.deals")}</NavPill>
+          <NavPill href="/request" accent="brand">{t("nav.requestProduct")}</NavPill>
         </span>
       </nav>
 

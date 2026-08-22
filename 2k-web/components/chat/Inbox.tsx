@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 
 import shop from "@/lib/shop";
 import type { ChatThread } from "@/lib/types";
-import { useLanguage } from "@/lib/i18n";
+import { useLanguage, useT } from "@/lib/i18n";
 import { useAuth } from "@/lib/store/auth";
 import { ChatPanel } from "./ChatPanel";
 import { Button, EmptyState, Skeleton } from "@/components/ui/Primitives";
@@ -21,6 +21,7 @@ import { Button, EmptyState, Skeleton } from "@/components/ui/Primitives";
  * no longer existed and so never loading anything at all.
  */
 export function Inbox({ emptyHint }: { emptyHint?: string }) {
+  const t = useT();
   const { locale } = useLanguage();
   const { isAuthenticated, ready, requireAuth } = useAuth();
   const params = useSearchParams();
@@ -53,9 +54,9 @@ export function Inbox({ emptyHint }: { emptyHint?: string }) {
   if (ready && !isAuthenticated) {
     return (
       <EmptyState
-        title="Sign in to see your messages"
-        message="Conversations are tied to the account they were started from."
-        action={<Button size="lg" onClick={() => void requireAuth()}>Sign in</Button>}
+        title={t("chat.signInTitle")}
+        message={t("chat.signInHint")}
+        action={<Button size="lg" onClick={() => void requireAuth()}>{t("chat.signIn")}</Button>}
       />
     );
   }
@@ -72,7 +73,7 @@ export function Inbox({ emptyHint }: { emptyHint?: string }) {
     return (
       <EmptyState
         icon={<ChatIcon className="h-9 w-9" />}
-        title="No messages yet"
+        title={t("chat.noMessages")}
         message={emptyHint ?? "Conversations you start with a seller appear here."}
       />
     );

@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import { formatMoney } from "@/lib/format";
 import type { PriceTier } from "@/lib/types";
 
@@ -23,6 +24,7 @@ export function BulkPricing({
   quantity: number;
   className?: string;
 }) {
+  const t = useT();
   if (!tiers.length) return null;
 
   const active = tiers.find(
@@ -42,11 +44,11 @@ export function BulkPricing({
       </p>
 
       <table className="mt-2.5 w-full border-collapse text-[12.5px]">
-        <caption className="sr-only">Unit price by quantity ordered</caption>
+        <caption className="sr-only">{t("product.unitPriceByQty")}</caption>
         <thead>
           <tr className="text-left text-[11px] uppercase tracking-wide text-[color:var(--color-ink-faint)]">
-            <th scope="col" className="py-1 font-bold">Quantity</th>
-            <th scope="col" className="py-1 text-right font-bold">Price each</th>
+            <th scope="col" className="py-1 font-bold">{t("product.quantity")}</th>
+            <th scope="col" className="py-1 text-right font-bold">{t("product.priceEach")}</th>
           </tr>
         </thead>
         <tbody>

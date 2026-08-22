@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 
@@ -30,6 +31,7 @@ export default function OrdersPage() {
 }
 
 function OrdersContent() {
+  const t = useT();
   const { isAuthenticated, ready, requireAuth } = useAuth();
   const hydrated = useHydrated();
   const [orders, setOrders] = useState<Order[] | null>(null);
@@ -46,9 +48,9 @@ function OrdersContent() {
   if (hydrated && ready && !isAuthenticated) {
     return (
       <EmptyState
-        title="Sign in to see your orders"
-        message="Your order history and tracking live in your account."
-        action={<Button size="lg" onClick={() => void requireAuth()}>Sign in</Button>}
+        title={t("orders.signInTitle")}
+        message={t("orders.signInHint")}
+        action={<Button size="lg" onClick={() => void requireAuth()}>{t("orders.signIn")}</Button>}
       />
     );
   }
@@ -61,16 +63,16 @@ function OrdersContent() {
 
   return (
     <div className="shell py-4 pb-tabbar">
-      <h1 className="text-[22px] font-black tracking-[-0.02em] md:text-[28px]">Your orders</h1>
+      <h1 className="text-[22px] font-black tracking-[-0.02em] md:text-[28px]">{t("orders.yourOrders")}</h1>
       <p className="mt-1 text-[14px] text-[color:var(--color-ink-muted)]">
-        Everything you have bought, and exactly where it is.
+        {t("orders.yourOrdersHint")}
       </p>
 
       <div className="mt-4 flex gap-1.5">
         {([
-          { key: "all", label: "All" },
-          { key: "active", label: "Active" },
-          { key: "completed", label: "Completed" },
+          { key: "all", label: t("orders.tabAll") },
+          { key: "active", label: t("orders.tabActive") },
+          { key: "completed", label: t("orders.tabCompleted") },
         ] as const).map((tab) => (
           <button
             key={tab.key}
@@ -91,9 +93,9 @@ function OrdersContent() {
       <div className="mt-4 space-y-3">
         {failed ? (
           <EmptyState
-            title="We couldn’t load your orders"
-            message="Check your connection and try again."
-            action={<Button onClick={() => window.location.reload()}>Try again</Button>}
+            title={t("orders.loadFailed")}
+            message={t("common.offline")}
+            action={<Button onClick={() => window.location.reload()}>{t("common.retry")}</Button>}
           />
         ) : orders === null ? (
           Array.from({ length: 3 }).map((_, index) => (
@@ -102,13 +104,17 @@ function OrdersContent() {
         ) : visible.length === 0 ? (
           <EmptyState
             icon={<BoxIcon className="h-9 w-9" />}
-            title={filter === "all" ? "No orders yet" : `No ${filter} orders`}
+            title={filter === "all"
+              ? t("orders.empty")
+              : filter === "active"
+                ? t("orders.noActiveOrders")
+                : t("orders.noCompletedOrders")}
             message={
               filter === "all"
-                ? "When you buy something it appears here, with tracking from the moment you pay."
-                : "Try another tab to see the rest of your orders."
+                ? t("orders.emptyAllHint")
+                : t("orders.emptyFilterHint")
             }
-            action={filter === "all" ? <ButtonLink href="/shop" size="lg">Start shopping</ButtonLink> : null}
+            action={filter === "all" ? <ButtonLink href="/shop" size="lg">{t("orders.startShopping")}</ButtonLink> : null}
           />
         ) : (
           visible.map((order) => <OrderCard key={order.reference} order={order} />)
@@ -119,6 +125,7 @@ function OrdersContent() {
 }
 
 function OrderCard({ order }: { order: Order }) {
+  const t = useT();
   const current = order.timeline?.find((step) => step.state === "current");
   const closed = ["completed", "cancelled", "refunded"].includes(order.status);
 
@@ -133,12 +140,15 @@ function OrderCard({ order }: { order: Order }) {
           <p className="flex flex-wrap items-center gap-2">
             <span className="text-[15px] font-black tracking-wide">{order.reference}</span>
             <Tag tone={order.fulfilment?.is_local === false ? "import" : "local"}>
-              {order.fulfilment?.is_local === false ? "🌍 Import" : "🇹🇿 Local"}
+              {order.fulfilment?.is_local === false
+                ? `🌍 ${t("orders.tagImport")}`
+                : `🇹🇿 ${t("orders.tagLocal")}`}
             </Tag>
           </p>
           <p className="mt-0.5 text-[12px] text-[color:var(--color-ink-muted)]">
-            Placed {formatDate(order.placed_at)} · {order.item_count}{" "}
-            {order.item_count === 1 ? "item" : "items"}
+            {order.item_count === 1
+              ? t("orders.placedItemOne", { date: formatDate(order.placed_at) })
+              : t("orders.placedItems", { date: formatDate(order.placed_at), count: order.item_count })}
           </p>
         </div>
 
@@ -169,7 +179,7 @@ function OrderCard({ order }: { order: Order }) {
             </span>
             {!closed && order.fulfilment?.estimated_arrival_at ? (
               <span className="text-[color:var(--color-ink-muted)]">
-                Expected by{" "}
+                {t("orders.expectedBy")}{" "}
                 <span className="font-bold text-[color:var(--color-ink)]">
                   {formatDate(order.fulfilment.estimated_arrival_at)}
                 </span>
@@ -200,17 +210,17 @@ function OrderCard({ order }: { order: Order }) {
         ))}
         {order.items.length > 4 ? (
           <span className="text-[12px] font-semibold text-[color:var(--color-ink-muted)]">
-            +{order.items.length - 4} more
+            {t("orders.moreItems", { count: order.items.length - 4 })}
           </span>
         ) : null}
 
         {order.can_request_delivery ? (
           <span className="ml-auto rounded-[var(--radius-sm)] bg-[color:var(--color-brand-100)] px-2.5 py-1 text-[11px] font-bold text-[color:var(--color-brand)]">
-            Arrange delivery
+            {t("orders.arrangeDelivery")}
           </span>
         ) : (
           <span className="ml-auto text-[12px] font-bold text-[color:var(--color-brand)]">
-            View details →
+            {t("orders.viewDetailsArrow")}
           </span>
         )}
       </div>

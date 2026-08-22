@@ -12,8 +12,8 @@ import { SiteChrome } from "@/components/layout/SiteChrome";
  * visitor either lands on the answer or on a way to reach a person.
  */
 export default function HelpPage() {
-  const copy = usePageContent("help");
   const t = useT();
+  const copy = usePageContent("help");
 
   return (
     <SiteChrome>

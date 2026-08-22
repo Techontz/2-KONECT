@@ -1,11 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FirebaseError } from "firebase/app";
 
 import { useT } from "@/lib/i18n";
 import { apiError } from "@/lib/api";
-import { firebaseConfigured, signInWithGoogle } from "@/lib/firebase";
+import { BRAND } from "@/lib/brand";
+import {
+  firebaseConfigured,
+  signInWithGoogle,
+  signInWithGoogleRedirect,
+  warmGoogleSignIn,
+} from "@/lib/firebase";
 import { useAuth } from "@/lib/store/auth";
 
 /**
@@ -19,13 +25,50 @@ import { useAuth } from "@/lib/store/auth";
  * scale — rather than Google's rendered widget, so it sits inside the existing
  * sheet instead of importing a second design language. Google's mark is the one
  * part reproduced to their spec.
+ *
+ * Firebase is warmed as soon as the button is on screen. `signInWithPopup`
+ * loads gapi, the auth iframe and the project config *before* it opens the
+ * window, which in production put `window.open` 3.3 seconds after the click —
+ * long past the point a browser still credits the gesture, so the pop-up was
+ * blocked every time. Warming on mount moves that work off the click; see
+ * lib/firebase.ts.
  */
 export function GoogleButton({ onDone }: { onDone?: () => void }) {
   const t = useT();
   const { loginWithGoogle } = useAuth();
 
   const [busy, setBusy] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // `onDone` is called from an effect below; a ref keeps that effect from
+  // re-running every time the parent re-creates the callback.
+  const done = useRef(onDone);
+  done.current = onDone;
+
+  /* ---- warm the pop-up, and finish a redirect if we are coming back ---- */
+  useEffect(() => {
+    if (!firebaseConfigured) return;
+    let live = true;
+
+    warmGoogleSignIn()
+      .then(async (idToken) => {
+        if (!live || !idToken) return;
+        // The page has just returned from a full-page Google sign-in.
+        setBusy(true);
+        try {
+          await loginWithGoogle(idToken);
+          done.current?.();
+        } catch (e) {
+          setError(apiError(e, t("auth.googleFailed")));
+        } finally {
+          if (live) setBusy(false);
+        }
+      })
+      .catch(() => undefined);
+
+    return () => { live = false; };
+  }, [loginWithGoogle, t]);
 
   // Nothing to sign in to without configuration, so the control is hidden
   // rather than shown as a button that cannot work.
@@ -38,32 +81,56 @@ export function GoogleButton({ onDone }: { onDone?: () => void }) {
     try {
       const idToken = await signInWithGoogle();
       await loginWithGoogle(idToken);
-      onDone?.();
+      done.current?.();
     } catch (e) {
       if (e instanceof FirebaseError) {
-        // Closing the popup is a decision, not a failure.
+        // Closing the pop-up is a decision, not a failure.
         if (
           e.code === "auth/popup-closed-by-user" ||
-          e.code === "auth/cancelled-popup-request"
+          e.code === "auth/cancelled-popup-request" ||
+          e.code === "auth/user-cancelled"
         ) {
           return;
         }
 
+        // Genuinely refused — the shopper blocks pop-ups site-wide, or an
+        // extension does. Rather than leaving them at a dead end, go the long
+        // way round: a full-page redirect needs no pop-up at all, and
+        // `warmGoogleSignIn` completes it when the browser comes back.
         if (e.code === "auth/popup-blocked") {
-          setError(t("auth.popupBlocked"));
-          return;
+          setRedirecting(true);
+          try {
+            await signInWithGoogleRedirect();
+            return;
+          } catch {
+            setRedirecting(false);
+            setError(t("auth.popupBlocked", { brand: BRAND.name }));
+            return;
+          }
         }
 
-        if (e.code === "auth/unauthorized-domain") {
+        if (e.code === "auth/unauthorized-domain" || e.code === "auth/operation-not-allowed") {
           // Configuration, not user error — say so plainly.
           setError(t("auth.googleUnavailable"));
           return;
         }
+
+        if (e.code === "auth/network-request-failed") {
+          setError(t("auth.googleNetwork"));
+          return;
+        }
+
+        // Any other Firebase code is ours to explain, not the shopper's to
+        // decode. Naming the browser here is what made a timing bug in this
+        // component look like a setting on their machine.
+        setError(t("auth.googleFailed"));
+        return;
       }
 
       // A seller/staff email is refused by the backend by design; its message
-      // explains what to do instead, so it is surfaced verbatim.
-      setError(apiError(e));
+      // explains what to do instead, so it is surfaced verbatim. Anything that
+      // arrives without a message falls back to the honest generic line.
+      setError(apiError(e, t("auth.googleFailed")));
     } finally {
       setBusy(false);
     }
@@ -81,12 +148,12 @@ export function GoogleButton({ onDone }: { onDone?: () => void }) {
 
       <button
         type="button"
-        disabled={busy}
+        disabled={busy || redirecting}
         onClick={start}
         className="flex h-11 w-full items-center justify-center gap-2.5 rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] bg-white text-sm font-bold text-[color:var(--color-ink)] transition-colors hover:bg-[color:var(--color-surface-alt)] disabled:opacity-60"
       >
         <GoogleMark />
-        {busy ? t("auth.pleaseWait") : t("auth.continueWithGoogle")}
+        {redirecting ? t("auth.googleRedirecting") : busy ? t("auth.pleaseWait") : t("auth.continueWithGoogle")}
       </button>
 
       {error ? (

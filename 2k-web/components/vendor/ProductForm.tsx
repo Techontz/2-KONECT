@@ -40,6 +40,7 @@ const COUNTRIES = [
  * product's photography by accident is not an acceptable outcome.
  */
 export function ProductForm({ product }: { product?: ProductDetail }) {
+  const t = useT();
   const router = useRouter();
   const editing = Boolean(product);
 
@@ -47,7 +48,6 @@ export function ProductForm({ product }: { product?: ProductDetail }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const t = useT();
 
   const [form, setForm] = useState({
     name: product?.name ?? "",
@@ -138,7 +138,7 @@ export function ProductForm({ product }: { product?: ProductDetail }) {
     // The server enforces both of these; catching them here means the seller
     // is told which row is wrong instead of being handed a validation error
     // after the upload.
-    if (validateTiers(tiers).some(Boolean)) {
+    if (validateTiers(tiers, t).some(Boolean)) {
       setError("Fix the overlapping or incomplete bulk pricing rows first.");
       return;
     }
@@ -274,7 +274,7 @@ export function ProductForm({ product }: { product?: ProductDetail }) {
                   update("subcategory_id", 0);
                 }}
               >
-                <option value={0}>Choose a category</option>
+                <option value={0}>{t("seller.chooseCategory")}</option>
                 {categories.map((category) => (
                   <option key={category.id} value={category.id}>{category.name.trim()}</option>
                 ))}
@@ -303,7 +303,7 @@ export function ProductForm({ product }: { product?: ProductDetail }) {
                 value={form.description}
                 onChange={(event) => update("description", event.target.value)}
                 rows={5}
-                placeholder="Size, colour, condition, what's included…"
+                placeholder={t("seller.specPlaceholder")}
                 className="w-full resize-y rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] px-3 py-2.5 text-sm outline-none focus:border-[color:var(--color-brand)]"
               />
             </label>
@@ -384,7 +384,7 @@ export function ProductForm({ product }: { product?: ProductDetail }) {
 
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <SelectField
-              label="Ships from"
+              label={t("seller.shipsFrom")}
               value={form.source_country}
               onChange={(event) => update("source_country", event.target.value)}
             >
@@ -397,7 +397,7 @@ export function ProductForm({ product }: { product?: ProductDetail }) {
 
             {form.availability === "import" ? (
               <SelectField
-                label="How does it travel?"
+                label={t("seller.howTravel")}
                 value={form.shipping_method}
                 onChange={(event) => update("shipping_method", event.target.value)}
               >

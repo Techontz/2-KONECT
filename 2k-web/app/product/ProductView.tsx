@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import Link from "next/link";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -51,6 +52,7 @@ export default function ProductView() {
 }
 
 function ProductContent() {
+  const t = useT();
   const params = useSearchParams();
   const router = useRouter();
   const productId = Number(params.get("id"));
@@ -121,15 +123,15 @@ function ProductContent() {
   if (missing) {
     return (
       <EmptyState
-        title="We couldn’t find that product"
-        message="It may have been removed, or the link may be wrong."
+        title={t("product.notFoundTitle")}
+        message={t("product.notFoundBody")}
         action={
           <>
             <Link href="/shop" className="font-bold text-[color:var(--color-brand)] hover:underline">
-              Keep shopping
+              {t("product.keepShopping")}
             </Link>
             <Link href="/request" className="font-bold text-[color:var(--color-brand)] hover:underline">
-              Ask us to source it
+              {t("product.askToSource")}
             </Link>
           </>
         }
@@ -253,7 +255,7 @@ function ProductContent() {
                 <button
                   type="button"
                   onClick={() => void wishlist.toggle(product.id)}
-                  aria-label={saved ? "Remove from saved items" : "Save this product"}
+                  aria-label={saved ? t("product.removeFromSavedShort") : t("product.saveThisProduct")}
                   aria-pressed={saved}
                   className="absolute right-3 top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/92 shadow-[var(--shadow-card)] backdrop-blur transition-colors hover:bg-white"
                 >
@@ -301,7 +303,7 @@ function ProductContent() {
 
             {product.description ? (
               <section className="rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 sm:p-5">
-                <h2 className="text-[16px] font-black">About this product</h2>
+                <h2 className="text-[16px] font-black">{t("product.aboutThisProduct")}</h2>
                 <p className="mt-2 whitespace-pre-line text-[14px] leading-relaxed text-[color:var(--color-ink-soft)]">
                   {product.description}
                 </p>
@@ -368,13 +370,13 @@ function ProductContent() {
 
         <div className="mt-5 space-y-4">
           <ProductShelf
-            title="You might also like"
+            title={t("product.youMightAlsoLike")}
             products={data.related}
             viewAllHref={product.category ? `/category?id=${product.category.id}` : undefined}
           />
           {product.vendor ? (
             <ProductShelf
-              title={`More from ${product.vendor.name}`}
+              title={t("product.moreFrom", { name: product.vendor.name })}
               products={data.from_vendor}
               viewAllHref={`/search?vendor_id=${product.vendor.id}`}
             />
@@ -392,13 +394,13 @@ function ProductContent() {
             <p className="text-[16px] font-black leading-none">
               {showingFrom ? (
                 <span className="mr-1 text-[11px] font-bold uppercase tracking-wide text-[color:var(--color-ink-faint)]">
-                  From
+                  {t("product.from")}
                 </span>
               ) : null}
               {formatMoney(activePrice.current)}
             </p>
             <p className="mt-0.5 truncate text-[11px] font-semibold text-[color:var(--color-ink-muted)]">
-              {sourcing.is_local ? "Delivery" : "Arrives"} {sourcing.lead_time.label}
+              {sourcing.is_local ? t("product.delivery") : t("product.arrives")} {sourcing.lead_time.label}
             </p>
           </div>
           <Button
@@ -406,7 +408,7 @@ function ProductContent() {
             disabled={!buyable}
             className="shrink-0"
           >
-            {added ? "Added ✓" : needsChoice ? "Choose options" : buyable ? "Add to cart" : "Unavailable"}
+            {added ? t("product.addedShort") : needsChoice ? t("product.chooseOptions") : buyable ? t("product.addToCart") : t("product.unavailable")}
           </Button>
         </div>
       </div>
@@ -481,6 +483,7 @@ function BuyColumn({
   showingFrom: boolean;
   summary: ProductDetail["variant_summary"];
 }) {
+  const t = useT();
   const option = options[Math.min(optionIndex, options.length - 1)] ?? options[0];
   const sourcing = option.sourcing;
 
@@ -505,7 +508,7 @@ function BuyColumn({
               <span className="text-[color:var(--color-ink-muted)]">({product.rating.count})</span>
             </a>
           ) : (
-            <span className="text-[12px] text-[color:var(--color-ink-faint)]">No reviews yet</span>
+            <span className="text-[12px] text-[color:var(--color-ink-faint)]">{t("product.noReviewsShort")}</span>
           )}
 
           {product.category ? (
@@ -514,7 +517,7 @@ function BuyColumn({
               prefetch={false}
               className="tap text-[12px] text-[color:var(--color-ink-muted)] hover:text-[color:var(--color-brand)]"
             >
-              in {product.category.name.trim()}
+              {t("product.inCategory", { name: product.category.name.trim() })}
             </Link>
           ) : null}
         </div>
@@ -589,13 +592,13 @@ function BuyColumn({
 
       <section className="rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4">
         <div className="flex items-center gap-3">
-          <span className="text-[13px] font-bold">Quantity</span>
+          <span className="text-[13px] font-bold">{t("product.quantity")}</span>
           <div className="flex h-11 items-center rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)]">
             <button
               type="button"
               onClick={() => setQuantity(Math.max(1, quantity - 1))}
               disabled={quantity <= 1}
-              aria-label="Decrease quantity"
+              aria-label={t("common.decreaseQuantity")}
               className="flex h-full w-11 items-center justify-center text-[18px] font-bold disabled:opacity-35"
             >
               −
@@ -609,14 +612,14 @@ function BuyColumn({
                 const next = Number(event.target.value);
                 setQuantity(Number.isFinite(next) ? Math.min(Math.max(1, next), ceiling) : 1);
               }}
-              aria-label="Quantity"
+              aria-label={t("product.quantity")}
               className="h-full w-12 border-x border-[color:var(--color-line-strong)] bg-transparent text-center text-[15px] font-bold outline-none"
             />
             <button
               type="button"
               onClick={() => setQuantity(Math.min(ceiling, quantity + 1))}
               disabled={quantity >= ceiling}
-              aria-label="Increase quantity"
+              aria-label={t("common.increaseQuantity")}
               className="flex h-full w-11 items-center justify-center text-[18px] font-bold disabled:opacity-35"
             >
               +
@@ -624,16 +627,16 @@ function BuyColumn({
           </div>
 
           {(variant || sourcing.is_local) && activeStock > 0 && activeStock <= 5 ? (
-            <Tag tone="warn">Only {activeStock} left</Tag>
+            <Tag tone="warn">{t("product.onlyLeftShort", { count: activeStock })}</Tag>
           ) : null}
         </div>
 
         <div className="mt-3 grid gap-2">
           <Button size="lg" onClick={onBuy} disabled={!buyable}>
-            {needsChoice ? "Choose your options" : buyable ? "Buy now" : "Currently unavailable"}
+            {needsChoice ? t("product.chooseYourOptions") : buyable ? t("product.buyNow") : t("product.currentlyUnavailable")}
           </Button>
           <Button size="lg" variant="secondary" onClick={onAdd} disabled={!buyable}>
-            {added ? "Added to cart ✓" : "Add to cart"}
+            {added ? t("product.addedToCartCheck") : t("product.addToCart")}
           </Button>
         </div>
 
@@ -650,7 +653,7 @@ function BuyColumn({
       {product.vendor ? (
         <section className="rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 lg:hidden">
           <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-[color:var(--color-ink-faint)]">
-            Sold by {product.vendor.name}
+            {t("product.soldByName", { name: product.vendor.name })}
           </p>
           <SellerActions vendor={product.vendor} product={product} onChat={onChat} />
         </section>
@@ -660,18 +663,19 @@ function BuyColumn({
 }
 
 function Reviews({ product }: { product: ProductDetail }) {
+  const t = useT();
   if (product.rating.count === 0 && product.reviews.length === 0) return null;
 
   return (
     <section id="reviews" className="rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 sm:p-5">
-      <h2 className="text-[16px] font-black">Reviews</h2>
+      <h2 className="text-[16px] font-black">{t("product.reviews")}</h2>
 
       <div className="mt-3 grid gap-5 sm:grid-cols-[180px_minmax(0,1fr)]">
         <div className="text-center sm:text-left">
           <p className="text-[40px] font-black leading-none">{product.rating.average.toFixed(1)}</p>
           <Stars value={product.rating.average} className="mt-1 h-4 w-4" />
           <p className="mt-1 text-[12px] text-[color:var(--color-ink-muted)]">
-            {product.rating.count} {product.rating.count === 1 ? "review" : "reviews"}
+            {product.rating.count === 1 ? t("product.reviewCountOne") : t("product.reviewCount", { count: product.rating.count })}
           </p>
         </div>
 
@@ -718,9 +722,10 @@ function Reviews({ product }: { product: ProductDetail }) {
 }
 
 function Breadcrumb({ product }: { product: ProductDetail }) {
+  const t = useT();
   return (
-    <nav aria-label="Breadcrumb" className="mb-2 flex flex-wrap items-center gap-x-1.5 text-[12px] text-[color:var(--color-ink-muted)]">
-      <Link href="/" prefetch={false} className="crumb hover:text-[color:var(--color-brand)]">Home</Link>
+    <nav aria-label={t("product.breadcrumb")} className="mb-2 flex flex-wrap items-center gap-x-1.5 text-[12px] text-[color:var(--color-ink-muted)]">
+      <Link href="/" prefetch={false} className="crumb hover:text-[color:var(--color-brand)]">{t("common.home")}</Link>
       {product.category ? (
         <>
           <span aria-hidden="true">/</span>

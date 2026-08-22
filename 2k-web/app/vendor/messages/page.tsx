@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import { Suspense } from "react";
 
 import { Inbox } from "@/components/chat/Inbox";
@@ -14,6 +15,7 @@ import { Skeleton } from "@/components/ui/Primitives";
  * exists and so never loaded a single conversation.
  */
 export default function VendorMessagesPage() {
+  const t = useT();
   return (
     <div className="space-y-4 p-4 lg:p-6">
       <header>
@@ -24,7 +26,7 @@ export default function VendorMessagesPage() {
       </header>
 
       <Suspense fallback={<Skeleton className="h-64 w-full rounded-[var(--radius-md)]" />}>
-        <Inbox emptyHint="When a shopper messages you about one of your products, the conversation appears here." />
+        <Inbox emptyHint={t("chat.sellerEmptyHint")} />
       </Suspense>
     </div>
   );

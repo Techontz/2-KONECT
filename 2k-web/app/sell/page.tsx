@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -23,6 +24,7 @@ import { Button, ButtonLink, Notice, Skeleton } from "@/components/ui/Primitives
  * disappointing the applicant afterwards.
  */
 export default function SellPage() {
+  const t = useT();
   const { user, isAuthenticated, ready, requireAuth } = useAuth();
 
   const [existing, setExisting] = useState<VendorApplication | null | undefined>(undefined);
@@ -90,7 +92,7 @@ export default function SellPage() {
       setSubmitted(result.application);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
-      setError(apiError(err, "We couldn’t send your application. Please check the details."));
+      setError(apiError(err, t("sell.applyFailed")));
       setSubmitting(false);
     }
   }
@@ -104,15 +106,13 @@ export default function SellPage() {
         <div className="shell grid gap-8 py-10 sm:py-14 lg:grid-cols-2 lg:items-center">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-widest text-white/60">
-              For businesses
+              {t("sell.eyebrow")}
             </p>
             <h1 className="mt-1 text-[30px] font-black leading-tight tracking-[-0.03em] text-white sm:text-[42px]">
-              Sell with {BRAND.name}.
+              {t("sell.heroTitle", { brand: BRAND.name })}
             </h1>
             <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-white/80">
-              Reach buyers across {BRAND.country} on a marketplace where every seller is
-              reviewed before they list. Apply once — we handle approval, verification
-              and the tools you need to run your shop.
+              {t("sell.heroBody", { country: BRAND.country })}
             </p>
 
             <div className="mt-6 flex flex-wrap gap-2">
@@ -120,24 +120,24 @@ export default function SellPage() {
                 href="#apply"
                 className="inline-flex h-[52px] items-center justify-center rounded-[var(--radius-sm)] bg-white px-7 text-[15px] font-bold text-[color:var(--color-brand)] transition-transform hover:-translate-y-0.5"
               >
-                {isVendor ? "Open your console" : "Apply to sell"}
+                {isVendor ? t("sell.openConsole") : t("sell.applyToSell")}
               </a>
               <Link
                 href="/help/contact"
                 prefetch={false}
                 className="inline-flex h-[52px] items-center justify-center rounded-[var(--radius-sm)] border border-white/30 px-6 text-[15px] font-bold text-white hover:bg-white/10"
               >
-                Talk to us first
+                {t("sell.talkFirst")}
               </Link>
             </div>
           </div>
 
           <ul className="grid gap-3 sm:grid-cols-2">
             {[
-              { icon: <GlobeIcon className="h-5 w-5" />, title: "A national shopfront", note: "Your products in front of buyers in every region we deliver to." },
-              { icon: <ShieldIcon className="h-5 w-5" />, title: "Verification that means something", note: "Reviewed sellers carry a badge shoppers can rely on." },
-              { icon: <TruckIcon className="h-5 w-5" />, title: "Delivery handled", note: "Orders route through 2KONECT delivery and tracking." },
-              { icon: <CheckIcon className="h-5 w-5" />, title: "Real tools", note: "Products, stock, orders and payouts in one console." },
+              { icon: <GlobeIcon className="h-5 w-5" />, title: t("sell.benefit1"), note: t("sell.benefit1Note") },
+              { icon: <ShieldIcon className="h-5 w-5" />, title: t("sell.benefit2"), note: t("sell.benefit2Note") },
+              { icon: <TruckIcon className="h-5 w-5" />, title: t("sell.benefit3"), note: t("sell.benefit3Note", { brand: BRAND.name }) },
+              { icon: <CheckIcon className="h-5 w-5" />, title: t("sell.benefit4"), note: t("sell.benefit4Note") },
             ].map((item) => (
               <li key={item.title} className="rounded-[var(--radius-md)] bg-white/10 p-4">
                 <span className="text-[color:var(--color-brand-200)]">{item.icon}</span>
@@ -152,14 +152,14 @@ export default function SellPage() {
       {/* ---- how approval works ---- */}
       <section className="shell py-8">
         <h2 className="text-[20px] font-black tracking-[-0.02em] sm:text-[24px]">
-          How it works
+          {t("sell.howItWorks")}
         </h2>
         <ol className="mt-4 grid gap-px overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-line)] sm:grid-cols-4">
           {[
-            { title: "Apply", note: "Tell us who you are and what you want to sell." },
-            { title: "We review", note: "A person reads every application — usually within a few days." },
-            { title: "Get approved", note: "We create your seller account and open the console." },
-            { title: "Start selling", note: "List products, take orders, get paid." },
+            { title: t("sell.step1"), note: t("sell.step1Note") },
+            { title: t("sell.step2"), note: t("sell.step2Note") },
+            { title: t("sell.step3"), note: t("sell.step3Note") },
+            { title: t("sell.step4"), note: t("sell.step4Note") },
           ].map((step, index) => (
             <li key={step.title} className="bg-[color:var(--color-surface)] p-4">
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[color:var(--color-brand-100)] text-[13px] font-black text-[color:var(--color-brand)]">
@@ -178,12 +178,12 @@ export default function SellPage() {
       <div id="apply" className="shell pb-tabbar">
         {isVendor ? (
           <div className="mx-auto max-w-2xl rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-6 text-center">
-            <h2 className="text-[20px] font-black">You already sell with us</h2>
+            <h2 className="text-[20px] font-black">{t("sell.alreadySell")}</h2>
             <p className="mt-1.5 text-[14px] text-[color:var(--color-ink-muted)]">
-              Your seller console is where you manage products, stock and orders.
+              {t("sell.alreadySellNote")}
             </p>
             <ButtonLink href="/vendor/dashboard" size="lg" className="mt-4">
-              Open seller console
+              {t("sell.openSellerConsole")}
             </ButtonLink>
           </div>
         ) : existing === undefined ? (
@@ -194,12 +194,12 @@ export default function SellPage() {
               <CheckIcon className="h-7 w-7" />
             </span>
             <h2 className="mt-4 text-[22px] font-black tracking-[-0.02em]">
-              {application.status === "approved" ? "You’re approved" : "Application received"}
+              {application.status === "approved" ? t("sell.approvedTitle") : t("sell.receivedTitle")}
             </h2>
             <p className="mt-2 text-[15px] leading-relaxed text-[color:var(--color-ink-soft)]">
               {application.status === "approved"
-                ? "Your seller account is live. Sign in again to reach your console."
-                : `We have your application for ${application.business_name}. A member of the team reviews every one — we will contact you as soon as it has been read.`}
+                ? t("sell.approvedBody")
+                : t("sell.receivedBody", { name: application.business_name })}
             </p>
 
             <p className="mt-4 inline-flex flex-col items-center rounded-[var(--radius-md)] bg-[color:var(--color-brand-50)] px-5 py-3">
@@ -216,66 +216,65 @@ export default function SellPage() {
             ) : null}
 
             <div className="mt-5">
-              <ButtonLink href="/shop" variant="secondary">Back to the shop</ButtonLink>
+              <ButtonLink href="/shop" variant="secondary">{t("sell.backToShop")}</ButtonLink>
             </div>
           </div>
         ) : (
           <form onSubmit={submit} className="mx-auto max-w-2xl space-y-4">
             <section className="rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 sm:p-5">
-              <h2 className="text-[18px] font-black">Apply to sell</h2>
+              <h2 className="text-[18px] font-black">{t("sell.applyToSell")}</h2>
               <p className="mt-1 text-[13px] text-[color:var(--color-ink-muted)]">
-                Nothing goes live until we have approved you.
+                {t("sell.nothingLive")}
               </p>
 
               {!isAuthenticated ? (
                 <Notice tone="info" className="mt-3">
-                  You can apply without an account, but approval creates a seller login —
-                  so{" "}
+                  {t("sell.noticeBefore")}{" "}
                   <button
                     type="button"
                     onClick={() => void requireAuth()}
                     className="font-bold underline"
                   >
-                    signing in first
+                    {t("sell.signingInFirst")}
                   </button>{" "}
-                  makes it quicker.
+                  {t("sell.noticeAfter")}
                 </Notice>
               ) : null}
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <Field label="Business name" value={form.business_name} onChange={(v) => set("business_name", v)} required placeholder="Your shop or company name" />
-                <Field label="Your name" value={form.full_name} onChange={(v) => set("full_name", v)} required placeholder="Contact person" />
-                <Field label="Phone" value={form.phone} onChange={(v) => set("phone", v)} required inputMode="tel" placeholder="07XX XXX XXX" />
-                <Field label="Email" value={form.email} onChange={(v) => set("email", v)} type="email" placeholder="you@example.com" />
+                <Field label={t("sell.businessName")} value={form.business_name} onChange={(v) => set("business_name", v)} required placeholder={t("sell.businessNamePlaceholder")} />
+                <Field label={t("sell.yourName")} value={form.full_name} onChange={(v) => set("full_name", v)} required placeholder={t("sell.contactPerson")} />
+                <Field label={t("sell.phone")} value={form.phone} onChange={(v) => set("phone", v)} required inputMode="tel" placeholder={t("checkout.phonePlaceholder")} />
+                <Field label={t("sell.email")} value={form.email} onChange={(v) => set("email", v)} type="email" placeholder="you@example.com" />
 
                 <label className="block">
-                  <span className="mb-1.5 block text-[13px] font-bold">Business type</span>
+                  <span className="mb-1.5 block text-[13px] font-bold">{t("sell.businessType")}</span>
                   <select
                     value={form.business_type}
                     onChange={(event) => set("business_type", event.target.value)}
                     className={`${FIELD} h-12`}
                   >
-                    <option value="individual">Individual seller</option>
-                    <option value="registered">Registered business</option>
-                    <option value="company">Limited company</option>
-                    <option value="importer">Importer / wholesaler</option>
+                    <option value="individual">{t("sell.typeIndividual")}</option>
+                    <option value="registered">{t("sell.typeRegistered")}</option>
+                    <option value="company">{t("sell.typeCompany")}</option>
+                    <option value="importer">{t("sell.typeImporter")}</option>
                   </select>
                 </label>
 
-                <Field label="Main category" value={form.category} onChange={(v) => set("category", v)} placeholder="Electronics, fashion, home…" />
-                <Field label="Region" value={form.region} onChange={(v) => set("region", v)} placeholder="Dar es Salaam" />
-                <Field label="City / area" value={form.city} onChange={(v) => set("city", v)} placeholder={BRAND.city} />
-                <Field label="Website or social page (optional)" value={form.website} onChange={(v) => set("website", v)} placeholder="instagram.com/yourshop" />
-                <Field label="NIDA or registration number (optional)" value={form.id_number} onChange={(v) => set("id_number", v)} placeholder="Helps us verify you faster" />
+                <Field label={t("sell.mainCategory")} value={form.category} onChange={(v) => set("category", v)} placeholder={t("sell.mainCategoryPlaceholder")} />
+                <Field label={t("sell.region")} value={form.region} onChange={(v) => set("region", v)} placeholder={BRAND.city} />
+                <Field label={t("sell.cityArea")} value={form.city} onChange={(v) => set("city", v)} placeholder={BRAND.city} />
+                <Field label={t("sell.websiteOptional")} value={form.website} onChange={(v) => set("website", v)} placeholder="instagram.com/yourshop" />
+                <Field label={t("sell.idOptional")} value={form.id_number} onChange={(v) => set("id_number", v)} placeholder={t("sell.idPlaceholder")} />
               </div>
 
               <div className="mt-3">
                 <Field
-                  label="What do you want to sell?"
+                  label={t("sell.whatSell")}
                   value={form.products}
                   onChange={(v) => set("products", v)}
                   multiline
-                  placeholder="The kinds of products you stock, roughly how many, and where you source them."
+                  placeholder={t("sell.whatSellPlaceholder")}
                 />
               </div>
             </section>
@@ -284,17 +283,18 @@ export default function SellPage() {
 
             <div className="flex flex-wrap items-center gap-3">
               <Button type="submit" size="lg" loading={submitting}>
-                {submitting ? "Sending application" : "Submit application"}
+                {submitting ? t("sell.sending") : t("sell.submitApplication")}
               </Button>
               <p className="text-[12px] text-[color:var(--color-ink-muted)]">
-                Free to apply. No listing fees while you wait.
+                {t("sell.freeToApply")}
               </p>
             </div>
 
             <p className="text-[12px] leading-relaxed text-[color:var(--color-ink-faint)]">
-              By applying you agree to {BRAND.name}’s{" "}
-              <Link href="/legal/terms" className="underline">seller terms</Link> and{" "}
-              <Link href="/sell/guidelines" className="underline">listing guidelines</Link>.
+              {t("sell.termsPrefix", { brand: BRAND.name })}{" "}
+              <Link href="/legal/terms" className="underline">{t("sell.sellerTerms", { brand: BRAND.name })}</Link>{" "}
+              {t("sell.and")}{" "}
+              <Link href="/sell/guidelines" className="underline">{t("sell.listingGuidelines")}</Link>.
             </p>
           </form>
         )}

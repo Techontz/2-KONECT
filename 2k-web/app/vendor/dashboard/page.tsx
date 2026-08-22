@@ -36,8 +36,8 @@ export default function VendorDashboardPage() {
   if (failed === "no-store") {
     return (
       <EmptyState
-        title="Your seller profile isn't set up yet"
-        message="Your account is registered as a seller, but no store is attached to it yet, so there is nothing to report on. Our team can finish the setup for you."
+        title={t("seller.profileNotSetUp")}
+        message={t("seller.profileNotSetUpHint")}
         action={<ButtonLink href="/help/contact">Contact {BRAND.name}</ButtonLink>}
       />
     );
@@ -46,8 +46,8 @@ export default function VendorDashboardPage() {
   if (failed === "error") {
     return (
       <EmptyState
-        title="We couldn't load your dashboard"
-        message="Please refresh, or sign in again if the problem continues."
+        title={t("seller.dashboardLoadFailed")}
+        message={t("seller.dashboardLoadFailedHint")}
         action={<Button onClick={() => window.location.reload()}>Retry</Button>}
       />
     );

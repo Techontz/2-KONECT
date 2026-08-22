@@ -28,11 +28,11 @@ export default function VendorsPage() {
 }
 
 function VendorsContent() {
+  const t = useT();
   const params = useSearchParams();
   const vendorId = Number(params.get("id")) || null;
 
   const copy = usePageContent("vendors");
-  const t = useT();
 
   const { data: vendors } = useVendors();
 

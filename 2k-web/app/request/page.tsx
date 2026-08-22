@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import Link from "next/link";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -28,9 +29,9 @@ import { Button, ButtonLink, Notice, Skeleton } from "@/components/ui/Primitives
 const SOURCE_CHOICES = ["CN", "AE", "US", "GB", "TR", "IN", "JP", "ZA"] as const;
 
 const URGENCIES = [
-  { value: "standard", label: "No rush" },
-  { value: "soon", label: "Soon" },
-  { value: "urgent", label: "Urgent" },
+  { value: "standard", label: "request.noRush" },
+  { value: "soon", label: "request.soon" },
+  { value: "urgent", label: "request.urgent" },
 ] as const;
 
 export default function RequestPage() {
@@ -44,6 +45,7 @@ export default function RequestPage() {
 }
 
 function RequestContent() {
+  const t = useT();
   const params = useSearchParams();
   const { user, isAuthenticated } = useAuth();
 
@@ -110,7 +112,7 @@ function RequestContent() {
       setDone(result.request);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
-      setError(apiError(err, "We couldn’t send that request. Please check the details and try again."));
+      setError(apiError(err, t("request.sendFailed")));
       setSubmitting(false);
     }
   }
@@ -126,26 +128,25 @@ function RequestContent() {
             </svg>
           </span>
 
-          <h1 className="mt-4 text-[24px] font-black tracking-[-0.025em]">Request received</h1>
+          <h1 className="mt-4 text-[24px] font-black tracking-[-0.025em]">{t("request.received")}</h1>
           <p className="mt-2 text-[15px] leading-relaxed text-[color:var(--color-ink-soft)]">
-            {BRAND.name} has your request for <span className="font-bold">{done.name}</span>.
-            Our sourcing team will look for it and come back to you with a price and an
-            arrival date.
+            {t("request.receivedBody", { brand: BRAND.name })}{" "}
+            <span className="font-bold">{done.name}</span>. {t("request.receivedBodyEnd")}
           </p>
 
           <p className="mt-4 inline-flex flex-col items-center rounded-[var(--radius-md)] bg-[color:var(--color-brand-50)] px-5 py-3">
             <span className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-brand)]">
-              Your reference
+              {t("request.yourReference")}
             </span>
             <span className="text-[20px] font-black tracking-wide">{done.reference}</span>
           </p>
 
           <ol className="mx-auto mt-6 max-w-sm space-y-2.5 text-left">
             {[
-              "We review what you sent and check we understand it.",
-              "We find a supplier and confirm the real cost.",
-              "We send you a price and an arrival date to approve.",
-              "You confirm, we order it, and you track it like any order.",
+              t("request.step1"),
+              t("request.step2"),
+              t("request.step3"),
+              t("request.step4"),
             ].map((step, index) => (
               <li key={step} className="flex gap-2.5 text-[13px] leading-relaxed">
                 <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[color:var(--color-brand-100)] text-[11px] font-black text-[color:var(--color-brand)]">
@@ -158,14 +159,14 @@ function RequestContent() {
 
           <div className="mt-6 flex flex-wrap justify-center gap-2">
             {isAuthenticated ? (
-              <ButtonLink href="/account/requests" size="lg">Track this request</ButtonLink>
+              <ButtonLink href="/account/requests" size="lg">{t("request.trackThis")}</ButtonLink>
             ) : (
               <p className="text-[13px] text-[color:var(--color-ink-muted)]">
-                We will call you on <span className="font-bold">{phone}</span>. Create an
-                account to follow it online.
+                {t("request.willCallBefore")} <span className="font-bold">{phone}</span>.{" "}
+                {t("request.willCallAfter")}
               </p>
             )}
-            <ButtonLink href="/shop" size="lg" variant="secondary">Keep shopping</ButtonLink>
+            <ButtonLink href="/shop" size="lg" variant="secondary">{t("request.keepShopping")}</ButtonLink>
           </div>
         </div>
       </div>
@@ -178,14 +179,13 @@ function RequestContent() {
       <section className="brand-ground">
         <div className="shell py-8 sm:py-12">
           <p className="text-[11px] font-bold uppercase tracking-widest text-white/60">
-            Sourcing service
+            {t("request.eyebrow")}
           </p>
           <h1 className="mt-1 max-w-2xl text-[28px] font-black leading-tight tracking-[-0.025em] text-white sm:text-[38px]">
-            Tell us what you need. We’ll find it.
+            {t("request.heroTitle")}
           </h1>
           <p className="mt-2 max-w-xl text-[14px] leading-snug text-white/75 sm:text-[15px] sm:leading-relaxed">
-            Send a photo or a description. We source it, price it and bring it into{" "}
-            {BRAND.country}.
+            {t("request.heroBody", { country: BRAND.country })}
           </p>
 
           {/* Three short reassurances, wrapped rather than stacked: on a phone
@@ -193,9 +193,9 @@ function RequestContent() {
               off the screen, and the form is the point of the page. */}
           <ul className="mt-4 flex flex-wrap gap-1.5 sm:mt-6 sm:gap-2">
             {[
-              { icon: <SendIcon className="h-3.5 w-3.5" />, text: "No account needed" },
-              { icon: <GlobeIcon className="h-3.5 w-3.5" />, text: "Sourced from anywhere" },
-              { icon: <ShieldIcon className="h-3.5 w-3.5" />, text: "You approve the price" },
+              { icon: <SendIcon className="h-3.5 w-3.5" />, text: t("request.noAccountNeeded") },
+              { icon: <GlobeIcon className="h-3.5 w-3.5" />, text: t("request.sourcedAnywhere") },
+              { icon: <ShieldIcon className="h-3.5 w-3.5" />, text: t("request.youApprove") },
             ].map((item) => (
               <li
                 key={item.text}
@@ -212,12 +212,12 @@ function RequestContent() {
       <div className="shell py-6 pb-tabbar">
         <form onSubmit={submit} className="mx-auto max-w-2xl space-y-4">
           <section className="rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 sm:p-5">
-            <h2 className="text-[16px] font-black">What are you looking for?</h2>
+            <h2 className="text-[16px] font-black">{t("request.whatLookingFor")}</h2>
 
             {/* The photo comes first: for most requests it is the clearest
                 description there is, and it is the least work to provide. */}
             <div className="mt-3">
-              <span className="mb-1.5 block text-[13px] font-bold">Photo (optional)</span>
+              <span className="mb-1.5 block text-[13px] font-bold">{t("request.photoOptional")}</span>
 
               {preview ? (
                 <div className="flex items-center gap-3 rounded-[var(--radius-sm)] border border-[color:var(--color-line)] p-2">
@@ -229,7 +229,7 @@ function RequestContent() {
                       onClick={() => { setImage(null); if (fileRef.current) fileRef.current.value = ""; }}
                       className="mt-1 text-[12px] font-bold text-[color:var(--color-sale)] hover:underline"
                     >
-                      Remove photo
+                      {t("request.removePhoto")}
                     </button>
                   </div>
                 </div>
@@ -240,9 +240,9 @@ function RequestContent() {
                   className="flex w-full flex-col items-center gap-1.5 rounded-[var(--radius-md)] border-2 border-dashed border-[color:var(--color-line-strong)] px-4 py-7 text-center transition-colors hover:border-[color:var(--color-brand)] hover:bg-[color:var(--color-brand-50)]"
                 >
                   <CameraIcon className="h-7 w-7 text-[color:var(--color-brand)]" />
-                  <span className="text-[14px] font-bold">Upload a photo</span>
+                  <span className="text-[14px] font-bold">{t("request.uploadPhoto")}</span>
                   <span className="text-[12px] text-[color:var(--color-ink-muted)]">
-                    A screenshot or a picture works — up to 5MB
+                    {t("request.uploadHint")}
                   </span>
                 </button>
               )}
@@ -253,30 +253,30 @@ function RequestContent() {
                 accept="image/*"
                 onChange={(event) => setImage(event.target.files?.[0] ?? null)}
                 className="sr-only"
-                aria-label="Product photo"
+                aria-label={t("request.productPhoto")}
               />
             </div>
 
             <div className="mt-4 space-y-3">
               <TextField
-                label="What is it?"
+                label={t("request.whatIsIt")}
                 value={name}
                 onChange={setName}
                 required
-                placeholder="iPhone 15 Pro 256GB, Natural Titanium"
+                placeholder={t("request.whatIsItPlaceholder")}
               />
               <TextField
-                label="Describe what you need"
+                label={t("request.describeNeed")}
                 value={description}
                 onChange={setDescription}
                 multiline
-                placeholder="Colour, size, model, condition — anything that matters to you."
+                placeholder={t("request.describePlaceholder")}
               />
 
               {/* Brand takes the row; the two short numeric fields share the
                   next one even on the narrowest phone — stacking three
                   full-width inputs here is what made this form feel endless. */}
-              <TextField label="Brand (optional)" value={brand} onChange={setBrand} placeholder="Apple" />
+              <TextField label={t("request.brandOptional")} value={brand} onChange={setBrand} placeholder="Apple" />
 
               {/* Where from, and how soon. Both change what the sourcing desk
                   actually does — an urgent request is quoted air freight, a
@@ -286,14 +286,14 @@ function RequestContent() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block">
                   <span className="mb-1.5 block text-[13px] font-bold">
-                    Buy it from (optional)
+                    {t("request.buyFrom")}
                   </span>
                   <select
                     value={preferredCountry}
                     onChange={(event) => setPreferredCountry(event.target.value)}
                     className={`${FIELD} h-12`}
                   >
-                    <option value="">Wherever is best</option>
+                    <option value="">{t("request.whereverBest")}</option>
                     {SOURCE_CHOICES.map((code) => (
                       <option key={code} value={code}>
                         {COUNTRIES[code].flag} {COUNTRIES[code].name}
@@ -303,7 +303,7 @@ function RequestContent() {
                 </label>
 
                 <fieldset className="block">
-                  <legend className="mb-1.5 block text-[13px] font-bold">How soon?</legend>
+                  <legend className="mb-1.5 block text-[13px] font-bold">{t("request.howSoon")}</legend>
                   <div className="flex gap-1.5">
                     {URGENCIES.map((choice) => (
                       <button
@@ -317,7 +317,7 @@ function RequestContent() {
                             : "border-[color:var(--color-line-strong)] bg-white text-[color:var(--color-ink-soft)] hover:border-[color:var(--color-brand-200)]"
                         }`}
                       >
-                        {choice.label}
+                        {t(choice.label)}
                       </button>
                     ))}
                   </div>
@@ -326,7 +326,7 @@ function RequestContent() {
 
               <div className="grid grid-cols-2 gap-3">
                 <label className="block">
-                  <span className="mb-1.5 block text-[13px] font-bold">Quantity</span>
+                  <span className="mb-1.5 block text-[13px] font-bold">{t("request.quantity")}</span>
                   <input
                     type="number"
                     min={1}
@@ -337,7 +337,7 @@ function RequestContent() {
                   />
                 </label>
                 <label className="block">
-                  <span className="mb-1.5 block text-[13px] font-bold">Budget (optional)</span>
+                  <span className="mb-1.5 block text-[13px] font-bold">{t("request.budgetOptional")}</span>
                   <input
                     type="number"
                     min={0}
@@ -352,16 +352,16 @@ function RequestContent() {
           </section>
 
           <section className="rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4 sm:p-5">
-            <h2 className="text-[16px] font-black">How do we reach you?</h2>
+            <h2 className="text-[16px] font-black">{t("request.howReachYou")}</h2>
             <p className="mt-0.5 text-[13px] text-[color:var(--color-ink-muted)]">
-              We come back with a price and an arrival date before anything is ordered.
+              {t("request.howReachYouHint")}
             </p>
 
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <TextField label="Your name" value={contactName} onChange={setContactName} required placeholder="Full name" />
-              <TextField label="Phone" value={phone} onChange={setPhone} required inputMode="tel" placeholder="07XX XXX XXX" />
-              <TextField label="Email (optional)" value={email} onChange={setEmail} type="email" placeholder="you@example.com" />
-              <TextField label="Deliver to" value={city} onChange={setCity} placeholder={BRAND.city} />
+              <TextField label={t("request.yourName")} value={contactName} onChange={setContactName} required placeholder={t("request.fullName")} />
+              <TextField label={t("request.phone")} value={phone} onChange={setPhone} required inputMode="tel" placeholder={t("checkout.phonePlaceholder")} />
+              <TextField label={t("request.emailOptional")} value={email} onChange={setEmail} type="email" placeholder="you@example.com" />
+              <TextField label={t("request.deliverTo")} value={city} onChange={setCity} placeholder={BRAND.city} />
             </div>
           </section>
 
@@ -369,17 +369,17 @@ function RequestContent() {
 
           <div className="flex flex-wrap items-center gap-3">
             <Button type="submit" size="lg" loading={submitting}>
-              {submitting ? "Sending request" : "Submit request"}
+              {submitting ? t("request.sending") : t("request.submit")}
             </Button>
             <p className="text-[12px] text-[color:var(--color-ink-muted)]">
-              No payment now. Nothing is ordered until you approve the price.
+              {t("request.noPaymentNow")}
             </p>
           </div>
 
           <p className="text-[12px] text-[color:var(--color-ink-faint)]">
-            Already sent one?{" "}
+            {t("request.alreadySent")}{" "}
             <Link href="/account/requests" className="font-bold text-[color:var(--color-brand)] hover:underline">
-              Check your requests
+              {t("request.checkRequests")}
             </Link>
           </p>
         </form>

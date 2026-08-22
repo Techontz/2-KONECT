@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import Link from "next/link";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -23,6 +24,7 @@ export default function VendorProductsPage() {
 }
 
 function ProductsContent() {
+  const t = useT();
   const params = useSearchParams();
 
   const [products, setProducts] = useState<ProductCard[]>([]);
@@ -77,7 +79,7 @@ function ProductsContent() {
     <div className="space-y-4 p-4 lg:p-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-[24px] font-black tracking-tight">Products</h1>
+          <h1 className="text-[24px] font-black tracking-tight">{t("seller.products")}</h1>
           <p className="text-[13px] text-[color:var(--color-ink-muted)]">
             {meta ? `${meta.total.toLocaleString()} listed` : "Loading…"}
           </p>
@@ -89,12 +91,12 @@ function ProductsContent() {
         <input
           value={term}
           onChange={(event) => setTerm(event.target.value)}
-          placeholder="Search your products…"
-          aria-label="Search your products"
+          placeholder={t("seller.searchProducts")}
+          aria-label={t("seller.searchProductsAria")}
           className="h-9 min-w-[200px] flex-1 rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] px-3 text-[13px] outline-none focus:border-[color:var(--color-brand)]"
         />
 
-        {([["", "All"], ["low", "Low stock"], ["out", "Sold out"]] as const).map(([value, label]) => (
+        {([["", "All"], ["low", t("seller.lowStock")], ["out", t("seller.soldOut")]] as const).map(([value, label]) => (
           <button
             key={value}
             type="button"
@@ -116,13 +118,13 @@ function ProductsContent() {
         </div>
       ) : products.length === 0 ? (
         <EmptyState
-          title="No products found"
-          message={term || stockFilter ? "Try a different search or filter." : "Add your first product to start selling."}
+          title={t("seller.noProductsFound")}
+          message={term || stockFilter ? t("seller.tryDifferentSearch") : t("seller.addFirstProduct")}
           action={
             term || stockFilter ? (
-              <Button onClick={() => { setTerm(""); setStockFilter(""); }}>Clear filters</Button>
+              <Button onClick={() => { setTerm(""); setStockFilter(""); }}>{t("seller.clearFilters")}</Button>
             ) : (
-              <ButtonLink href="/vendor/products/new">Add product</ButtonLink>
+              <ButtonLink href="/vendor/products/new">{t("seller.addProduct")}</ButtonLink>
             )
           }
         />
@@ -134,12 +136,12 @@ function ProductsContent() {
               <table className="w-full min-w-[720px] border-collapse text-[13px]">
                 <thead>
                   <tr className="border-b border-[color:var(--color-line)] text-left text-[11px] uppercase tracking-wide text-[color:var(--color-ink-faint)]">
-                    <th className="px-3 py-2.5 font-bold">Product</th>
-                    <th className="px-3 py-2.5 font-bold">Category</th>
-                    <th className="px-3 py-2.5 font-bold">Price</th>
-                    <th className="px-3 py-2.5 font-bold">Stock</th>
-                    <th className="px-3 py-2.5 font-bold">Rating</th>
-                    <th className="px-3 py-2.5 text-right font-bold">Actions</th>
+                    <th className="px-3 py-2.5 font-bold">{t("seller.colProduct")}</th>
+                    <th className="px-3 py-2.5 font-bold">{t("seller.colCategory")}</th>
+                    <th className="px-3 py-2.5 font-bold">{t("seller.colPrice")}</th>
+                    <th className="px-3 py-2.5 font-bold">{t("seller.colStock")}</th>
+                    <th className="px-3 py-2.5 font-bold">{t("seller.colRating")}</th>
+                    <th className="px-3 py-2.5 text-right font-bold">{t("seller.colActions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -173,7 +175,7 @@ function ProductsContent() {
                       </td>
                       <td className="px-3 py-2.5">
                         {product.stock <= 0 ? (
-                          <Tag tone="sale">Sold out</Tag>
+                          <Tag tone="sale">{t("seller.soldOut")}</Tag>
                         ) : product.stock <= 5 ? (
                           <Tag tone="warn">{product.stock} left</Tag>
                         ) : (
@@ -197,7 +199,7 @@ function ProductsContent() {
                             onClick={() => remove(product)}
                             className="text-[color:var(--color-sale)]"
                           >
-                            {deleting === product.id ? "…" : "Delete"}
+                            {deleting === product.id ? "…" : t("seller.delete")}
                           </Button>
                         </div>
                       </td>
@@ -215,7 +217,7 @@ function ProductsContent() {
                 disabled={loading}
                 onClick={() => load((meta.current_page ?? 1) + 1, true)}
               >
-                {loading ? "Loading…" : "Load more"}
+                {loading ? "Loading…" : t("seller.loadMore")}
               </Button>
             </div>
           ) : null}

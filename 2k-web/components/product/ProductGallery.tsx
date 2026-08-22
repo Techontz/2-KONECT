@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 /** How much the magnifier enlarges, when the source image is big enough. */
@@ -36,6 +37,7 @@ export function ProductGallery({
   /** Overlay controls (the wishlist heart) drawn on top of the main image. */
   children?: React.ReactNode;
 }) {
+  const t = useT();
   const frameRef = useRef<HTMLDivElement>(null);
 
   const [canHover, setCanHover] = useState(false);
@@ -127,7 +129,7 @@ export function ProductGallery({
           <img
             key={src}
             src={src}
-            alt={`${name} — photo ${activeIndex + 1} of ${images.length}`}
+            alt={t("product.photoOf", { name, index: activeIndex + 1, total: images.length })}
             // The hero image is the page's largest paint — load it eagerly.
             fetchPriority="high"
             onLoad={(event) => {
@@ -195,7 +197,7 @@ export function ProductGallery({
               type="button"
               onClick={() => onSelect(index)}
               onMouseEnter={() => onSelect(index)}
-              aria-label={`View image ${index + 1}`}
+              aria-label={t("product.viewImage", { number: index + 1 })}
               aria-current={index === activeIndex}
               className={`h-16 w-16 shrink-0 overflow-hidden rounded-[var(--radius-sm)] bg-white transition-all ${
                 index === activeIndex
@@ -242,6 +244,7 @@ function TouchViewer({
   onSelect: (index: number) => void;
   onClose: () => void;
 }) {
+  const t = useT();
   const [zoomed, setZoomed] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -266,11 +269,11 @@ function TouchViewer({
   }, [onClose]);
 
   return (
-    <div role="dialog" aria-modal="true" aria-label={`${name} images`} className="fixed inset-0 z-[100] bg-black">
+    <div role="dialog" aria-modal="true" aria-label={t("product.imagesOf", { name })} className="fixed inset-0 z-[100] bg-black">
       <button
         type="button"
         onClick={onClose}
-        aria-label="Close image viewer"
+        aria-label={t("product.closeViewer")}
         className="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-xl text-white backdrop-blur"
       >
         ×
@@ -284,7 +287,7 @@ function TouchViewer({
         <div className={zoomed ? "min-h-full w-[250%]" : "flex h-full w-full items-center justify-center"}>
           <img
             src={images[index]}
-            alt={`${name} — photo ${index + 1} of ${images.length}`}
+            alt={t("product.photoOf", { name, index: index + 1, total: images.length })}
             onClick={() => setZoomed((current) => !current)}
             className={zoomed ? "w-full" : "max-h-full max-w-full object-contain"}
           />
@@ -302,7 +305,7 @@ function TouchViewer({
               key={image}
               type="button"
               onClick={() => onSelect(position)}
-              aria-label={`View image ${position + 1}`}
+              aria-label={t("product.viewImage", { number: position + 1 })}
               className={`h-14 w-14 shrink-0 overflow-hidden rounded bg-white ${
                 position === index ? "ring-2 ring-white" : "opacity-60"
               }`}

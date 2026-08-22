@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
@@ -32,6 +33,7 @@ export default function AbroadShopPage() {
 }
 
 function AbroadContent() {
+  const t = useT();
   const params = useSearchParams();
 
   // "Shop by country" links here. Only a two-letter code we recognise is
@@ -43,8 +45,8 @@ function AbroadContent() {
   return (
     <ListingView
       baseQuery={{ availability: "import", source_country: country }}
-      heading={origin ? `From ${origin.name}` : "Order from abroad"}
-      emptyMessage="Nothing matched those filters. Tell us what you need and we will source it."
+      heading={origin ? t("listing.fromCountry", { country: origin.name }) : t("listing.abroadHeading")}
+      emptyMessage={t("listing.abroadEmpty")}
     />
   );
 }

@@ -45,8 +45,8 @@ function isActive(pathname: string, href: string): boolean {
 }
 
 export default function VendorLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
   const t = useT();
+  const pathname = usePathname();
   const { user, isAuthenticated, ready, requireAuth, logout } = useAuth();
   const [moreOpen, setMoreOpen] = useState(false);
 
@@ -65,9 +65,9 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
     return (
       <div className="min-h-screen bg-[color:var(--color-canvas)]">
         <EmptyState
-          title="Sign in to your seller account"
-          message="The seller console is only available to registered sellers."
-          action={<Button size="lg" onClick={() => void requireAuth()}>Sign in</Button>}
+          title={t("seller.consoleSignIn")}
+          message={t("seller.consoleSignInHint")}
+          action={<Button size="lg" onClick={() => void requireAuth()}>{t("seller.signIn")}</Button>}
         />
       </div>
     );
@@ -90,7 +90,7 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
     return (
       <div className="min-h-screen bg-[color:var(--color-canvas)]">
         <EmptyState
-          title="Your seller profile isn't set up yet"
+          title={t("seller.profileNotSetUp")}
           message={`Your account is registered as a seller, but it has no store attached — so there are no products, orders or payouts to show. Our team can finish the setup for you; it usually takes one working day once you have been in touch.`}
           action={
             <div className="flex flex-wrap justify-center gap-2">

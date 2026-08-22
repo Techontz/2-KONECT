@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { BRAND } from "@/lib/brand";
+import { useT } from "@/lib/i18n";
 import { country as lookupCountry } from "@/lib/countries";
 import shop from "@/lib/shop";
 import type { Country, ProductCard as ProductCardType } from "@/lib/types";
@@ -28,6 +29,7 @@ import { SectionHead } from "@/components/home/SectionHead";
  * dropped because it is the other half of the model and has its own entrance.
  */
 export function ShopByCountry({ origins: all }: { origins: (Country & { count: number })[] | null }) {
+  const t = useT();
   const origins = (all ?? []).filter((origin) => origin.code !== "TZ" && origin.count > 0);
 
   if (origins.length === 0) return null;
@@ -36,11 +38,11 @@ export function ShopByCountry({ origins: all }: { origins: (Country & { count: n
     <section className="section" aria-labelledby="by-country">
       <SectionHead
         id="by-country"
-        eyebrow="Sourced worldwide"
-        title="Shop by country"
-        subtitle="Where it comes from decides what it costs and how long it takes."
+        eyebrow={t("home.sourcedWorldwide")}
+        title={t("home.shopByCountry")}
+        subtitle={t("home.shopByCountryHint")}
         href="/shop/abroad"
-        linkLabel="All imports"
+        linkLabel={t("home.allImports")}
       />
 
       <div className="rail bleed gap-3">
@@ -95,10 +97,10 @@ export function ShopByCountry({ origins: all }: { origins: (Country & { count: n
  * not the answers, and the answers move as the catalogue does.
  */
 const WINDOWS = [
-  { days: 3,  title: "Need it now",    window: "1–3 days",      note: "In Tanzania, ready to ship" },
-  { days: 10, title: "Next week",      window: "Up to 10 days", note: "Local stock and the fastest air freight" },
-  { days: 14, title: "Worth the wait", window: "Up to 14 days", note: "Imported by air" },
-  { days: 45, title: "Best price",     window: "Up to 45 days", note: "Everything, including sea freight" },
+  { days: 3,  title: "home.needItNow",     window: null, note: "home.needItNowNote" },
+  { days: 10, title: "home.nextWeek",      window: 10,   note: "home.nextWeekNote" },
+  { days: 14, title: "home.worthTheWait",  window: 14,   note: "home.worthTheWaitNote" },
+  { days: 45, title: "home.bestPrice",     window: 45,   note: "home.bestPriceNote" },
 ] as const;
 
 /**
@@ -111,6 +113,7 @@ const WINDOWS = [
  * waiting for.
  */
 export function ShopByDelivery({ counts }: { counts: Record<number, number> | null }) {
+  const t = useT();
   const shown = WINDOWS.filter((w) => counts === null || (counts[w.days] ?? 0) > 0);
   if (counts !== null && shown.length === 0) return null;
 
@@ -118,9 +121,9 @@ export function ShopByDelivery({ counts }: { counts: Record<number, number> | nu
     <section className="section" aria-labelledby="by-speed">
       <SectionHead
         id="by-speed"
-        eyebrow="However fast you need it"
-        title="Shop by delivery time"
-        subtitle="Pay more and get it sooner, or wait longer and pay less. Both are here."
+        eyebrow={t("home.howeverFast")}
+        title={t("home.shopByDelivery")}
+        subtitle={t("home.shopByDeliveryHint")}
       />
 
       <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
@@ -132,13 +135,13 @@ export function ShopByDelivery({ counts }: { counts: Record<number, number> | nu
             className="group rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-white p-4 transition-all hover:border-[color:var(--color-brand-200)] hover:shadow-[var(--shadow-hover)]"
           >
             <span className="block text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-ink-faint)]">
-              {w.title}
+              {t(w.title)}
             </span>
             <span className="mt-1.5 block text-[19px] font-extrabold leading-none tracking-[-0.02em] text-[color:var(--color-brand)] sm:text-[22px]">
-              {w.window}
+              {w.window === null ? t("home.daysRange") : t("home.upToDays", { days: w.window })}
             </span>
             <span className="mt-1.5 block text-[12px] leading-snug text-[color:var(--color-ink-muted)]">
-              {w.note}
+              {t(w.note)}
             </span>
             <span className="mt-3 block text-[12px] font-bold text-[color:var(--color-brand)]">
               {counts === null ? (
@@ -219,6 +222,7 @@ function cardFromDetail(payload: Awaited<ReturnType<typeof shop.product>>): Prod
  * whatever they were at the time.
  */
 export function RecentlyViewed() {
+  const t = useT();
   const [products, setProducts] = useState<ProductCardType[] | null>(null);
 
   useEffect(() => {
@@ -257,7 +261,7 @@ export function RecentlyViewed() {
 
   return (
     <section className="section" aria-labelledby="recent">
-      <SectionHead id="recent" title="Recently viewed" subtitle="Pick up where you left off." />
+      <SectionHead id="recent" title={t("home.recentlyViewed")} subtitle={t("home.recentlyViewedHint")} />
       <div className="rail bleed gap-2.5">
         {products.map((product) => (
           <div key={product.id} className="w-[164px] shrink-0 sm:w-[200px]">
@@ -282,21 +286,22 @@ export function RecentlyViewed() {
  * issue, no guarantees the software cannot keep.
  */
 export function TrustBand() {
+  const t = useT();
   const facts = [
-    { title: "Know where it is", note: "Every order has a reference and a timeline, from the supplier to your door." },
-    { title: "Know what it costs", note: "The price you see is the price you pay. Sourcing quotes are agreed before you spend anything." },
-    { title: "Know when it arrives", note: "An estimated window on every product, and a date once it is on its way." },
-    { title: "Checked sellers", note: `Every business selling on ${BRAND.name} is reviewed and approved by our team before it can list.` },
+    { title: t("home.knowWhere"), note: t("home.knowWhereNote") },
+    { title: t("home.knowCost"), note: t("home.knowCostNote") },
+    { title: t("home.knowWhen"), note: t("home.knowWhenNote") },
+    { title: t("home.checkedSellers"), note: t("home.checkedSellersNote", { brand: BRAND.name }) },
   ];
 
   return (
     <section className="section brand-ground overflow-hidden rounded-[var(--radius-lg)]" aria-labelledby="trust">
       <div className="px-5 py-8 sm:px-8 sm:py-10">
         <h2 id="trust" className="max-w-xl text-[24px] font-extrabold leading-tight tracking-[-0.03em] text-white sm:text-[30px]">
-          Buying from abroad should not feel like a gamble.
+          {t("home.trustTitle")}
         </h2>
         <p className="mt-2 max-w-xl text-[14px] leading-relaxed text-white/70">
-          So we tell you everything we know, the whole way through.
+          {t("home.trustSubtitle")}
         </p>
 
         <dl className="mt-7 grid gap-x-6 gap-y-6 sm:grid-cols-2 lg:grid-cols-4">

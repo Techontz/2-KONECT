@@ -1,5 +1,7 @@
 "use client";
 
+import { BRAND } from "@/lib/brand";
+import { useT } from "@/lib/i18n";
 import type { OrderFulfilment, TimelineStep } from "@/lib/types";
 import { DotIcon, JOURNEY_ICONS } from "./icons";
 import { RouteLine } from "./Availability";
@@ -22,6 +24,7 @@ export function JourneyTimeline({
   fulfilment: OrderFulfilment;
   className?: string;
 }) {
+  const t = useT();
   if (!timeline.length) return null;
 
   const done = timeline.filter((step) => step.state === "done").length;
@@ -35,7 +38,7 @@ export function JourneyTimeline({
     : 100;
 
   return (
-    <section aria-label="Order progress" className={className}>
+    <section aria-label={t("product.orderProgress")} className={className}>
       {/* Header: the route and the promise, before the detail. */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--color-line)] px-4 py-3">
         <div className="min-w-0">
@@ -44,7 +47,7 @@ export function JourneyTimeline({
           </p>
           {fulfilment.is_local ? (
             <p className="mt-0.5 text-[13px] font-bold">
-              {fulfilment.destination?.flag} Delivering within {fulfilment.destination?.name ?? "Tanzania"}
+              {fulfilment.destination?.flag} {t("product.deliveringWithin", { country: fulfilment.destination?.name ?? BRAND.country })}
             </p>
           ) : (
             <RouteLine

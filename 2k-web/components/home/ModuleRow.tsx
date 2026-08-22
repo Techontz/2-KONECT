@@ -1,5 +1,7 @@
 "use client";
 
+import { BRAND } from "@/lib/brand";
+import { useT } from "@/lib/i18n";
 import Link from "next/link";
 
 import { formatMoney } from "@/lib/format";
@@ -45,33 +47,34 @@ export function ModuleRow({
  * of the marketplace, the fast window, and the sourcing desk.
  */
 function ReasonsToShop() {
+  const t = useT();
   const tiles = [
     {
       href: "/shop/local",
       flag: "🇹🇿",
-      title: "Already in Tanzania",
-      note: "Ready to ship",
+      title: t("home.alreadyInCountry", { country: BRAND.country }),
+      note: t("home.readyToShip"),
       className: "bg-[color:var(--color-local-soft)] text-[color:var(--color-local)]",
     },
     {
       href: "/shop/abroad",
       flag: "🌍",
-      title: "From abroad",
-      note: "Lower prices",
+      title: t("home.fromAbroadShort"),
+      note: t("home.lowerPrices"),
       className: "bg-[color:var(--color-import-soft)] text-[color:var(--color-import)]",
     },
     {
       href: "/shop?max_days=3",
       flag: "⚡",
-      title: "Need it fast",
-      note: "Within 3 days",
+      title: t("home.needItFast"),
+      note: t("home.withinDays", { days: 3 }),
       className: "bg-[color:var(--color-brand-100)] text-[color:var(--color-brand)]",
     },
     {
       href: "/request",
       flag: "🔎",
-      title: "Can’t find it?",
-      note: "We’ll source it",
+      title: t("home.cantFindIt"),
+      note: t("home.wellSourceIt"),
       className: "bg-[color:var(--color-warn-soft)] text-[color:var(--color-warn)]",
     },
   ];

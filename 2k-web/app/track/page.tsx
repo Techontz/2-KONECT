@@ -1,5 +1,7 @@
 "use client";
 
+import { BRAND } from "@/lib/brand";
+import { useT } from "@/lib/i18n";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -17,6 +19,7 @@ import { BoxIcon, GlobeIcon, PlaneIcon, TruckIcon } from "@/components/sourcing/
  * One tracking screen, not two that can disagree.
  */
 export default function TrackPage() {
+  const t = useT();
   const router = useRouter();
   const { isAuthenticated, requireAuth } = useAuth();
   const [reference, setReference] = useState("");
@@ -44,14 +47,14 @@ export default function TrackPage() {
       <section className="brand-ground">
         <div className="shell py-10 sm:py-14">
           <p className="text-[11px] font-bold uppercase tracking-widest text-white/60">
-            Order tracking
+            {t("track.eyebrow")}
           </p>
           <h1 className="mt-1 max-w-2xl text-[28px] font-black leading-tight tracking-[-0.025em] text-white sm:text-[38px]">
-            Know exactly where your order is.
+            {t("track.title")}
           </h1>
           <p className="mt-2 max-w-xl text-[14px] text-white/75 sm:text-[15px]">
-            Every order carries a reference like <span className="font-bold text-white">2K-A1B2C3D4</span>.
-            Enter it and we will show you every step from the supplier to your door.
+            {t("track.introBefore")} <span className="font-bold text-white">2K-A1B2C3D4</span>.{" "}
+            {t("track.introAfter")}
           </p>
 
           <form onSubmit={submit} className="mt-6 flex max-w-lg flex-col gap-2 sm:flex-row">
@@ -59,12 +62,12 @@ export default function TrackPage() {
               value={reference}
               onChange={(event) => setReference(event.target.value)}
               placeholder="2K-XXXXXXXX"
-              aria-label="Order reference"
+              aria-label={t("track.referenceLabel")}
               autoComplete="off"
               className="h-[52px] w-full rounded-[var(--radius-sm)] bg-white px-4 text-[15px] font-bold uppercase tracking-wide outline-none placeholder:font-normal placeholder:normal-case placeholder:tracking-normal placeholder:text-[color:var(--color-ink-faint)]"
             />
             <Button type="submit" size="lg" variant="secondary" loading={busy} className="shrink-0">
-              Track order
+              {t("track.trackButton")}
             </Button>
           </form>
         </div>
@@ -72,34 +75,33 @@ export default function TrackPage() {
 
       <div className="shell py-8 pb-tabbar">
         <h2 className="text-[18px] font-black tracking-[-0.02em] sm:text-[22px]">
-          What the stages mean
+          {t("track.stagesTitle")}
         </h2>
         <p className="mt-1 text-[14px] text-[color:var(--color-ink-muted)]">
-          Local orders take the short route. Imported orders take the long one — and we
-          record every stop along it.
+          {t("track.stagesHint")}
         </p>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[
             {
               icon: <BoxIcon className="h-5 w-5" />,
-              title: "Confirmed",
-              note: "We have your order and the seller has accepted it.",
+              title: t("track.confirmed"),
+              note: t("track.confirmedNote"),
             },
             {
               icon: <GlobeIcon className="h-5 w-5" />,
-              title: "Dispatched",
-              note: "Imported orders are handed to the international carrier.",
+              title: t("track.dispatched"),
+              note: t("track.dispatchedNote"),
             },
             {
               icon: <PlaneIcon className="h-5 w-5" />,
-              title: "In transit",
-              note: "On the way to Tanzania by air, sea or road.",
+              title: t("track.inTransit"),
+              note: t("track.inTransitNote", { country: BRAND.country }),
             },
             {
               icon: <TruckIcon className="h-5 w-5" />,
-              title: "Out for delivery",
-              note: "A 2KONECT rider is bringing it to you — or it is ready to collect.",
+              title: t("track.outForDelivery"),
+              note: t("track.outForDeliveryNote", { brand: BRAND.name }),
             },
           ].map((stage) => (
             <article

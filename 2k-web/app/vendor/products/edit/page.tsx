@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import shop from "@/lib/shop";
@@ -16,6 +17,7 @@ export default function EditProductPage() {
 }
 
 function EditContent() {
+  const t = useT();
   const params = useSearchParams();
   const id = Number(params.get("id"));
 
@@ -28,7 +30,7 @@ function EditContent() {
   }, [id]);
 
   if (missing) {
-    return <EmptyState title="Product not found" message="It may have been deleted." />;
+    return <EmptyState title={t("productForm.notFound")} message={t("productForm.notFoundHint")} />;
   }
 
   if (!product) {
@@ -39,7 +41,7 @@ function EditContent() {
     <div className="space-y-4 p-4 lg:p-6">
       <header>
         <h1 className="clamp-1 text-[24px] font-black tracking-tight">{product.name}</h1>
-        <p className="text-[13px] text-[color:var(--color-ink-muted)]">Editing your listing</p>
+        <p className="text-[13px] text-[color:var(--color-ink-muted)]">{t("productForm.editingListing")}</p>
       </header>
 
       <ProductForm product={product} />

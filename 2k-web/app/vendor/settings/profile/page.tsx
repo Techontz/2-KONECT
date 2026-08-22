@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import {
@@ -68,6 +69,7 @@ interface PaymentOption {
 /* 🌟 Vendor Profile — Cached + Shimmer + Smooth UX                            */
 /* -------------------------------------------------------------------------- */
 export default function VendorProfilePage() {
+  const t = useT();
   const [vendor, setVendor] = useState<VendorProfile | null>(null);
   const [user, setUser] = useState<ProfileUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -254,7 +256,7 @@ export default function VendorProfilePage() {
   /* 🗑️ Delete Payment                                                          */
   /* -------------------------------------------------------------------------- */
   async function handleDeletePayment(id: number) {
-    if (!confirm("Remove this payment method?")) return;
+    if (!confirm(t("seller.removePaymentMethod"))) return;
     try {
       await api.post(`/vendor/delete-payment-option/${id}`);
       fetchProfile();
@@ -346,7 +348,7 @@ export default function VendorProfilePage() {
           <div className="relative">
             <Image
               src={logoUrl}
-              alt="Vendor Logo"
+              alt={t("seller.vendorLogo")}
               width={110}
               height={110}
               className="rounded-full object-cover border-4 border-white shadow-md"
@@ -363,23 +365,23 @@ export default function VendorProfilePage() {
           <h2 className="mt-4 text-lg font-semibold text-gray-900">
             {vendor?.business_name || "-"}
           </h2>
-          <p className="text-gray-500 text-sm">Vendor Account</p>
+          <p className="text-gray-500 text-sm">{t("seller.vendorAccount")}</p>
         </div>
 
         {/* Vendor Info */}
         <ProfileCard
           icon={<Store className="w-5 h-5 text-[color:var(--color-brand)]" />}
-          title="Business Name"
+          title={t("seller.businessName")}
           subtitle={vendor?.business_name || "-"}
         />
         <ProfileCard
           icon={<Mail className="w-5 h-5 text-[color:var(--color-brand)]" />}
-          title="Email"
+          title={t("seller.email")}
           subtitle={user?.email || vendor?.email || "-"}
         />
         <EditableRow
           icon={<Phone className="w-5 h-5 text-[color:var(--color-brand)]" />}
-          label="Phone"
+          label={t("seller.phone")}
           value={phone}
           editing={editingPhone}
           setEditing={setEditingPhone}
@@ -387,12 +389,12 @@ export default function VendorProfilePage() {
         />
         <ProfileCard
           icon={<MapPin className="w-5 h-5 text-[color:var(--color-brand)]" />}
-          title="Business Address"
+          title={t("seller.businessAddress")}
           subtitle={location || "-"}
           action={
             <button
               type="button"
-              aria-label="Edit business address"
+              aria-label={t("seller.editBusinessAddress")}
               onClick={() => alert("Map picker coming soon")}
               className="text-[color:var(--color-brand)] hover:text-[color:var(--color-brand-strong)]"
             >
@@ -507,7 +509,7 @@ export default function VendorProfilePage() {
 
               <input
                 type="text"
-                placeholder="Enter account / phone number"
+                placeholder={t("seller.accountOrPhone")}
                 value={paymentForm.account}
                 onChange={(e) => setPaymentForm((p) => ({ ...p, account: e.target.value }))}
                 className="w-full border border-gray-200 rounded-xl p-2.5 bg-gray-50 focus:ring-2 focus:ring-[color:var(--color-brand-400)]"
