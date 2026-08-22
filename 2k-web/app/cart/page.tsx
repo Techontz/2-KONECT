@@ -60,7 +60,12 @@ export default function CartPage() {
   }
 
   const subtotal = quote?.subtotal.current ?? cart.subtotal;
-  const total = subtotal + (cart.lines.length ? DELIVERY_FEE : 0);
+  // A basket holding anything from abroad is not quoted delivery here: what
+  // it costs to move the last mile is not known until the shipment lands, and
+  // it is arranged against the order afterwards. Matches CheckoutPolicy.
+  const hasImport = cart.lines.some((line) => lineSourcing(line)?.is_local === false);
+  const deliveryFee = hasImport || cart.lines.length === 0 ? 0 : DELIVERY_FEE;
+  const total = subtotal + deliveryFee;
 
   // The two halves of a mixed basket, so the summary can be honest about the
   // fact that they will not turn up together.
@@ -208,7 +213,10 @@ export default function CartPage() {
                   label={cart.count === 1 ? t("cart.subtotalItemOne") : t("cart.subtotalItems", { count: cart.count })}
                   value={formatMoney(subtotal)}
                 />
-                <SummaryRow label={t("cart.delivery")} value={formatMoney(DELIVERY_FEE)} />
+                <SummaryRow
+                  label={t("cart.delivery")}
+                  value={hasImport ? t("payment.deliveryNotAdded") : formatMoney(deliveryFee)}
+                />
               </dl>
 
               <div className="mt-3 flex items-baseline justify-between border-t border-[color:var(--color-line)] pt-3">

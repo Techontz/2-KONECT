@@ -2,6 +2,7 @@
 
 import { BRAND } from "@/lib/brand";
 import { useT } from "@/lib/i18n";
+import { PayPanel } from "@/components/checkout/PayPanel";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
@@ -147,7 +148,9 @@ function OrderDetail() {
           <div className="text-right">
             <p className="text-[24px] font-black tracking-[-0.02em]">{formatMoney(order.total)}</p>
             <p className="text-[12px] text-[color:var(--color-ink-muted)]">
-              {order.payment_method === "cash_on_delivery" ? t("orders.cashOnDelivery") : order.payment_method}
+              {order.payment_method === "cash_on_delivery"
+                ? t("orders.cashOnDelivery")
+                : paymentStatusLabel(order.payment_status, t)}
             </p>
           </div>
         </div>
@@ -194,6 +197,20 @@ function OrderDetail() {
       </header>
 
       <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+        {/* Paying for an order that has not been settled. Renders nothing for
+            cash on delivery or an order already verified. */}
+        {order.payment_method !== "cash_on_delivery" ? (
+          <div className="lg:col-span-2">
+            <PayPanel
+              reference={order.reference}
+              amount={order.total}
+              method={order.payment_method}
+              status={order.payment_status}
+              onSubmitted={load}
+            />
+          </div>
+        ) : null}
+
         {/* ---- the journey ---- */}
         <section className="overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)]">
           <h2 className="px-4 pt-4 text-[16px] font-black">{t("orders.journey")}</h2>
@@ -245,7 +262,19 @@ function OrderDetail() {
 
             <dl className="mt-3 space-y-1.5 border-t border-[color:var(--color-line)] pt-3 text-[13px]">
               <Row label={t("orders.subtotal")} value={formatMoney(order.subtotal)} />
-              <Row label={t("orders.delivery")} value={formatMoney(order.delivery_fee)} />
+              {/* An imported order is quoted no delivery at checkout, so a
+                  zero here is not "free" — it is "not decided yet". Saying
+                  TZS 0 would promise a free delivery nobody has agreed to. */}
+              <Row
+                label={t("orders.delivery")}
+                value={
+                  order.delivery_fee > 0
+                    ? formatMoney(order.delivery_fee)
+                    : order.fulfilment?.is_local === false
+                      ? t("payment.deliveryNotAdded")
+                      : formatMoney(0)
+                }
+              />
               <div className="flex justify-between gap-3 border-t border-[color:var(--color-line)] pt-1.5">
                 <dt className="font-black">{t("orders.total")}</dt>
                 <dd className="text-[17px] font-black">{formatMoney(order.total)}</dd>
@@ -421,4 +450,16 @@ function Row({ label, value }: { label: string; value: string }) {
       <dd className="font-semibold">{value}</dd>
     </div>
   );
+}
+
+/** How a payment state reads to the person who owes or paid the money. */
+function paymentStatusLabel(
+  status: Order["payment_status"],
+  t: ReturnType<typeof useT>,
+): string {
+  if (status === "awaiting_verification") return t("payment.statusPendingVerification");
+  if (status === "verified") return t("payment.statusVerified");
+  if (status === "rejected") return t("payment.statusRejected");
+  if (status === "awaiting_payment") return t("payment.statusAwaitingPayment");
+  return t("payment.statusOnDelivery");
 }

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { apiError } from "@/lib/api";
+import { paymentOptions, type PaymentOptions } from "@/lib/payments";
 import { BRAND } from "@/lib/brand";
 import { formatMoney } from "@/lib/format";
 import shop from "@/lib/shop";
@@ -56,12 +57,35 @@ function CheckoutContent() {
   // one-off destination is not overwritten when the saved list arrives.
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [mapOpen, setMapOpen] = useState(false);
-  // Only cash on delivery is connected. Mobile money is shown but cannot be
-  // selected, because pretending an unintegrated provider took the money would
-  // create an order nobody has actually paid for.
-  const payment = "cash_on_delivery" as const;
+  // What this basket may be paid with is decided by the server, because it
+  // depends on what is in it: anything sourced from abroad is prepaid. The
+  // page asks, renders the answer, and the same rule is applied again when the
+  // order is placed — so this is presentation, not permission.
+  const [options, setOptions] = useState<PaymentOptions | null>(null);
+  const [payment, setPayment] = useState<string>("cash_on_delivery");
+  // Anything from abroad makes the whole basket prepaid, and takes delivery
+  // out of this checkout entirely — see the note by the summary below.
+  const hasImport = cart.lines.some((line) => lineSourcing(line)?.is_local === false);
+  const deliveryFee = hasImport || cart.lines.length === 0 ? 0 : DELIVERY_FEE;
+
   const [placing, setPlacing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let live = true;
+
+    paymentOptions(hasImport)
+      .then((next) => {
+        if (!live) return;
+        setOptions(next);
+        // Default to the first thing that is actually offered. A prepaid
+        // basket has no cash-on-delivery entry to fall back to.
+        setPayment(next.cash_on_delivery ? "cash_on_delivery" : next.channels[0]?.code ?? "");
+      })
+      .catch(() => undefined);
+
+    return () => { live = false; };
+  }, [hasImport]);
 
   // Ask for credentials as soon as the shopper lands here, not before.
   useEffect(() => {
@@ -110,7 +134,6 @@ function CheckoutContent() {
     if (item.phone) setPhone(item.phone);
   }
 
-  const total = cart.subtotal + (cart.lines.length ? DELIVERY_FEE : 0);
 
   // The order is complete when its slowest line lands, so that is the date
   // the summary promises — never an average that no line actually meets.
@@ -118,6 +141,7 @@ function CheckoutContent() {
     (max, line) => Math.max(max, lineSourcing(line)?.lead_time.max ?? 0),
     0,
   );
+  const total = cart.subtotal + deliveryFee;
   const importCount = cart.lines.filter((line) => lineSourcing(line)?.is_local === false).length;
 
   if (cart.ready && cart.lines.length === 0) {
@@ -285,47 +309,50 @@ function CheckoutContent() {
           <section className="rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4">
             <h2 className="mb-3 text-[15px] font-black">{t("checkout.payment")}</h2>
 
+            {/* Anything from abroad is prepaid, and the reason is stated
+                rather than left as a missing option. */}
+            {hasImport ? (
+              <Notice tone="info" className="mb-3">
+                {importCount < cart.lines.length
+                  ? t("payment.mixedBasketNote")
+                  : t("payment.prepaidExplainer")}
+              </Notice>
+            ) : null}
+
             <div className="space-y-2">
-              <PaymentOption
-                checked
-                title={t("payment.cashOnDelivery")}
-                body={t("payment.cashOnDeliveryHint")}
-              />
+              {/* Cash on delivery appears only when the server says it may.
+                  It is never rendered disabled for an import: an option that
+                  cannot be chosen is still an option the shopper reads. */}
+              {options?.cash_on_delivery ? (
+                <PaymentOption
+                  checked={payment === "cash_on_delivery"}
+                  onSelect={() => setPayment("cash_on_delivery")}
+                  title={t("payment.cashOnDelivery")}
+                  body={t("payment.cashOnDeliveryHint")}
+                />
+              ) : null}
 
-              {/* Shown so shoppers know these are coming, but not selectable —
-                  there is no integration behind either yet, and a checkout that
-                  pretends otherwise creates an order nobody has paid for. */}
-              <PaymentOption
-                unavailable
-                title={t("payment.lipaNamba")}
-                body={t("payment.lipaNambaHint", { brand: BRAND.name })}
-                badge={t("payment.comingSoon")}
-              />
+              {(options?.channels ?? []).map((channel) => (
+                <PaymentOption
+                  key={channel.code}
+                  checked={payment === channel.code}
+                  onSelect={() => setPayment(channel.code)}
+                  title={channel.label}
+                  body={channel.instructions ?? ""}
+                />
+              ))}
 
-              <PaymentOption
-                unavailable
-                title={t("payment.mobileMoney")}
-                body={t("payment.mobileMoneyHint")}
-                badge={t("payment.comingSoon")}
-              >
-                <span className="mt-2 flex flex-wrap gap-2">
-                  {["M-Pesa", "Tigo Pesa", "Airtel Money", "HaloPesa"].map((option) => (
-                    <span
-                      key={option}
-                      className="rounded-[var(--radius-sm)] border border-[color:var(--color-line)] px-2.5 py-1 text-[12px] font-semibold text-[color:var(--color-ink-faint)]"
-                    >
-                      {option}
-                    </span>
-                  ))}
-                </span>
-              </PaymentOption>
+              {options && !options.cash_on_delivery && options.channels.length === 0 ? (
+                <Notice tone="warn">{t("payment.noChannels")}</Notice>
+              ) : null}
             </div>
 
-            <p className="mt-3 flex items-start gap-2 text-[11px] leading-relaxed text-[color:var(--color-ink-muted)]">
-              <LockIcon className="mt-[1px] h-3.5 w-3.5 shrink-0 text-[color:var(--color-brand)]" />
-              Online payment methods are being connected. Until then, orders are placed
-              on cash on delivery so nothing is charged before you receive it.
-            </p>
+            {hasImport ? (
+              <p className="mt-3 flex items-start gap-2 text-[11px] leading-relaxed text-[color:var(--color-ink-muted)]">
+                <LockIcon className="mt-[1px] h-3.5 w-3.5 shrink-0 text-[color:var(--color-brand)]" />
+                {t("payment.deliveryNotIncluded", { country: BRAND.country })}
+              </p>
+            ) : null}
           </section>
 
           {/* ---- items, each with its own arrival ---- */}
@@ -381,7 +408,9 @@ function CheckoutContent() {
               </div>
               <div className="flex justify-between gap-3">
                 <dt className="text-[color:var(--color-ink-muted)]">{t("checkout.delivery")}</dt>
-                <dd className="font-semibold">{formatMoney(DELIVERY_FEE)}</dd>
+                <dd className="font-semibold">
+                  {hasImport ? t("payment.deliveryNotAdded") : formatMoney(deliveryFee)}
+                </dd>
               </div>
             </dl>
 

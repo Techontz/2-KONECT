@@ -278,7 +278,7 @@ export const shop = {
     }[];
     delivery_address: string;
     customer_phone: string;
-    payment_method: "cash_on_delivery" | "mobile_money";
+    payment_method: string;
     payment_provider?: string;
   }) {
     const { data } = await api.post("/shop/orders", payload);

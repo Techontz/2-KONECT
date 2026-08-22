@@ -497,6 +497,15 @@ export interface Order {
   total: number;
   currency: string;
   payment_method: string | null;
+  /** Whether the money arrived, as opposed to which method was chosen. */
+  payment_status:
+    | "not_required"
+    | "awaiting_payment"
+    | "awaiting_verification"
+    | "verified"
+    | "rejected";
+  payment_reference: string | null;
+  payment_note: string | null;
   delivery_address: string | null;
   customer_phone: string | null;
   items: OrderItem[];

@@ -99,6 +99,77 @@ class CatalogController extends Controller
         return response()->json($payload);
     }
 
+    /**
+     * Everything the website's XML sitemap needs, and nothing else.
+     *
+     * Ids and timestamps only — no names, prices, images or relations. The
+     * sitemap needs a URL and a `lastmod`, and shipping the catalogue payload
+     * to build one would be several megabytes for a few hundred kilobytes of
+     * XML.
+     *
+     * It exists because the alternative is worse: the listing endpoint caps at
+     * sixty rows a page, so a crawlable sitemap of 2,858 products would mean
+     * forty-eight paginated round trips against an origin whose TTFB is around
+     * three seconds. This is four flat queries, cached, and versioned with the
+     * rest of the catalogue so a new product appears in the sitemap on the next
+     * request rather than at the end of a TTL.
+     *
+     * Only what should actually be indexed: a vendor with nothing in stock is
+     * an empty storefront, and a subcategory with no products is a dead grid.
+     */
+    public function sitemap()
+    {
+        $payload = CatalogCache::remember('sitemap', 1800, function () {
+            return [
+                'products' => DB::table('products')
+                    ->select('id', 'updated_at')
+                    ->orderBy('id')
+                    ->get()
+                    ->map(fn ($row) => [
+                        'id'           => (int) $row->id,
+                        'updated_at'   => $row->updated_at,
+                    ])
+                    ->all(),
+
+                'categories' => DB::table('categories')
+                    ->select('id', 'updated_at')
+                    ->orderBy('id')
+                    ->get()
+                    ->map(fn ($row) => ['id' => (int) $row->id, 'updated_at' => $row->updated_at])
+                    ->all(),
+
+                // Subcategories that actually have something behind them. One
+                // with no products is a page that would be crawled, found
+                // empty, and counted against the site.
+                'subcategories' => DB::table('subcategories')
+                    ->select('subcategories.id', 'subcategories.category_id', 'subcategories.updated_at')
+                    ->whereExists(fn ($q) => $q->selectRaw('1')->from('products')
+                        ->whereColumn('products.subcategory_id', 'subcategories.id'))
+                    ->orderBy('subcategories.id')
+                    ->get()
+                    ->map(fn ($row) => [
+                        'id'          => (int) $row->id,
+                        'category_id' => (int) $row->category_id,
+                        'updated_at'  => $row->updated_at,
+                    ])
+                    ->all(),
+
+                'vendors' => DB::table('vendors')
+                    ->select('vendors.id', 'vendors.updated_at')
+                    ->where('vendors.is_approved', true)
+                    ->whereExists(fn ($q) => $q->selectRaw('1')->from('products')
+                        ->whereColumn('products.vendor_id', 'vendors.id')
+                        ->where('products.stock', '>', 0))
+                    ->orderBy('vendors.id')
+                    ->get()
+                    ->map(fn ($row) => ['id' => (int) $row->id, 'updated_at' => $row->updated_at])
+                    ->all(),
+            ];
+        });
+
+        return response()->json($payload);
+    }
+
     /* ---------------------------------------------------------------- */
     /* Listing                                                          */
     /* ---------------------------------------------------------------- */
