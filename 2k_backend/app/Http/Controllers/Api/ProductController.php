@@ -33,6 +33,8 @@ class ProductController extends Controller
             ], 403);
         }
 
+        $this->normaliseCollections($request);
+
         $rules = [
             'name'           => 'required|string|max:100',
             'category_id'    => 'required|exists:categories,id',
@@ -55,6 +57,24 @@ class ProductController extends Controller
             'lead_time_min_days' => 'nullable|integer|min:1|max:180',
             'lead_time_max_days' => 'nullable|integer|min:1|max:180|gte:lead_time_min_days',
             'fulfilment_location' => 'nullable|string|max:255',
+
+            // Optional quantity breaks. Absent leaves whatever the product
+            // already has untouched; an explicit empty array clears them.
+            'price_tiers'                => 'nullable|array|max:20',
+            'price_tiers.*.min_quantity' => 'required|integer|min:1',
+            'price_tiers.*.max_quantity' => 'nullable|integer|min:1',
+            'price_tiers.*.unit_price'   => 'required|numeric|min:0',
+
+            // Optional selectable combinations. `options` names a value from
+            // the existing attribute vocabulary on each axis.
+            'variants'                        => 'nullable|array|max:100',
+            'variants.*.sku'                  => 'nullable|string|max:64',
+            'variants.*.price'                => 'nullable|numeric|min:0',
+            'variants.*.stock'                => 'required|integer|min:0',
+            'variants.*.is_active'            => 'nullable|boolean',
+            'variants.*.options'              => 'required|array|min:1|max:4',
+            'variants.*.options.*.attribute_id'       => 'required|integer|exists:attributes,id',
+            'variants.*.options.*.attribute_value_id' => 'required|integer|exists:attribute_values,id',
         ];
 
         if ($request->hasFile('images')) {
@@ -111,6 +131,9 @@ class ProductController extends Controller
                 }
             }
 
+            $this->syncPriceTiers($product, $request);
+            $this->syncVariants($product, $request);
+
             DB::commit();
 
             $product = Product::with(['images', 'attributeValues.attribute', 'subcategory', 'category'])
@@ -120,6 +143,13 @@ class ProductController extends Controller
                 'message' => 'Product created successfully.',
                 'product' => $product,
             ], 201);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // A rejected tier or variant set is the seller's mistake, not the
+            // server's. Without this it fell into the catch-all below and came
+            // back as "Failed to create product" with a 500 — hiding the one
+            // thing that would have told them which row to fix.
+            DB::rollBack();
+            throw $e;
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('❌ Product create error: ' . $e->getMessage(), [
@@ -130,6 +160,125 @@ class ProductController extends Controller
                 'message' => 'Failed to create product.',
                 'error'   => $e->getMessage(),
             ], 500);
+        }
+    }
+
+    /**
+     * Multipart cannot carry an empty array, so the client sends the key with
+     * an empty string to mean "present, and empty" — which is how a seller
+     * clears their tiers or variants. Turn it into the array the validator
+     * expects before anything looks at it.
+     *
+     * An *absent* key stays absent, and that still means "leave them alone".
+     */
+    private function normaliseCollections(Request $request): void
+    {
+        foreach (['price_tiers', 'variants'] as $key) {
+            if ($request->has($key) && $request->input($key) === '') {
+                $request->merge([$key => []]);
+            }
+        }
+    }
+
+    /**
+     * Replace the product's quantity tiers with what was sent.
+     *
+     * Absent means "leave them alone", so a client that has never heard of
+     * bulk pricing — the Flutter app, or any older form — keeps working and
+     * cannot wipe a seller's tiers by omission. An explicit empty array is how
+     * the seller removes them.
+     */
+    private function syncPriceTiers(Product $product, Request $request): void
+    {
+        if (! $request->has('price_tiers')) {
+            return;
+        }
+
+        $tiers = \App\Support\PriceTierRules::normalise((array) $request->input('price_tiers', []));
+
+        $product->priceTiers()->delete();
+
+        foreach ($tiers as $tier) {
+            $product->priceTiers()->create($tier);
+        }
+    }
+
+    /**
+     * Replace the product's variants with what was sent.
+     *
+     * Same rule as the tiers: omitted leaves them, empty clears them.
+     *
+     * Two things are checked that plain validation cannot express — that each
+     * chosen value really belongs to the attribute it is filed under, and that
+     * no two variants describe the same combination. Without the first a
+     * seller could file "128GB" under Colour; without the second a product
+     * could have two Black-128GB rows and the selector would pick whichever
+     * came back first.
+     */
+    private function syncVariants(Product $product, Request $request): void
+    {
+        if (! $request->has('variants')) {
+            return;
+        }
+
+        $rows = array_values((array) $request->input('variants', []));
+
+        $valueOwners = \App\Models\AttributeValue::query()
+            ->whereIn('id', collect($rows)->flatMap(fn ($v) => collect($v['options'] ?? [])->pluck('attribute_value_id'))->unique())
+            ->pluck('attribute_id', 'id');
+
+        $seen = [];
+
+        foreach ($rows as $index => $row) {
+            $combination = [];
+
+            foreach ((array) ($row['options'] ?? []) as $option) {
+                $attributeId = (int) $option['attribute_id'];
+                $valueId     = (int) $option['attribute_value_id'];
+
+                if ((int) ($valueOwners[$valueId] ?? 0) !== $attributeId) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        "variants.{$index}.options" => 'That value does not belong to the option it was filed under.',
+                    ]);
+                }
+
+                if (isset($combination[$attributeId])) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        "variants.{$index}.options" => 'A variant can only take one value per option.',
+                    ]);
+                }
+
+                $combination[$attributeId] = $valueId;
+            }
+
+            ksort($combination);
+            $fingerprint = json_encode($combination);
+
+            if (isset($seen[$fingerprint])) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    "variants.{$index}.options" => 'Two variants describe the same combination.',
+                ]);
+            }
+
+            $seen[$fingerprint] = true;
+        }
+
+        $product->variants()->delete();
+
+        foreach ($rows as $row) {
+            $variant = $product->variants()->create([
+                'sku'       => $row['sku'] ?? null,
+                'price'     => ($row['price'] ?? null) === '' ? null : ($row['price'] ?? null),
+                'stock'     => (int) ($row['stock'] ?? 0),
+                'is_active' => filter_var($row['is_active'] ?? true, FILTER_VALIDATE_BOOLEAN),
+            ]);
+
+            foreach ((array) ($row['options'] ?? []) as $option) {
+                $variant->options()->create([
+                    'attribute_id'       => (int) $option['attribute_id'],
+                    'attribute_value_id' => (int) $option['attribute_value_id'],
+                ]);
+            }
         }
     }
 
@@ -242,6 +391,8 @@ class ProductController extends Controller
             return response()->json(['message' => 'Product not found.'], 404);
         }
 
+        $this->normaliseCollections($request);
+
         $rules = [
             'name'           => 'sometimes|required|string|max:100',
             'category_id'    => 'sometimes|required|exists:categories,id',
@@ -257,6 +408,24 @@ class ProductController extends Controller
             'lead_time_min_days' => 'nullable|integer|min:1|max:180',
             'lead_time_max_days' => 'nullable|integer|min:1|max:180|gte:lead_time_min_days',
             'fulfilment_location' => 'nullable|string|max:255',
+
+            // Optional quantity breaks. Absent leaves whatever the product
+            // already has untouched; an explicit empty array clears them.
+            'price_tiers'                => 'nullable|array|max:20',
+            'price_tiers.*.min_quantity' => 'required|integer|min:1',
+            'price_tiers.*.max_quantity' => 'nullable|integer|min:1',
+            'price_tiers.*.unit_price'   => 'required|numeric|min:0',
+
+            // Optional selectable combinations. `options` names a value from
+            // the existing attribute vocabulary on each axis.
+            'variants'                        => 'nullable|array|max:100',
+            'variants.*.sku'                  => 'nullable|string|max:64',
+            'variants.*.price'                => 'nullable|numeric|min:0',
+            'variants.*.stock'                => 'required|integer|min:0',
+            'variants.*.is_active'            => 'nullable|boolean',
+            'variants.*.options'              => 'required|array|min:1|max:4',
+            'variants.*.options.*.attribute_id'       => 'required|integer|exists:attributes,id',
+            'variants.*.options.*.attribute_value_id' => 'required|integer|exists:attribute_values,id',
         ];
 
         if ($request->hasFile('images')) {
@@ -315,6 +484,9 @@ class ProductController extends Controller
                 }
             }
 
+            $this->syncPriceTiers($product, $request);
+            $this->syncVariants($product, $request);
+
             DB::commit();
 
             $product = Product::with(['images', 'attributeValues.attribute', 'subcategory', 'category'])->find($product->id);
@@ -323,6 +495,11 @@ class ProductController extends Controller
                 'message' => 'Product updated successfully.',
                 'product' => $product,
             ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Same reason as in store(): the seller needs the field-level
+            // message, not a generic failure.
+            DB::rollBack();
+            throw $e;
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([

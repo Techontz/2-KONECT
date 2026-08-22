@@ -14,6 +14,20 @@ class Order extends Model
         'user_id',
         'vendor_id',
         'product_id',
+        // Which alternative offer, and which option combination, this line was
+        // for. `offer_id` was missing from this list while OrderController
+        // passed it to Order::create(), so mass assignment silently dropped it
+        // and no order has ever recorded one -- 109 of them, all null, against
+        // 582 live offers. Nothing drifted, because every one of those offers
+        // is an import and imports neither reserve nor restore stock, but a
+        // seller listing a local alternative would have had cancellations
+        // credit the product instead of the offer. Variants do count stock, so
+        // they must be here from the start.
+        'offer_id',
+        'product_variant_id',
+        // The chosen options in words, frozen at checkout so the order stays
+        // readable after the listing is edited.
+        'variant_options',
         'quantity',
         'price',
         'total',
@@ -36,6 +50,7 @@ class Order extends Model
     ];
 
     protected $casts = [
+        'variant_options' => 'array',
         'price'        => 'decimal:2',
         'total'        => 'decimal:2',
         'delivery_fee' => 'decimal:2',
@@ -53,6 +68,11 @@ class Order extends Model
     public function vendor()
     {
         return $this->belongsTo(Vendor::class);
+    }
+
+    public function variant()
+    {
+        return $this->belongsTo(\App\Models\ProductVariant::class, 'product_variant_id');
     }
 
     public function product()

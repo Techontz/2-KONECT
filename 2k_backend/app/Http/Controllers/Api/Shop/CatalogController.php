@@ -169,6 +169,12 @@ class CatalogController extends Controller
             'vendor',
             'reviews.user',
             'offers.vendor',
+            // Optional extras. Loaded here, nested, so the whole option matrix
+            // costs three queries for the page rather than one per variant and
+            // two more per option row.
+            'priceTiers',
+            'variants.options.attribute',
+            'variants.options.attributeValue',
         ])->find($id);
 
         if (! $product) {
@@ -353,6 +359,27 @@ class CatalogController extends Controller
             ->without('attributeValues')
             ->withAvg('reviews', 'rating')
             ->withCount('reviews')
+            // Two booleans for the card, as EXISTS subqueries on the row that
+            // is already being fetched. Eager-loading the tiers and variants
+            // themselves would drag a matrix per product into a payload that
+            // renders neither.
+            ->withExists([
+                'priceTiers as price_tiers_exists',
+                'variants as variants_exists' => fn ($q) => $q->where('is_active', true),
+            ])
+            // For a product that sells by combination the parent row is not
+            // the commercial unit, so the card cannot read price and stock
+            // from it — an iPhone whose four variants hold seventeen units
+            // between them would otherwise render "Out of stock" because the
+            // parent row says zero. These are correlated subqueries on the row
+            // already being fetched, so the whole grid still costs one query.
+            ->withSum(['variants as variants_stock' => fn ($q) => $q->where('is_active', true)], 'stock')
+            ->withMin(['variants as variants_min_price' => fn ($q) => $q->where('is_active', true)], 'price')
+            ->withMax(['variants as variants_max_price' => fn ($q) => $q->where('is_active', true)], 'price')
+            // MIN/MAX skip nulls, so a variant that inherits the product's
+            // price is invisible to them; this counts those so the range can
+            // include the parent price when one of them does.
+            ->withCount(['variants as variants_inheriting' => fn ($q) => $q->where('is_active', true)->whereNull('price')])
             ->latest('id');
     }
 

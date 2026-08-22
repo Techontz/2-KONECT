@@ -87,6 +87,29 @@ class Product extends Model
         return $this->hasMany(ProductOffer::class);
     }
 
+    /**
+     * Optional quantity breaks, cheapest quantity first.
+     *
+     * A product with none of these prices exactly as it always did.
+     */
+    public function priceTiers()
+    {
+        return $this->hasMany(ProductPriceTier::class)->orderBy('min_quantity');
+    }
+
+    /** Optional selectable combinations. Empty for an ordinary product. */
+    public function variants()
+    {
+        return $this->hasMany(ProductVariant::class);
+    }
+
+    public function hasBulkPricing(): bool
+    {
+        return $this->relationLoaded('priceTiers')
+            ? $this->priceTiers->isNotEmpty()
+            : $this->priceTiers()->exists();
+    }
+
     /** Is this item already in the country, or does it have to be brought in? */
     public function isImport(): bool
     {

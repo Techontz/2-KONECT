@@ -69,6 +69,12 @@ Route::prefix('shop')->group(function () {
     Route::get('/categories/{id}', [ShopCatalogController::class, 'category'])
         ->whereNumber('id')->middleware('cacheable:300,1800');
 
+    // Prices a basket server-side. Deliberately not cacheable: it is about
+    // this shopper's quantities, and a quantity tier makes the answer differ
+    // per basket rather than per product.
+    Route::post('/cart/quote', \App\Http\Controllers\Api\Shop\CartQuoteController::class)
+        ->middleware('throttle:60,1');
+
     // Sourcing requests and seller applications are open to signed-out
     // visitors: someone who cannot find a product, or who wants to sell,
     // should not have to register before they can say so. Both are throttled

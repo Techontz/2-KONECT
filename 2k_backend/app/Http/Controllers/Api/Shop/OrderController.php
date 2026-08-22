@@ -9,8 +9,10 @@ use App\Models\Order;
 use App\Models\OrderEvent;
 use App\Models\Product;
 use App\Models\ProductOffer;
+use App\Models\ProductVariant;
 use App\Support\Media;
 use App\Support\OrderJourney;
+use App\Support\Pricing;
 use App\Support\Sourcing;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -45,6 +47,9 @@ class OrderController extends Controller
             // Which way the buyer chose to buy it: local stock or imported.
             // Absent means the product's own primary offer.
             'items.*.offer_id'     => 'nullable|integer|exists:product_offers,id',
+            // Which combination, when the product has any. Absent means the
+            // product itself, which is every existing listing.
+            'items.*.variant_id'   => 'nullable|integer|exists:product_variants,id',
             'delivery_address'     => 'required|string|max:500',
             'customer_phone'       => 'required|string|max:40',
             'payment_method'       => 'required|string|in:cash_on_delivery,mobile_money',
@@ -61,7 +66,7 @@ class OrderController extends Controller
 
                 foreach ($data['items'] as $item) {
                     /** @var Product $product */
-                    $product = Product::lockForUpdate()->find($item['product_id']);
+                    $product = Product::with('priceTiers')->lockForUpdate()->find($item['product_id']);
 
                     if (! $product) {
                         abort(422, 'A product in your cart is no longer available.');
@@ -83,18 +88,43 @@ class OrderController extends Controller
                         }
                     }
 
-                    $availability = Sourcing::normalise($offer?->availability ?? $product->availability);
-                    $unitPrice    = (float) ($offer?->price ?? $product->new_price);
-                    $stock        = (int) ($offer?->stock ?? $product->stock);
+                    // Resolve the combination, if one was named. It has to
+                    // belong to this product and still be live, or a shopper
+                    // could post the id of a variant from another listing.
+                    $variant = null;
+                    if (! empty($item['variant_id'])) {
+                        // The exact variant, with its option rows, so the
+                        // labels can be frozen onto the order below. One
+                        // query for the one combination being bought — never
+                        // the product's whole matrix.
+                        $variant = ProductVariant::with('options.attribute', 'options.attributeValue')
+                            ->where('id', $item['variant_id'])
+                            ->where('product_id', $product->id)
+                            ->where('is_active', true)
+                            ->lockForUpdate()
+                            ->first();
 
-                    // Local stock is finite; an import is bought to order, so
-                    // it is never blocked by a zero on hand.
-                    if ($availability === Sourcing::LOCAL && $stock < $item['quantity']) {
-                        abort(422, sprintf(
-                            'Only %d left of "%s".',
-                            $stock,
-                            $product->name
-                        ));
+                        if (! $variant) {
+                            abort(422, 'That option is no longer available.');
+                        }
+                    } elseif ($product->variants()->where('is_active', true)->exists()) {
+                        // The product sells by combination and none was chosen.
+                        // Falling through would charge the product's own price
+                        // for stock that is only tracked per variant.
+                        abort(422, sprintf('Choose an option for "%s" before checking out.', $product->name));
+                    }
+
+                    // The price and the stock ceiling both come from the
+                    // database here — variant, then offer, then the product —
+                    // with the quantity tier applied on top. Nothing the
+                    // browser sent about price is read.
+                    $quote = Pricing::resolve($product, $offer, $variant, (int) $item['quantity']);
+
+                    $availability = $quote['availability'];
+                    $unitPrice    = $quote['unit_price'];
+
+                    if (! $quote['purchasable']) {
+                        abort(422, $quote['reason'] ?? 'That item is no longer available.');
                     }
 
                     $sourcing = Sourcing::payload(
@@ -115,6 +145,10 @@ class OrderController extends Controller
                         'vendor_id'        => $offer?->vendor_id ?? $product->vendor_id,
                         'product_id'       => $product->id,
                         'offer_id'         => $offer?->id,
+                        'product_variant_id' => $variant?->id,
+                        // Words, not ids: the order has to survive the listing
+                        // being reconfigured underneath it.
+                        'variant_options'    => $variant?->optionSnapshot(),
                         'quantity'         => $item['quantity'],
                         'price'            => $unitPrice,
                         'total'            => $lineTotal,
@@ -135,9 +169,14 @@ class OrderController extends Controller
                         'estimated_arrival_at' => now()->addDays($sourcing['lead_time']['max'])->toDateString(),
                     ]);
 
-                    // Reserve the stock that was just sold. Imports have none
-                    // to reserve — they are ordered in for this buyer.
-                    if ($availability === Sourcing::LOCAL) {
+                    // Reserve the stock that was just sold, from whichever
+                    // row is actually counting it. A variant tracks its own,
+                    // so it is decremented even for an import: the units exist
+                    // as a specific combination, unlike an import of the
+                    // product itself which is bought in per order.
+                    if ($variant) {
+                        $variant->decrement('stock', $item['quantity']);
+                    } elseif ($availability === Sourcing::LOCAL) {
                         $offer
                             ? $offer->decrement('stock', $item['quantity'])
                             : $product->decrement('stock', $item['quantity']);
@@ -233,9 +272,13 @@ class OrderController extends Controller
 
         DB::transaction(function () use ($lines, $reference) {
             foreach ($lines as $line) {
-                // Put the reserved units back on sale. Imports never held any
-                // — they were to be bought in — so there is nothing to return.
-                if ($line->fulfilment_type !== Sourcing::IMPORT) {
+                // Put the reserved units back where they were taken from, so
+                // this mirrors the reservation above exactly. Imports of the
+                // product itself never held any — they were to be bought in —
+                // so there is nothing to return.
+                if ($line->product_variant_id) {
+                    ProductVariant::where('id', $line->product_variant_id)->increment('stock', $line->quantity);
+                } elseif ($line->fulfilment_type !== Sourcing::IMPORT) {
                     $line->offer_id
                         ? ProductOffer::where('id', $line->offer_id)->increment('stock', $line->quantity)
                         : Product::where('id', $line->product_id)->increment('stock', $line->quantity);
@@ -378,6 +421,10 @@ class OrderController extends Controller
                 'vendor'   => $line->vendor?->business_name,
                 'quantity' => (int) $line->quantity,
                 'price'    => (float) $line->price,
+                // The combination that was bought, in the words it was bought
+                // under. Read from the order's own snapshot, never looked up
+                // against today's configuration.
+                'options'  => $line->variant_options ?: null,
                 'total'    => (float) $line->total,
                 'status'   => $line->status,
                 'sourcing' => Sourcing::payload(

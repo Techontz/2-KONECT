@@ -147,6 +147,14 @@ class SellerController extends Controller
                 'type'    => $attribute->input_type ?? 'text',
                 'unit'    => $attribute->unit,
                 'options' => $attribute->values->pluck('value')->values(),
+                // The same curated list, with ids. `options` is kept exactly
+                // as it was for the specification fields and for the Flutter
+                // app; variants need to name a value rather than repeat its
+                // text, so they read this instead.
+                'values'  => $attribute->values->map(fn ($value) => [
+                    'id'    => (int) $value->id,
+                    'value' => $value->value,
+                ])->values(),
             ]);
 
         return response()->json(['attributes' => $attributes]);
