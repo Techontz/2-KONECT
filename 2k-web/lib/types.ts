@@ -78,11 +78,68 @@ export interface ProductCard {
   subcategory?: Ref;
   vendor?: Ref & { is_verified?: boolean };
   sourcing: Sourcing;
+  /** Flags only — the card shows a label, the detail page shows the tables. */
+  has_bulk_pricing?: boolean;
+  has_options?: boolean;
+  /**
+   * True when `price` is the cheapest of several combinations rather than the
+   * price. The card says "From" so it never quotes one figure as though the
+   * choice did not change it.
+   */
+  price_from?: boolean;
   badges: {
     low_stock: boolean;
     out_of_stock: boolean;
     discounted: boolean;
   };
+}
+
+/** One quantity break. `max_quantity` null is the open-ended top tier. */
+export interface PriceTier {
+  min_quantity: number;
+  max_quantity: number | null;
+  unit_price: number;
+  /** Pre-formatted by the server: "1–4", "1,001+". */
+  label: string;
+}
+
+/** One axis of choice, built from the attributes/attribute_values vocabulary. */
+export interface OptionAxis {
+  attribute_id: number;
+  name: string;
+  unit: string | null;
+  values: { id: number; value: string }[];
+}
+
+/** One buyable combination. */
+export interface ProductVariant {
+  id: number;
+  sku: string | null;
+  price: Price;
+  stock: number;
+  in_stock: boolean;
+  options: { attribute_id: number; attribute_value_id: number }[];
+}
+
+/** A server-priced basket line. The browser never does this arithmetic. */
+export interface QuoteLine {
+  product_id: number;
+  offer_id: number | null;
+  variant_id: number | null;
+  quantity: number;
+  unit_price: Price;
+  base_price: Price;
+  total: Price;
+  tier: PriceTier | null;
+  stock: number;
+  purchasable: boolean;
+  reason: string | null;
+}
+
+export interface CartQuote {
+  lines: QuoteLine[];
+  subtotal: Price;
+  can_checkout: boolean;
 }
 
 export interface Specification {
@@ -166,6 +223,27 @@ export interface ProductDetail {
   sourcing: Sourcing;
   /** Primary offer first; more than one turns the page into a comparison. */
   buying_options: BuyingOption[];
+  /** Optional quantity breaks. Empty is the ordinary case. */
+  price_tiers: PriceTier[];
+  /** Optional selectable options and the combinations behind them. */
+  options: OptionAxis[];
+  variants: ProductVariant[];
+  /**
+   * Present only when the product sells by combination.
+   *
+   * `stock` and the price range are aggregated across live variants, because
+   * for such a product the parent row is not the commercial unit — its stock
+   * is meaningless and its price is at best the cheapest variant.
+   */
+  variant_summary: {
+    has_variants: true;
+    requires_selection: boolean;
+    stock: number;
+    in_stock: boolean;
+    price_from: number;
+    price_to: number;
+    is_range: boolean;
+  } | null;
   specifications: Specification[];
   rating: Rating & {
     distribution: { star: number; count: number; percent: number }[];
@@ -308,6 +386,12 @@ export interface OrderItem {
   total: number;
   status: string;
   sourcing: Sourcing;
+  /**
+   * The combination bought, in the words it was bought under — frozen onto
+   * the order at checkout rather than looked up against today's listing, so
+   * the line stays readable after the seller edits or deletes the variant.
+   */
+  options: { attribute: string; value: string }[] | null;
 }
 
 /** One stop on the order journey, as the tracking screen renders it. */

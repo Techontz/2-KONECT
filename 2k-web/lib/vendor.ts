@@ -7,7 +7,66 @@ export interface SellerAttribute {
   name: string;
   type: "select" | "multiselect" | "text" | "number";
   unit: string | null;
+  /** Curated values as plain text, for the specification fields. */
   options: string[];
+  /** The same values with ids — what a variant names. */
+  values?: { id: number; value: string }[];
+}
+
+
+/**
+ * Flattens the optional pricing and variant structures into the multipart
+ * body, in the bracket notation Laravel's validator reads back as arrays.
+ *
+ * Both are skipped entirely when absent, which is what tells the server to
+ * leave whatever the product already has alone — an omitted key must never be
+ * read as "delete these".
+ */
+function appendPricing(
+  form: FormData,
+  fields: {
+    price_tiers?: { min_quantity: number; max_quantity: number | null; unit_price: number }[];
+    variants?: {
+      sku: string | null;
+      price: number | null;
+      stock: number;
+      is_active: boolean;
+      options: { attribute_id: number; attribute_value_id: number }[];
+    }[];
+  },
+) {
+  if (fields.price_tiers) {
+    if (fields.price_tiers.length === 0) {
+      // An explicit empty array is how a seller clears their tiers. A bare
+      // key with no rows does not survive multipart, so it is sent as a flag
+      // the server reads as "present, and empty".
+      form.append("price_tiers", "");
+    }
+
+    fields.price_tiers.forEach((tier, index) => {
+      form.append(`price_tiers[${index}][min_quantity]`, String(tier.min_quantity));
+      if (tier.max_quantity !== null) {
+        form.append(`price_tiers[${index}][max_quantity]`, String(tier.max_quantity));
+      }
+      form.append(`price_tiers[${index}][unit_price]`, String(tier.unit_price));
+    });
+  }
+
+  if (fields.variants) {
+    if (fields.variants.length === 0) form.append("variants", "");
+
+    fields.variants.forEach((variant, index) => {
+      if (variant.sku) form.append(`variants[${index}][sku]`, variant.sku);
+      if (variant.price !== null) form.append(`variants[${index}][price]`, String(variant.price));
+      form.append(`variants[${index}][stock]`, String(variant.stock));
+      form.append(`variants[${index}][is_active]`, variant.is_active ? "1" : "0");
+
+      variant.options.forEach((option, position) => {
+        form.append(`variants[${index}][options][${position}][attribute_id]`, String(option.attribute_id));
+        form.append(`variants[${index}][options][${position}][attribute_value_id]`, String(option.attribute_value_id));
+      });
+    });
+  }
 }
 
 /** Typed client for the vendor portal API (`/api/shop/vendor/*`). */
@@ -149,6 +208,16 @@ export const vendorApi = {
     lead_time_min_days?: number;
     lead_time_max_days?: number;
     fulfilment_location?: string;
+    /** Optional quantity breaks. Omit to leave existing ones untouched. */
+    price_tiers?: { min_quantity: number; max_quantity: number | null; unit_price: number }[];
+    /** Optional selectable combinations. Omit to leave existing ones untouched. */
+    variants?: {
+      sku: string | null;
+      price: number | null;
+      stock: number;
+      is_active: boolean;
+      options: { attribute_id: number; attribute_value_id: number }[];
+    }[];
   }) {
     const form = new FormData();
     form.append("name", fields.name);
@@ -175,6 +244,8 @@ export const vendorApi = {
     Object.entries(fields.attributes ?? {}).forEach(([id, value]) => {
       if (value) form.append(`attributes[${id}]`, value);
     });
+
+    appendPricing(form, fields);
 
     const { data } = await api.post("/products", form, {
       headers: { "Content-Type": "multipart/form-data" },
@@ -206,18 +277,31 @@ export const vendorApi = {
       lead_time_min_days: number;
       lead_time_max_days: number;
       fulfilment_location: string;
+      price_tiers: { min_quantity: number; max_quantity: number | null; unit_price: number }[];
+      variants: {
+        sku: string | null;
+        price: number | null;
+        stock: number;
+        is_active: boolean;
+        options: { attribute_id: number; attribute_value_id: number }[];
+      }[];
     }>
   ) {
     const form = new FormData();
 
     for (const [key, value] of Object.entries(fields)) {
       if (value === undefined || key === "images") continue;
+      // Both are arrays of objects and are appended field by field below;
+      // String()-ing them here would post "[object Object]".
+      if (key === "price_tiers" || key === "variants") continue;
       if (key === "remove_images") {
         if (value) form.append("remove_images", "true");
         continue;
       }
       form.append(key, String(value));
     }
+
+    appendPricing(form, fields);
 
     (fields.images ?? []).forEach((file) => form.append("images[]", file));
 

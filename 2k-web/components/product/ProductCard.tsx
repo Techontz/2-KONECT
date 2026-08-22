@@ -9,6 +9,7 @@ import { useWishlist } from "@/lib/store/wishlist";
 import type { ProductCard as ProductCardModel } from "@/lib/types";
 import { PriceBlock, RatingPill, Tag } from "@/components/ui/Primitives";
 import { AvailabilityStrip } from "@/components/sourcing/Availability";
+import { StockLevel } from "./StockLevel";
 import { VerifiedBadge } from "@/components/sourcing/Trust";
 
 /**
@@ -187,8 +188,34 @@ export function ProductCard({
             </div>
           ) : null}
 
+          {/* "From" when the price depends on a choice the shopper has not
+              made yet, so the grid never quotes the cheapest combination as
+              though it were the price of the product. */}
           <div className="mt-1.5">
-            <PriceBlock price={product.price} size="md" />
+            {product.price_from ? (
+              <span className="mr-1 align-middle text-[10px] font-bold uppercase tracking-wide text-[color:var(--color-ink-faint)]">
+                From
+              </span>
+            ) : null}
+            <span className="align-middle">
+              <PriceBlock price={product.price} size="md" />
+            </span>
+          </div>
+
+          {/* Stock, and a bulk-pricing hint where the seller configured tiers.
+              One short line at the card's smallest size, sharing a row rather
+              than taking two — the height of this block was hard-won and
+              neither of these earns a row of its own. */}
+          <div className="mt-0.5 flex min-w-0 items-baseline gap-1 leading-[15px]">
+            <StockLevel
+              stock={product.stock}
+              toOrder={product.stock <= 0 && !product.sourcing?.is_local}
+            />
+            {product.has_bulk_pricing ? (
+              <span className="clamp-1 text-[10.5px] font-medium text-[color:var(--color-brand-600)]">
+                · Bulk pricing
+              </span>
+            ) : null}
           </div>
 
           {product.vendor ? (

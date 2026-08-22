@@ -129,16 +129,23 @@ export function Tag({
 type ButtonVariant = "primary" | "secondary" | "ghost" | "dark" | "brandGhost";
 type ButtonSize = "sm" | "md" | "lg";
 
+/**
+ * Only `primary` carried a disabled appearance, so a disabled secondary,
+ * ghost or dark button looked exactly like a working one — you found out by
+ * clicking. That went unnoticed while nothing important was ever disabled;
+ * "Add to cart" on a product that sells by option is disabled until a
+ * combination is chosen, so the state now has to be visible.
+ */
 const BUTTON_VARIANTS: Record<ButtonVariant, string> = {
   primary:
     "bg-[color:var(--color-brand)] text-white shadow-[var(--shadow-brand)] hover:bg-[color:var(--color-brand-strong)] active:translate-y-px disabled:bg-[color:var(--color-line-strong)] disabled:shadow-none",
   secondary:
-    "bg-[color:var(--color-surface)] text-[color:var(--color-ink)] border border-[color:var(--color-line-strong)] hover:border-[color:var(--color-ink)] active:translate-y-px",
+    "bg-[color:var(--color-surface)] text-[color:var(--color-ink)] border border-[color:var(--color-line-strong)] hover:border-[color:var(--color-ink)] active:translate-y-px disabled:bg-[color:var(--color-canvas)] disabled:text-[color:var(--color-ink-faint)] disabled:border-[color:var(--color-line)] disabled:hover:border-[color:var(--color-line)]",
   brandGhost:
-    "bg-[color:var(--color-brand-50)] text-[color:var(--color-brand)] border border-[color:var(--color-brand-200)] hover:bg-[color:var(--color-brand-100)]",
+    "bg-[color:var(--color-brand-50)] text-[color:var(--color-brand)] border border-[color:var(--color-brand-200)] hover:bg-[color:var(--color-brand-100)] disabled:bg-[color:var(--color-canvas)] disabled:text-[color:var(--color-ink-faint)] disabled:border-[color:var(--color-line)]",
   ghost:
-    "bg-transparent text-[color:var(--color-ink)] hover:bg-[color:var(--color-surface-alt)]",
-  dark: "bg-[color:var(--color-ink)] text-white hover:opacity-90 active:translate-y-px",
+    "bg-transparent text-[color:var(--color-ink)] hover:bg-[color:var(--color-surface-alt)] disabled:text-[color:var(--color-ink-faint)] disabled:hover:bg-transparent",
+  dark: "bg-[color:var(--color-ink)] text-white hover:opacity-90 active:translate-y-px disabled:bg-[color:var(--color-line-strong)] disabled:hover:opacity-100",
 };
 
 // Every size clears the 44px comfortable-tap floor except `sm`, which is only

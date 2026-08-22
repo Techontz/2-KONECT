@@ -1,5 +1,6 @@
 import api from "./api";
 import type {
+  CartQuote,
   Address,
   AddressInput,
   Availability,
@@ -248,10 +249,33 @@ export const shop = {
     return data.order;
   },
 
+  /**
+   * Prices a basket on the server.
+   *
+   * The cart lives in the browser, so it can remember what was picked up but
+   * must not be believed about what it costs — quantity tiers and variant
+   * prices are resolved by the same code that will charge for them.
+   */
+  async quote(items: {
+    product_id: number;
+    quantity: number;
+    offer_id?: number | null;
+    variant_id?: number | null;
+  }[]): Promise<CartQuote> {
+    const { data } = await api.post<CartQuote>("/shop/cart/quote", { items });
+    return data;
+  },
+
   async placeOrder(payload: {
     // `offer_id` carries the buying option the shopper chose — the imported
     // alternative rather than the product's own local offer.
-    items: { product_id: number; quantity: number; offer_id?: number | null }[];
+    items: {
+      product_id: number;
+      quantity: number;
+      offer_id?: number | null;
+      /** Which combination, when the product sells by option. */
+      variant_id?: number | null;
+    }[];
     delivery_address: string;
     customer_phone: string;
     payment_method: "cash_on_delivery" | "mobile_money";

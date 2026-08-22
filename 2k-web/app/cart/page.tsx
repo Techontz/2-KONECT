@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { formatMoney } from "@/lib/format";
 import { keyOf, lineSourcing, unitPrice, useCart } from "@/lib/store/cart";
+import { useCartQuote } from "@/lib/useCartQuote";
 import { useWishlist } from "@/lib/store/wishlist";
 import { SiteChrome } from "@/components/layout/SiteChrome";
 import { AvailabilityBadge, DeliveryEstimate } from "@/components/sourcing/Availability";
@@ -27,6 +28,11 @@ const DELIVERY_FEE = 3000;
  */
 export default function CartPage() {
   const cart = useCart();
+
+  // What the server would actually charge. Quantity tiers live there, so the
+  // cart asks rather than guessing; if the call fails the per-line prices
+  // below still render, and they are correct for any product without tiers.
+  const { lineFor, quote } = useCartQuote(cart.lines, cart.ready);
   const wishlist = useWishlist();
   const router = useRouter();
 
@@ -50,7 +56,8 @@ export default function CartPage() {
     );
   }
 
-  const total = cart.subtotal + (cart.lines.length ? DELIVERY_FEE : 0);
+  const subtotal = quote?.subtotal.current ?? cart.subtotal;
+  const total = subtotal + (cart.lines.length ? DELIVERY_FEE : 0);
 
   // The two halves of a mixed basket, so the summary can be honest about the
   // fact that they will not turn up together.
@@ -90,7 +97,10 @@ export default function CartPage() {
               const { product, quantity, option } = line;
               const key = keyOf(line);
               const sourcing = lineSourcing(line);
-              const price = unitPrice(line);
+              // The server's price when it has answered, the local one until
+              // then — they differ only where a quantity tier applies.
+              const quoted = lineFor(line);
+              const price = quoted?.unit_price.current ?? unitPrice(line);
               const ceiling = sourcing && !sourcing.is_local ? 99 : Math.max(option?.stock ?? product.stock, 1);
 
               return (
@@ -112,6 +122,15 @@ export default function CartPage() {
                     <Link href={`/product?id=${product.id}`} prefetch={false} className="clamp-2 text-[14px] font-semibold hover:underline">
                       {product.name}
                     </Link>
+
+                    {/* Which combination, when the product sells by option.
+                        Two variants of one product are two lines here, and
+                        without this they would read as a duplicate. */}
+                    {line.variantLabel ? (
+                      <p className="mt-0.5 text-[12px] font-semibold text-[color:var(--color-ink-soft)]">
+                        {line.variantLabel}
+                      </p>
+                    ) : null}
 
                     {/* How this line is being bought, right under its name —
                         two lines of the same product can sit in one cart at
@@ -184,7 +203,7 @@ export default function CartPage() {
               <dl className="space-y-2 text-[13px]">
                 <SummaryRow
                   label={`Subtotal (${cart.count} ${cart.count === 1 ? "item" : "items"})`}
-                  value={formatMoney(cart.subtotal)}
+                  value={formatMoney(subtotal)}
                 />
                 <SummaryRow label="Delivery" value={formatMoney(DELIVERY_FEE)} />
               </dl>

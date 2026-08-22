@@ -156,6 +156,9 @@ function CheckoutContent() {
           // Which way they chose to buy it. The server prices and dates the
           // line from this, so what was promised here is what gets recorded.
           offer_id: line.option?.id ?? null,
+          // Which combination, when the product sells by option. The server
+          // re-resolves the price and the stock behind it either way.
+          variant_id: line.variant?.id ?? null,
         })),
         delivery_address: address.trim(),
         customer_phone: phone.trim(),

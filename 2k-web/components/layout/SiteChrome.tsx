@@ -66,14 +66,12 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
 
   return (
     <CategoriesContext.Provider value={categories}>
-      {/* Skip link: the first stop for a keyboard, ahead of a header full of
-          category links on every single page. */}
-      <a
-        href="#main"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-[var(--radius-sm)] focus:bg-[color:var(--color-brand)] focus:px-4 focus:py-2.5 focus:text-sm focus:font-bold focus:text-white"
-      >
-        Skip to content
-      </a>
+      {/* The skip link that used to sit here has been removed at the client's
+          request: it was rendering as a dark floating box over the header.
+          Everything else it depended on stays — <main id="main"> below is
+          still a landmark, the header is still <header>, the nav is still
+          <nav aria-label>, and tab order through them is unchanged. A keyboard
+          user now tabs the header links rather than jumping past them. */}
 
       <div className="flex min-h-screen flex-col">
         <Header onOpenMenu={() => setDrawerOpen(true)} />

@@ -127,7 +127,7 @@ export function ProductGallery({
           <img
             key={src}
             src={src}
-            alt={name}
+            alt={`${name} — photo ${activeIndex + 1} of ${images.length}`}
             // The hero image is the page's largest paint — load it eagerly.
             fetchPriority="high"
             onLoad={(event) => {
@@ -284,7 +284,7 @@ function TouchViewer({
         <div className={zoomed ? "min-h-full w-[250%]" : "flex h-full w-full items-center justify-center"}>
           <img
             src={images[index]}
-            alt={name}
+            alt={`${name} — photo ${index + 1} of ${images.length}`}
             onClick={() => setZoomed((current) => !current)}
             className={zoomed ? "w-full" : "max-h-full max-w-full object-contain"}
           />

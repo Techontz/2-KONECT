@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
-import type { BuyingOption, ProductCard, Sourcing } from "../types";
+import type { BuyingOption, ProductCard, ProductVariant, Sourcing } from "../types";
 
 /**
  * Shopping cart.
@@ -23,6 +23,23 @@ export interface CartLine {
   quantity: number;
   /** The chosen alternative; absent means the product's own primary offer. */
   option?: BuyingOption;
+  /**
+   * The chosen combination, for a product that sells by option.
+   *
+   * Carried so the cart can show which one, and so checkout can name it to
+   * the server. The price stored on it is only ever a *display* figure: the
+   * server re-resolves every line at quote and again at order, so a stale
+   * basket cannot fix a price.
+   */
+  variant?: ProductVariant;
+  /**
+   * The chosen values in words, for display in the cart.
+   *
+   * Kept beside the variant because the cart renders from what it holds, and
+   * looking "Blue / 256GB" back up would mean shipping the whole option
+   * vocabulary into the basket. Never used for pricing — that is the server's.
+   */
+  variantLabel?: string;
 }
 
 interface CartContextValue {
@@ -30,7 +47,13 @@ interface CartContextValue {
   count: number;
   subtotal: number;
   ready: boolean;
-  add(product: ProductCard, quantity?: number, option?: BuyingOption | null): void;
+  add(
+    product: ProductCard,
+    quantity?: number,
+    option?: BuyingOption | null,
+    variant?: ProductVariant | null,
+    variantLabel?: string,
+  ): void;
   setQuantity(key: string, quantity: number): void;
   remove(key: string): void;
   clear(): void;
@@ -47,18 +70,35 @@ const LEGACY_STORAGE_KEY = "d2k.cart.v1";
 
 const CartContext = createContext<CartContextValue | null>(null);
 
-/** Identifies a line: the product, plus which offer of it. */
-export function lineKey(productId: number, optionId?: number | null): string {
-  return `${productId}:${optionId ?? "primary"}`;
+/**
+ * Identifies a line: the product, which offer of it, and which combination.
+ *
+ * The variant is part of the key because black and blue are two lines, not one
+ * line of two — merging them would lose the distinction the shopper just made.
+ */
+export function lineKey(
+  productId: number,
+  optionId?: number | null,
+  variantId?: number | null,
+): string {
+  return `${productId}:${optionId ?? "primary"}:${variantId ?? "base"}`;
 }
 
 export function keyOf(line: CartLine): string {
-  return lineKey(line.product.id, line.option?.id);
+  return lineKey(line.product.id, line.option?.id, line.variant?.id);
 }
 
-/** What a line actually costs per unit, and where it comes from. */
+/**
+ * What a line costs per unit, for display before the server has priced it.
+ *
+ * Precedence matches App\Support\Pricing on the server: the variant's price,
+ * then the offer's, then the product's. Quantity tiers are deliberately not
+ * applied here — the cart shows the server's quote for those, because guessing
+ * at a tier in the browser and being corrected at checkout is worse than
+ * waiting a moment for the real number.
+ */
 export function unitPrice(line: CartLine): number {
-  return line.option?.price.current ?? line.product.price.current;
+  return line.variant?.price.current ?? line.option?.price.current ?? line.product.price.current;
 }
 
 export function lineSourcing(line: CartLine): Sourcing | undefined {
@@ -89,15 +129,28 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(lines));
   }, [lines, ready]);
 
-  const add = useCallback((product: ProductCard, quantity = 1, option?: BuyingOption | null) => {
-    const key = lineKey(product.id, option?.id);
-    const ceiling = ceilingFor(product, option);
+  const add = useCallback((
+    product: ProductCard,
+    quantity = 1,
+    option?: BuyingOption | null,
+    variant?: ProductVariant | null,
+    variantLabel?: string,
+  ) => {
+    const key = lineKey(product.id, option?.id, variant?.id);
+    // A variant counts its own stock, so it is the ceiling when there is one.
+    const ceiling = variant ? Math.max(variant.stock, 0) : ceilingFor(product, option);
 
     setLines((current) => {
       const existing = current.find((line) => keyOf(line) === key);
 
       if (!existing) {
-        return [...current, { product, quantity: clamp(quantity, ceiling), option: option ?? undefined }];
+        return [...current, {
+          product,
+          quantity: clamp(quantity, ceiling),
+          option: option ?? undefined,
+          variant: variant ?? undefined,
+          variantLabel: variantLabel || undefined,
+        }];
       }
 
       return current.map((line) =>
@@ -112,7 +165,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         ? current.filter((line) => keyOf(line) !== key)
         : current.map((line) =>
             keyOf(line) === key
-              ? { ...line, quantity: clamp(quantity, ceilingFor(line.product, line.option)) }
+              ? {
+                  ...line,
+                  quantity: clamp(
+                    quantity,
+                    line.variant ? Math.max(line.variant.stock, 0) : ceilingFor(line.product, line.option),
+                  ),
+                }
               : line,
           ),
     );

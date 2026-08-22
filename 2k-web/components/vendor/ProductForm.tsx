@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/Primitives";
 import { useT } from "@/lib/i18n";
 import { ProductImagePicker, type PickedImage } from "./ProductImagePicker";
 import type { SellerAttribute } from "@/lib/vendor";
+import { PriceTierEditor, validate as validateTiers, type TierDraft } from "./PriceTierEditor";
+import { VariantEditor, findDuplicates, incomplete, type VariantDraft } from "./VariantEditor";
 
 /**
  * Countries the marketplace sources from, mirroring App\Support\Sourcing.
@@ -73,6 +75,33 @@ export function ProductForm({ product }: { product?: ProductDetail }) {
   const [attributes, setAttributes] = useState<SellerAttribute[]>([]);
   const [attributeValues, setAttributeValues] = useState<Record<number, string>>({});
 
+  // Both optional, and both seeded from the product so editing shows what is
+  // already configured rather than an empty form that would wipe it on save.
+  const [tiers, setTiers] = useState<TierDraft[]>(
+    (product?.price_tiers ?? []).map((tier) => ({
+      min_quantity: tier.min_quantity,
+      max_quantity: tier.max_quantity ?? "",
+      unit_price: tier.unit_price,
+    })),
+  );
+
+  const [axes, setAxes] = useState<number[]>(
+    (product?.options ?? []).map((axis) => axis.attribute_id),
+  );
+
+  const [variants, setVariants] = useState<VariantDraft[]>(
+    (product?.variants ?? []).map((variant) => ({
+      sku: variant.sku ?? "",
+      // A variant that matches the product's price is inheriting it; showing
+      // the figure would turn an inherited price into a pinned one on save.
+      price: variant.price.current === (product?.price.current ?? -1) ? "" : variant.price.current,
+      stock: variant.stock,
+      options: Object.fromEntries(
+        variant.options.map((option) => [option.attribute_id, option.attribute_value_id]),
+      ),
+    })),
+  );
+
   useEffect(() => {
     shop.categories().then(setCategories).catch(() => setCategories([]));
   }, []);
@@ -106,6 +135,26 @@ export function ProductForm({ product }: { product?: ProductDetail }) {
       return;
     }
 
+    // The server enforces both of these; catching them here means the seller
+    // is told which row is wrong instead of being handed a validation error
+    // after the upload.
+    if (validateTiers(tiers).some(Boolean)) {
+      setError("Fix the overlapping or incomplete bulk pricing rows first.");
+      return;
+    }
+
+    const readyVariants = variants.filter((variant) => !incomplete(variant, axes));
+
+    if (variants.length !== readyVariants.length) {
+      setError("Every variant needs a value for each option.");
+      return;
+    }
+
+    if (findDuplicates(variants, axes).some(Boolean)) {
+      setError("Two variants describe the same combination.");
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -127,6 +176,8 @@ export function ProductForm({ product }: { product?: ProductDetail }) {
           fulfilment_location: form.fulfilment_location || undefined,
           images: images.length ? images.map((image) => image.file) : undefined,
           remove_images: replaceExisting,
+          price_tiers: tierPayload(tiers),
+          variants: variantPayload(readyVariants, axes),
         });
       } else {
         await vendorApi.createProduct({
@@ -146,6 +197,8 @@ export function ProductForm({ product }: { product?: ProductDetail }) {
           fulfilment_location: form.fulfilment_location || undefined,
           images: images.map((image) => image.file),
           attributes: attributeValues,
+          price_tiers: tierPayload(tiers),
+          variants: variantPayload(readyVariants, axes),
         });
       }
 
@@ -154,6 +207,32 @@ export function ProductForm({ product }: { product?: ProductDetail }) {
       setError(apiError(err, t("common.somethingWrong")));
       setSaving(false);
     }
+  }
+
+  /** Drops half-typed rows; the rest go as the API expects them. */
+  function tierPayload(rows: TierDraft[]) {
+    return rows
+      .filter((tier) => tier.min_quantity !== "" && tier.unit_price !== "")
+      .map((tier) => ({
+        min_quantity: Number(tier.min_quantity),
+        max_quantity: tier.max_quantity === "" ? null : Number(tier.max_quantity),
+        unit_price: Number(tier.unit_price),
+      }));
+  }
+
+  function variantPayload(rows: VariantDraft[], on: number[]) {
+    return rows.map((variant) => ({
+      sku: variant.sku || null,
+      // Blank means "inherit the product price", which the server stores as
+      // null rather than as a copy of today's figure.
+      price: variant.price === "" ? null : Number(variant.price),
+      stock: Number(variant.stock || 0),
+      is_active: true,
+      options: on.map((attributeId) => ({
+        attribute_id: attributeId,
+        attribute_value_id: variant.options[attributeId],
+      })),
+    }));
   }
 
   function update<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
@@ -230,6 +309,18 @@ export function ProductForm({ product }: { product?: ProductDetail }) {
             </label>
           </div>
         </section>
+
+        {/* Optional, and inert unless the seller uses them. */}
+        <PriceTierEditor tiers={tiers} onChange={setTiers} />
+
+        <VariantEditor
+          attributes={attributes}
+          axes={axes}
+          onAxes={setAxes}
+          variants={variants}
+          onChange={setVariants}
+          productPrice={form.new_price}
+        />
 
         {/* Where the stock is. On 2KONECT this decides how the listing is
             filed, priced against, and what arrival date a buyer is promised —

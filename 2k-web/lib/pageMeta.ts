@@ -18,6 +18,7 @@ export function pageMeta({
   description,
   path,
   index = true,
+  followOnly = false,
 }: {
   /** Without the brand — the root layout's template appends it. */
   title: string;
@@ -26,6 +27,17 @@ export function pageMeta({
   path?: string;
   /** False for anything personal: an account page indexed is a dead result. */
   index?: boolean;
+  /**
+   * Keep the page out of the index but let a crawler follow its links.
+   *
+   * For search results: `/search?q=` accepts any string, so leaving it
+   * indexable invites Google to index an unbounded set of near-identical
+   * pages, each thinner than the category page covering the same products.
+   * The links on it are still worth following — they lead to real products —
+   * which is why this is separate from `index: false`, whose `nofollow` is
+   * right for a personal page and wrong here.
+   */
+  followOnly?: boolean;
 }): Metadata {
   // Absolute rather than relying on the root template. Nesting a layout under
   // another one makes which template applies ambiguous, and a route already
@@ -37,7 +49,11 @@ export function pageMeta({
     title: { absolute: full },
     description,
     ...(path ? { alternates: { canonical: path } } : {}),
-    robots: index ? { index: true, follow: true } : { index: false, follow: false },
+    robots: followOnly
+      ? { index: false, follow: true }
+      : index
+        ? { index: true, follow: true }
+        : { index: false, follow: false },
     openGraph: {
       title: full,
       description,
