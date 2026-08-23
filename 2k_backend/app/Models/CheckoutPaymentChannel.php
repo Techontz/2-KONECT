@@ -23,6 +23,10 @@ class CheckoutPaymentChannel extends Model
         never available for an imported order. */
     public const CASH_ON_DELIVERY = 'cash_on_delivery';
 
+    /** Hosted card payment. A gateway: it confirms itself through a signed
+        webhook, so there is no reference to type and no human to wait for. */
+    public const STRIPE = 'stripe';
+
     protected $fillable = [
         'code',
         'label',
@@ -30,6 +34,7 @@ class CheckoutPaymentChannel extends Model
         'number',
         'instructions',
         'is_active',
+        'is_gateway',
         'requires_reference',
         'requires_verification',
         'sort_order',
@@ -37,6 +42,7 @@ class CheckoutPaymentChannel extends Model
 
     protected $casts = [
         'is_active'             => 'boolean',
+        'is_gateway'            => 'boolean',
         'requires_reference'    => 'boolean',
         'requires_verification' => 'boolean',
         'sort_order'            => 'integer',
@@ -61,6 +67,12 @@ class CheckoutPaymentChannel extends Model
             'label'                 => $this->label,
             'merchant_name'         => $this->merchant_name,
             'number'                => $this->number,
+            // Whether the shopper reads a number off the screen or is sent
+            // somewhere to pay. The clients branch on this rather than on the
+            // code, so adding a second gateway later needs no client release —
+            // and so the list of what counts as a gateway does not end up
+            // hardcoded in a bundle, which is where the till number used to be.
+            'is_gateway'            => (bool) $this->is_gateway,
             'instructions'          => $this->instructions,
             'requires_reference'    => $this->requires_reference,
             'requires_verification' => $this->requires_verification,

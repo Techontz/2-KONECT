@@ -21,6 +21,7 @@ class User extends Authenticatable implements FilamentUser
         'phone',
         'address',
         'firebase_uid',
+        'stripe_customer_id',
         'avatar_url',
         'email_verified_at',
     ];

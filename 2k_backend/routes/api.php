@@ -14,7 +14,6 @@ use App\Http\Controllers\Api\SubscriptionController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\WalletController;
 use App\Http\Controllers\Api\WithdrawalController;
-use App\Http\Controllers\Api\VendorOrderController;
 use App\Http\Controllers\Api\BannerController;
 use App\Http\Controllers\Api\VendorPaymentController;
 use App\Http\Controllers\Api\NotificationController;
@@ -112,7 +111,37 @@ Route::post('/auth/google', [\App\Http\Controllers\Auth\GoogleAuthController::cl
     ->middleware('throttle:10,1');
 
 // 💳 AzamPay Callback
-Route::post('/v1/Checkout/Callback', [PaymentController::class, 'azampayCallback']);
+//
+// Registered only when the AzamPay surface is switched on, and then only
+// behind `azampay.callback`. AzamPay publishes no callback signing mechanism,
+// so that middleware is a gate we own rather than proof of who is calling —
+// which is why passing it records a claim and never settles a payment.
+//
+// The secret may arrive as a path segment, an `X-Callback-Token` header or a
+// `token` query parameter, because which of those a gateway's portal lets you
+// configure is not up to us. Both shapes are registered so the callback URL
+// can be whichever AzamPay accepts.
+if (config('azampay.enabled')) {
+    Route::post('/v1/Checkout/Callback/{token}', [PaymentController::class, 'azampayCallback'])
+        ->middleware(['azampay.callback', 'throttle:30,1']);
+
+    Route::post('/v1/Checkout/Callback', [PaymentController::class, 'azampayCallback'])
+        ->middleware(['azampay.callback', 'throttle:30,1']);
+}
+
+// 💳 Stripe webhook
+//
+// Unauthenticated by necessity — Stripe cannot present a session — and
+// unauthenticated safely, because the signature over the raw body *is* the
+// authentication. Deliberately not throttled: rate-limiting a gateway turns a
+// burst into retries and retries into a larger burst. API routes carry no
+// CSRF, so there is nothing to exempt.
+//
+// This is the only thing in the system that may settle an order without a
+// person, and it earns that by being cryptographically verified.
+if (config('stripe.enabled')) {
+    Route::post('/webhooks/stripe', \App\Http\Controllers\Api\StripeWebhookController::class);
+}
 
 // 🗂️ Categories
 Route::get('/categories', [CategoryController::class, 'index']);
@@ -209,6 +238,20 @@ Route::middleware('auth:sanctum')->group(function () {
         // have paid. Confirming a payment is deliberately not reachable from
         // here — an administrator does that from the admin panel.
         Route::post('/orders/{reference}/payment', [ShopCheckoutPaymentController::class, 'submit']);
+
+        // Opening a hosted card payment page for an order that already exists.
+        //
+        // Creates no order and decides no rule: the order was placed through
+        // the checkout above, CheckoutPolicy already ruled on it, and this
+        // returns a URL to pay what is already owed. The amount is recomputed
+        // server-side; the request carries no body.
+        //
+        // Throttled, unlike the webhook: this one is reachable by a signed-in
+        // shopper, and each call is an API round trip to Stripe.
+        if (config('stripe.enabled')) {
+            Route::post('/orders/{reference}/checkout-session', [\App\Http\Controllers\Api\Shop\StripeCheckoutController::class, 'store'])
+                ->middleware('throttle:20,1');
+        }
     });
 
     /* --------------------------------------------------------- */
@@ -325,10 +368,22 @@ Route::middleware('auth:sanctum')->group(function () {
     /* --------------------------------------------------------- */
     /* 💳 PAYMENTS & WITHDRAWALS                                 */
     /* --------------------------------------------------------- */
-    Route::post('/checkout', [PaymentController::class, 'checkout']);
     Route::post('/withdraw', [WithdrawalController::class, 'requestWithdrawal']);
-    Route::post('/checkout/confirm-manual', [PaymentController::class, 'confirmManualPayment']);
-    Route::post('/checkout/vendors', [PaymentController::class, 'previewVendors']);
+
+    // The legacy checkout. Registered only when the AzamPay surface is on, so
+    // by default these are a 404 rather than a refusal — there is nothing to
+    // probe and nothing to fingerprint.
+    //
+    // Nothing calls them. The website checks out through POST /api/shop/orders,
+    // the current Flutter app does the same, and the retired app never had
+    // these endpoints in its source. They are gated rather than deleted because
+    // the AzamPay integration is real work and mobile money is the obvious next
+    // channel — but until it is switched on deliberately, the surface is shut.
+    if (config('azampay.enabled')) {
+        Route::post('/checkout', [PaymentController::class, 'checkout']);
+        Route::post('/checkout/confirm-manual', [PaymentController::class, 'confirmManualPayment']);
+        Route::post('/checkout/vendors', [PaymentController::class, 'previewVendors']);
+    }
 
     /* --------------------------------------------------------- */
     /* 🛒 USER ORDERS                                            */
