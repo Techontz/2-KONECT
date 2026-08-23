@@ -16,6 +16,15 @@ export interface PaymentChannel {
   instructions: string | null;
   requires_reference: boolean;
   requires_verification: boolean;
+  /**
+   * Does the shopper get sent somewhere to pay, rather than reading a number
+   * off the screen?
+   *
+   * Branch on this, never on `code === "stripe"`. The list of what counts as a
+   * gateway belongs to the server for the same reason the till number does —
+   * a second gateway added later should not need a frontend release.
+   */
+  is_gateway: boolean;
 }
 
 export interface PaymentOptions {
@@ -41,6 +50,23 @@ export async function paymentOptions(hasImport: boolean): Promise<PaymentOptions
     params: hasImport ? { import: 1 } : undefined,
   });
   return data;
+}
+
+/**
+ * Open a hosted card payment for an order that already exists.
+ *
+ * Returns only a URL. The browser's whole job is to go there — it does not see
+ * an amount, a key or a session object, and it could not usefully send one:
+ * the server prices the order from its own rows and ignores the request body.
+ *
+ * Coming back from Stripe settles nothing. The order page refetches, and only
+ * a signed webhook can have moved it.
+ */
+export async function createCheckoutSession(reference: string): Promise<string> {
+  const { data } = await api.post<{ url: string }>(
+    `/shop/orders/${encodeURIComponent(reference)}/checkout-session`,
+  );
+  return data.url;
 }
 
 /** Tell 2KONECT the money has been sent. Never marks the order paid. */

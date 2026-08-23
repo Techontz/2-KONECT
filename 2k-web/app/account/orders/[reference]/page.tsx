@@ -44,6 +44,15 @@ function OrderDetail() {
   const reference = decodeURIComponent(String(params.reference ?? ""));
   const justPlaced = search.get("placed") === "1";
 
+  // Where the shopper came back from, and nothing more.
+  //
+  // `?stripe=success` is a hint that they finished on the payment page. It is
+  // NOT evidence the money arrived: anybody can type it, and a shopper who
+  // paid but closed the tab never sends it at all. The order is settled by a
+  // signed webhook or not at all, so this only decides which sentence to show
+  // while the real state is fetched.
+  const returnedFromGateway = search.get("stripe");
+
   const { isAuthenticated, ready, requireAuth } = useAuth();
 
   const hydrated = useHydrated();
@@ -63,6 +72,28 @@ function OrderDetail() {
     if (!isAuthenticated) { void requireAuth(); return; }
     load();
   }, [ready, isAuthenticated, requireAuth, load]);
+
+  // Coming back from the payment page, the webhook may not have landed yet —
+  // it is a separate request from Stripe to our server, racing the shopper's
+  // browser. So the order is refetched a few times over the next half minute
+  // rather than leaving somebody looking at a stale "awaiting payment" for an
+  // order they have just paid for.
+  //
+  // This is a display convenience and nothing more. It polls; it never
+  // decides. If the webhook never arrives the order stays unpaid, correctly.
+  useEffect(() => {
+    if (!returnedFromGateway || !isAuthenticated) return;
+    if (order?.payment_status === "verified") return;
+
+    let attempts = 0;
+    const timer = setInterval(() => {
+      attempts += 1;
+      if (attempts > 10) { clearInterval(timer); return; }
+      load();
+    }, 3000);
+
+    return () => clearInterval(timer);
+  }, [returnedFromGateway, isAuthenticated, order?.payment_status, load]);
 
   if (hydrated && ready && !isAuthenticated) {
     return (
@@ -199,6 +230,20 @@ function OrderDetail() {
       <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         {/* Paying for an order that has not been settled. Renders nothing for
             cash on delivery or an order already verified. */}
+        {returnedFromGateway === "success" && order.payment_status !== "verified" ? (
+          <Notice tone="info" className="lg:col-span-2">
+            <span className="block text-[15px] font-black">{t("payment.confirmingPayment")}</span>
+            <span className="mt-1 block text-[13px]">{t("payment.confirmingPaymentHint")}</span>
+          </Notice>
+        ) : null}
+
+        {returnedFromGateway === "cancelled" && order.payment_status !== "verified" ? (
+          <Notice tone="warn" className="lg:col-span-2">
+            <span className="block text-[15px] font-black">{t("payment.paymentCancelled")}</span>
+            <span className="mt-1 block text-[13px]">{t("payment.paymentCancelledHint")}</span>
+          </Notice>
+        ) : null}
+
         {order.payment_method !== "cash_on_delivery" ? (
           <div className="lg:col-span-2">
             <PayPanel

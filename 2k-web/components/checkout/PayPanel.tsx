@@ -6,6 +6,7 @@ import { formatMoney } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 import { apiError } from "@/lib/api";
 import {
+  createCheckoutSession,
   paymentOptions,
   submitPaymentReference,
   type PaymentChannel,
@@ -67,6 +68,21 @@ export function PayPanel({
 
   // Nothing is owed on a cash-on-delivery order, and a settled one is done.
   if (status === "not_required" || status === "verified") return null;
+
+  // A gateway confirms itself. There is no number to copy, no reference to
+  // type and nobody to wait for — the shopper goes and pays, and a signed
+  // webhook settles the order. So this is a different panel, not the same one
+  // with fields hidden.
+  if (channel?.is_gateway) {
+    return (
+      <GatewayPanel
+        reference={reference}
+        amount={amount}
+        channel={channel}
+        status={status}
+      />
+    );
+  }
 
   const waiting = status === "awaiting_verification" || done;
 
@@ -175,6 +191,88 @@ export function PayPanel({
             {busy ? t("payment.submitting") : t("payment.iHavePaid")}
           </Button>
         </form>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Paying by card.
+ *
+ * One button. It asks the server for a Checkout Session and leaves — the URL
+ * is the only thing the server hands back, and the amount was decided there
+ * from the order's own rows.
+ *
+ * Deliberately says nothing about whether the order is paid. Coming back from
+ * Stripe is not evidence of anything; the order page refetches and shows
+ * whatever the webhook has actually recorded.
+ */
+function GatewayPanel({
+  reference,
+  amount,
+  channel,
+  status,
+}: {
+  reference: string;
+  amount: number;
+  channel: PaymentChannel;
+  status: PaymentStatus;
+}) {
+  const t = useT();
+
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function pay() {
+    setBusy(true);
+    setError(null);
+
+    try {
+      const url = await createCheckoutSession(reference);
+      // Leaves the site. `assign` rather than `replace` so the back button
+      // still returns here if the shopper changes their mind on Stripe's page.
+      window.location.assign(url);
+    } catch (err) {
+      setError(apiError(err, t("payment.submitFailed")));
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--color-brand-200)] bg-[color:var(--color-surface)]">
+      <header className="brand-ground px-4 py-3">
+        <p className="text-[15px] font-black text-white">
+          {t("payment.payWith", { method: channel.label })}
+        </p>
+      </header>
+
+      <div className="space-y-3 p-4">
+        {status === "rejected" ? (
+          <Notice tone="danger">{t("payment.rejectedHint")}</Notice>
+        ) : null}
+
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="text-[13px] text-[color:var(--color-ink-muted)]">
+            {t("payment.amountToPay")}
+          </span>
+          <span className="text-[22px] font-black tracking-[-0.02em]">{formatMoney(amount)}</span>
+        </div>
+
+        {channel.instructions ? (
+          <p className="text-[13px] leading-relaxed text-[color:var(--color-ink-muted)]">
+            {channel.instructions}
+          </p>
+        ) : null}
+
+        {error ? <Notice tone="danger">{error}</Notice> : null}
+
+        <Button type="button" size="lg" className="w-full" loading={busy} onClick={() => void pay()}>
+          {busy ? t("payment.submitting") : t("payment.paySecurely")}
+        </Button>
+
+        <p className="text-center text-[11px] leading-relaxed text-[color:var(--color-ink-faint)]">
+          {t("payment.gatewayNote")}
+        </p>
       </div>
     </section>
   );
