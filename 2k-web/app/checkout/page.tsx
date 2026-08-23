@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { apiError } from "@/lib/api";
-import { paymentOptions, type PaymentOptions } from "@/lib/payments";
+import { createCheckoutSession, paymentOptions, type PaymentOptions } from "@/lib/payments";
+import { AddressForm } from "@/components/account/AddressForm";
 import { BRAND } from "@/lib/brand";
 import { formatMoney } from "@/lib/format";
 import shop from "@/lib/shop";
@@ -69,7 +70,18 @@ function CheckoutContent() {
   const deliveryFee = hasImport || cart.lines.length === 0 ? 0 : DELIVERY_FEE;
 
   const [placing, setPlacing] = useState(false);
+  // Which step of a card checkout we are on, so the button can say what is
+  // actually happening rather than spinning silently through two round trips
+  // and a redirect.
+  const [phase, setPhase] = useState<"placing" | "session" | "redirecting" | null>(null);
+  const [addingAddress, setAddingAddress] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // The channel the shopper has actually chosen, and whether paying it means
+  // leaving the site. Read from the server's own `is_gateway` flag, never from
+  // the code string — a second gateway later must not need a frontend release.
+  const selectedChannel = options?.channels.find((channel) => channel.code === payment) ?? null;
+  const isGateway = selectedChannel?.is_gateway === true;
 
   useEffect(() => {
     let live = true;
@@ -164,14 +176,36 @@ function CheckoutContent() {
     );
   }
 
+  /**
+   * Place the order, and — when the channel is a gateway — take the shopper
+   * straight to it.
+   *
+   * This used to do the same thing for every channel: create the order, empty
+   * the cart, land on the order page. For cash on delivery and Lipa Namba that
+   * is right; for a card it is not. The shopper pressed a button that reads
+   * like paying, got a page that reads like a receipt, and the actual payment
+   * sat behind a second button further down. Nothing was ever wrongly marked
+   * paid — the order is created `awaiting_payment` and only a signed webhook
+   * can settle it — but the flow told a story the money did not match.
+   *
+   * The order still has to exist first: `POST /shop/orders/{ref}/checkout-session`
+   * needs a reference to price and attach the payment to. So the fix is to
+   * chain the two calls, not to defer creating the order.
+   */
   async function placeOrder(event: React.FormEvent) {
     event.preventDefault();
+
+    // A second submit must not create a second order. The button is disabled
+    // while this runs, but a form can also be submitted with Enter, and a
+    // double tap on a slow connection beats a re-render.
+    if (placing) return;
 
     // Guard the action itself as well as the page: a session can expire while
     // the shopper is filling the form in.
     if (!(await requireAuth())) return;
 
     setPlacing(true);
+    setPhase("placing");
     setError(null);
 
     try {
@@ -191,11 +225,45 @@ function CheckoutContent() {
         payment_method: payment,
       });
 
+      const reference = encodeURIComponent(result.reference);
+
+      if (!isGateway) {
+        // Unchanged: cash on delivery and every manual channel land on the
+        // order, where a till number and a reference field are waiting.
+        cart.clear();
+        router.push(`/account/orders/${reference}?placed=1`);
+        return;
+      }
+
+      // ---- card payment ----
+      //
+      // The order exists and owes money. Ask the server for a hosted Checkout
+      // Session and leave. The server prices it from its own rows; this request
+      // carries no body, so there is no amount for anyone to tamper with.
+      setPhase("session");
+
+      let url: string;
+      try {
+        url = await createCheckoutSession(result.reference);
+      } catch (sessionError) {
+        // The order was created but the payment page could not be opened.
+        // Never re-submit — that would place a second order. Send the shopper
+        // to the order, where the same payment can be retried against the
+        // reference that already exists.
+        cart.clear();
+        router.push(`/account/orders/${reference}?stripe=unavailable`);
+        return;
+      }
+
+      // Only now is the basket spent: if anything above had failed, the
+      // shopper still has their cart.
       cart.clear();
-      router.push(`/account/orders/${encodeURIComponent(result.reference)}?placed=1`);
+      setPhase("redirecting");
+      window.location.assign(url);
     } catch (err) {
       setError(apiError(err, t("checkout.failed")));
       setPlacing(false);
+      setPhase(null);
     }
   }
 
@@ -276,6 +344,41 @@ function CheckoutContent() {
               </fieldset>
             ) : null}
 
+            {/* Saving an address without leaving checkout. Reuses the account
+                page's own form rather than growing a second one that would
+                drift from it. */}
+            {addingAddress ? (
+              <div className="mb-3 rounded-[var(--radius-sm)] border border-[color:var(--color-line)] p-3">
+                <AddressForm
+                  initial={null}
+                  forceDefault={saved.length === 0}
+                  onCancel={() => setAddingAddress(false)}
+                  onSubmit={async (values) => {
+                    const list = await shop.createAddress(values);
+                    setSaved(list);
+
+                    // Select whatever the server says is new, so the shopper is
+                    // delivering to the address they just typed.
+                    const created =
+                      list.find((item) => !saved.some((existing) => existing.id === item.id)) ??
+                      list.find((item) => item.is_default) ??
+                      list[0];
+
+                    if (created) chooseAddress(created);
+                    setAddingAddress(false);
+                  }}
+                />
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setAddingAddress(true)}
+                className="mb-3 inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-sm)] border border-dashed border-[color:var(--color-line-strong)] px-3 py-2 text-[13px] font-bold text-[color:var(--color-brand)] hover:bg-[color:var(--color-brand-50)]"
+              >
+                + {t("checkout.addNewAddress")}
+              </button>
+            )}
+
             <div className="space-y-3">
               <Field
                 label={t("checkout.deliveryAddress")}
@@ -338,7 +441,7 @@ function CheckoutContent() {
                   checked={payment === channel.code}
                   onSelect={() => setPayment(channel.code)}
                   title={channel.label}
-                  body={channel.instructions ?? ""}
+                  body={channel.instructions ?? (channel.is_gateway ? t("payment.gatewayBody") : "")}
                 />
               ))}
 
@@ -439,9 +542,27 @@ function CheckoutContent() {
 
             {error ? <Notice tone="danger" className="mt-3">{error}</Notice> : null}
 
-            <Button type="submit" size="lg" className="mt-3 w-full" loading={placing}>
-              {placing ? t("checkout.placing") : t("checkout.placeOrder")}
+            {/* The label says what the button does. With a card selected it
+                leaves the site, and the shopper should know that before they
+                press it, not after. */}
+            <Button type="submit" size="lg" className="mt-3 w-full" loading={placing} disabled={placing}>
+              {phase === "redirecting"
+                ? t("checkout.redirectingToStripe")
+                : phase === "session"
+                  ? t("checkout.preparingPayment")
+                  : placing
+                    ? t("checkout.placing")
+                    : isGateway
+                      ? t("checkout.payAndPlaceOrder")
+                      : t("checkout.placeOrder")}
             </Button>
+
+            {isGateway && !placing ? (
+              <p className="mt-2 flex items-start justify-center gap-1.5 text-center text-[11px] leading-relaxed text-[color:var(--color-ink-muted)]">
+                <LockIcon className="mt-[1px] h-3 w-3 shrink-0 text-[color:var(--color-brand)]" />
+                {t("checkout.gatewayRedirectNote")}
+              </p>
+            ) : null}
 
             <p className="mt-2 text-center text-[11px] leading-relaxed text-[color:var(--color-ink-faint)]">
               {t("checkout.termsPrefix", { brand: BRAND.name })}{" "}

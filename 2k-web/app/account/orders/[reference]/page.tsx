@@ -82,7 +82,9 @@ function OrderDetail() {
   // This is a display convenience and nothing more. It polls; it never
   // decides. If the webhook never arrives the order stays unpaid, correctly.
   useEffect(() => {
-    if (!returnedFromGateway || !isAuthenticated) return;
+    // Only after a completed attempt. A cancelled payment has nothing to
+    // wait for, and neither does a session that never opened.
+    if (returnedFromGateway !== "success" || !isAuthenticated) return;
     if (order?.payment_status === "verified") return;
 
     let attempts = 0;
@@ -230,6 +232,29 @@ function OrderDetail() {
       <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         {/* Paying for an order that has not been settled. Renders nothing for
             cash on delivery or an order already verified. */}
+        {/* ---- what came back from the payment page ----
+
+            Every branch below reads `order.payment_status`, which is the
+            server's word, and uses the query string only to choose the
+            sentence. A shopper who types `?stripe=success` onto an unpaid
+            order gets the "still waiting" panel, because the status says so.
+
+            Equally, a shopper who paid and closed the tab never sends
+            anything — and their order still settles, because the webhook
+            does not need them to come back. */}
+
+        {order.payment_status === "verified" && returnedFromGateway ? (
+          <section className="lg:col-span-2 overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--color-ok-line,#b7dfc4)] bg-[color:var(--color-ok-soft,#eaf7ee)] p-4">
+            <p className="text-[17px] font-black text-[color:var(--color-ok,#1c7a3e)]">
+              {t("payment.paymentSuccessful")}
+            </p>
+            <p className="mt-1 text-[13px]">{t("payment.paymentSuccessfulHint")}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <ButtonLink href="/shop" variant="ghost" size="sm">{t("payment.continueShopping")}</ButtonLink>
+            </div>
+          </section>
+        ) : null}
+
         {returnedFromGateway === "success" && order.payment_status !== "verified" ? (
           <Notice tone="info" className="lg:col-span-2">
             <span className="block text-[15px] font-black">{t("payment.confirmingPayment")}</span>
@@ -241,6 +266,25 @@ function OrderDetail() {
           <Notice tone="warn" className="lg:col-span-2">
             <span className="block text-[15px] font-black">{t("payment.paymentCancelled")}</span>
             <span className="mt-1 block text-[13px]">{t("payment.paymentCancelledHint")}</span>
+          </Notice>
+        ) : null}
+
+        {/* The session could not be opened at all — the order exists, unpaid.
+            Distinct from a cancelled payment, because nothing was attempted. */}
+        {returnedFromGateway === "unavailable" && order.payment_status !== "verified" ? (
+          <Notice tone="warn" className="lg:col-span-2">
+            <span className="block text-[15px] font-black">{t("payment.paymentUnavailable")}</span>
+            <span className="mt-1 block text-[13px]">{t("payment.paymentUnavailableHint")}</span>
+          </Notice>
+        ) : null}
+
+        {/* An administrator, or the gateway, could not confirm the money. */}
+        {order.payment_status === "rejected" ? (
+          <Notice tone="danger" className="lg:col-span-2">
+            <span className="block text-[15px] font-black">{t("payment.paymentFailed")}</span>
+            <span className="mt-1 block text-[13px]">
+              {order.payment_note || t("payment.paymentFailedHint")}
+            </span>
           </Notice>
         ) : null}
 

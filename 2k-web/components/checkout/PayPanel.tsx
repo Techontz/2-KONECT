@@ -53,6 +53,11 @@ export function PayPanel({
   const [done, setDone] = useState(false);
 
   // The till number is fetched, never bundled. See lib/payments.ts.
+  //
+  // The prepaid set is requested because this panel only ever renders for an
+  // order that owes money — a cash-on-delivery order returns null above. That
+  // set contains every channel except cash on delivery, so whichever one the
+  // order was placed with is in it.
   useEffect(() => {
     let live = true;
 
