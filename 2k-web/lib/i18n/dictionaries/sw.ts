@@ -513,6 +513,8 @@ export const sw: Dictionary = {
     preparingPayment: "Tunaandaa malipo salama",
     redirectingToStripe: "Tunakupeleka kwenye malipo salama",
     gatewayRedirectNote: "Utapelekwa kwa mtoa huduma wetu wa malipo ili kuweka taarifa za kadi yako.",
+    editAddress: "Hariri",
+    addressRequiredForCard: "Chagua au ongeza anwani iliyohifadhiwa kabla ya kulipa kwa kadi, ili tujue hasa oda inakwenda wapi.",
     addNewAddress: "Ongeza anwani mpya",
     placeOrder: "Weka oda",
     placing: "Inaweka oda yako",

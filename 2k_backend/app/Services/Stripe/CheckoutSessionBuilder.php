@@ -97,6 +97,31 @@ class CheckoutSessionBuilder
             // out of the Dashboard and into a deployment.
             'line_items' => $this->lineItems($lines, $currency, $amountMinor),
 
+            // ---- letting a shopper keep their card ----
+            //
+            // `payment_method_save` puts a checkbox on Stripe's page: tick it
+            // and the card comes back next time, leave it and nothing is kept.
+            // The shopper decides, which is both the honest arrangement and the
+            // only one that actually works.
+            //
+            // The obvious-looking alternative does not. Saving a card with
+            // `setup_future_usage` gives it `allow_redisplay: limited`, and
+            // Stripe documents plainly that such cards "don't appear for return
+            // purchases in Checkout" — so it would store a card the shopper can
+            // never see, while also granting off-session charging that a
+            // marketplace taking payment at the till has no use for. Only
+            // `payment_method_save` produces `allow_redisplay: always`, which
+            // is the value Checkout prefills from.
+            //
+            // It needs a customer to attach the card to, which is what
+            // customerParams() below supplies. Without one Stripe saves neither
+            // the customer nor the card.
+            'saved_payment_method_options' => [
+                'payment_method_save' => 'enabled',
+            ],
+
+            ...$this->customerParams($first),
+
             // Both correlate the payment back to the order. `client_reference_id`
             // is the one that shows in the Dashboard; the metadata is what the
             // webhook reads, because it survives on the PaymentIntent too.
@@ -195,6 +220,38 @@ class CheckoutSessionBuilder
         // Stripe caps this, and a long seller-written title would otherwise be
         // rejected at the API rather than trimmed on the page.
         return Str::limit($name, 250, '');
+    }
+
+    /**
+     * How this shopper is identified to Stripe.
+     *
+     * A shopper who has paid before already has a Stripe Customer, and naming
+     * it is what makes their saved card appear instead of an empty form. A
+     * first-time shopper has none, so Stripe is asked to create one and the
+     * webhook writes its id onto the user.
+     *
+     * `customer` and `customer_creation` are mutually exclusive — sending both
+     * is an API error — which is why this returns one shape or the other
+     * rather than two flags set independently.
+     *
+     * The email goes with it so Stripe can send a receipt and the Dashboard
+     * shows a person rather than an anonymous charge. Nothing about the card
+     * itself passes through here, or through this application at all.
+     *
+     * @return array<string, mixed>
+     */
+    private function customerParams(Order $line): array
+    {
+        $user = $line->buyer;
+
+        if ($user?->stripe_customer_id) {
+            return ['customer' => $user->stripe_customer_id];
+        }
+
+        return array_filter([
+            'customer_creation' => 'always',
+            'customer_email'    => $user?->email,
+        ]);
     }
 
     private function returnUrl(string $reference, string $outcome): string

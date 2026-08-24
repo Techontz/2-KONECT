@@ -75,6 +75,8 @@ function CheckoutContent() {
   // and a redirect.
   const [phase, setPhase] = useState<"placing" | "session" | "redirecting" | null>(null);
   const [addingAddress, setAddingAddress] = useState(false);
+  // The saved address currently open for editing, if any.
+  const [editing, setEditing] = useState<AddressType | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // The channel the shopper has actually chosen, and whether paying it means
@@ -82,6 +84,20 @@ function CheckoutContent() {
   // the code string — a second gateway later must not need a frontend release.
   const selectedChannel = options?.channels.find((channel) => channel.code === payment) ?? null;
   const isGateway = selectedChannel?.is_gateway === true;
+
+  // Paying by card means leaving the site, and coming back to an order that is
+  // already real. A typed line of free text is enough to deliver a cash order
+  // that a rider can ask about at the door; it is not enough to send somebody
+  // to a payment page. So a card checkout requires a structured address —
+  // chosen from the book or saved during checkout — with a name and a phone
+  // number a courier can actually use.
+  //
+  // Deliberately scoped to gateway channels. Cash on delivery, Lipa Namba and
+  // mobile money keep the free-text field they have always had.
+  const structuredAddress = selectedId !== null
+    ? saved.find((item) => item.id === selectedId) ?? null
+    : null;
+  const needsStructuredAddress = isGateway && structuredAddress === null;
 
   useEffect(() => {
     let live = true;
@@ -194,6 +210,13 @@ function CheckoutContent() {
    */
   async function placeOrder(event: React.FormEvent) {
     event.preventDefault();
+
+    // A card checkout needs somewhere real to deliver to. Refused before the
+    // order is created, so nothing is placed that cannot be fulfilled.
+    if (needsStructuredAddress) {
+      setError(t("checkout.addressRequiredForCard"));
+      return;
+    }
 
     // A second submit must not create a second order. The button is disabled
     // while this runs, but a form can also be submitted with Enter, and a
@@ -320,6 +343,21 @@ function CheckoutContent() {
                         <span className="clamp-2 block text-[12px] text-[color:var(--color-ink-muted)]">
                           {item.formatted}
                         </span>
+
+                        {/* Correcting a saved address without losing the
+                            basket. Uses the account page's own updateAddress,
+                            so there is one address system rather than two. */}
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            setAddingAddress(false);
+                            setEditing(item);
+                          }}
+                          className="mt-1 text-[11px] font-bold text-[color:var(--color-brand)] hover:underline"
+                        >
+                          {t("checkout.editAddress")}
+                        </button>
                       </span>
                     </label>
                   ))}
@@ -342,6 +380,26 @@ function CheckoutContent() {
                   </label>
                 </div>
               </fieldset>
+            ) : null}
+
+            {editing ? (
+              <div className="mb-3 rounded-[var(--radius-sm)] border border-[color:var(--color-line)] p-3">
+                <AddressForm
+                  initial={editing}
+                  onCancel={() => setEditing(null)}
+                  onSubmit={async (values) => {
+                    const list = await shop.updateAddress(editing.id, values);
+                    setSaved(list);
+
+                    // Stays selected. Correcting a house number should not
+                    // quietly change where the order is going.
+                    const updated = list.find((item) => item.id === editing.id);
+                    if (updated) chooseAddress(updated);
+
+                    setEditing(null);
+                  }}
+                />
+              </div>
             ) : null}
 
             {/* Saving an address without leaving checkout. Reuses the account
@@ -372,7 +430,7 @@ function CheckoutContent() {
             ) : (
               <button
                 type="button"
-                onClick={() => setAddingAddress(true)}
+                onClick={() => { setEditing(null); setAddingAddress(true); }}
                 className="mb-3 inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-sm)] border border-dashed border-[color:var(--color-line-strong)] px-3 py-2 text-[13px] font-bold text-[color:var(--color-brand)] hover:bg-[color:var(--color-brand-50)]"
               >
                 + {t("checkout.addNewAddress")}
@@ -545,7 +603,19 @@ function CheckoutContent() {
             {/* The label says what the button does. With a card selected it
                 leaves the site, and the shopper should know that before they
                 press it, not after. */}
-            <Button type="submit" size="lg" className="mt-3 w-full" loading={placing} disabled={placing}>
+            {needsStructuredAddress ? (
+              <Notice tone="warn" className="mt-3">
+                {t("checkout.addressRequiredForCard")}
+              </Notice>
+            ) : null}
+
+            <Button
+              type="submit"
+              size="lg"
+              className="mt-3 w-full"
+              loading={placing}
+              disabled={placing || needsStructuredAddress}
+            >
               {phase === "redirecting"
                 ? t("checkout.redirectingToStripe")
                 : phase === "session"

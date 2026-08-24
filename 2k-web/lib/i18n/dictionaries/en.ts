@@ -514,6 +514,8 @@ export const en = {
     preparingPayment: "Preparing secure payment",
     redirectingToStripe: "Redirecting to secure checkout",
     gatewayRedirectNote: "You will be taken to our secure payment provider to enter your card details.",
+    editAddress: "Edit",
+    addressRequiredForCard: "Choose or add a saved delivery address before paying by card, so we know exactly where the order is going.",
     addNewAddress: "Add a new address",
     placeOrder: "Place order",
     placing: "Placing your order",

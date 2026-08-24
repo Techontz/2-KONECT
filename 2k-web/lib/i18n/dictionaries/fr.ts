@@ -507,6 +507,8 @@ export const fr: Dictionary = {
     preparingPayment: "Préparation du paiement sécurisé",
     redirectingToStripe: "Redirection vers le paiement sécurisé",
     gatewayRedirectNote: "Vous serez redirigé vers notre prestataire de paiement sécurisé pour saisir vos informations de carte.",
+    editAddress: "Modifier",
+    addressRequiredForCard: "Choisissez ou ajoutez une adresse enregistrée avant de payer par carte, afin que nous sachions précisément où livrer la commande.",
     addNewAddress: "Ajouter une adresse",
     placeOrder: "Passer la commande",
     placing: "Envoi de votre commande",

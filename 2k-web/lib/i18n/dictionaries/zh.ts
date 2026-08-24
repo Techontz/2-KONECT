@@ -506,6 +506,8 @@ export const zh: Dictionary = {
     preparingPayment: "正在准备安全支付",
     redirectingToStripe: "正在跳转至安全收银台",
     gatewayRedirectNote: "我们会将您转至安全支付服务商页面填写卡片信息。",
+    editAddress: "编辑",
+    addressRequiredForCard: "使用银行卡付款前，请选择或添加已保存的收货地址，以便我们确认订单的送达地点。",
     addNewAddress: "添加新地址",
     placeOrder: "提交订单",
     placing: "正在提交订单",

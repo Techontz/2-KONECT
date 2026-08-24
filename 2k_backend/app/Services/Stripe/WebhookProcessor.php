@@ -189,6 +189,8 @@ class WebhookProcessor
                 'note'        => 'We have received your payment.',
                 'happened_at' => now(),
             ]);
+
+            $this->rememberCustomer($session, $first);
         });
 
         return self::HANDLED;
@@ -332,6 +334,39 @@ class WebhookProcessor
     }
 
     /* ---------------------------------------------------------------- */
+
+    /**
+     * Record the Stripe Customer this shopper now has.
+     *
+     * Stripe creates one when a session asks it to, and its id only comes back
+     * on the completed event. Storing it is what lets the next checkout name
+     * that customer, which is what makes their saved card appear rather than
+     * an empty form.
+     *
+     * An opaque identifier and nothing else. No card number, expiry or CVC has
+     * ever reached this application, and none is stored here — the card lives
+     * at Stripe, attached to this id.
+     *
+     * Written only when absent. A shopper's cards are attached to one customer,
+     * and a later session that happened to create a second must not move them
+     * off the one their cards are on.
+     */
+    private function rememberCustomer(object $session, Order $line): void
+    {
+        $customer = $session->customer ?? null;
+
+        if (! is_string($customer) || $customer === '') {
+            return;
+        }
+
+        $user = $line->buyer;
+
+        if (! $user || $user->stripe_customer_id) {
+            return;
+        }
+
+        $user->forceFill(['stripe_customer_id' => $customer])->save();
+    }
 
     /**
      * Update the `payments` row for a session, creating it if the webhook beat
