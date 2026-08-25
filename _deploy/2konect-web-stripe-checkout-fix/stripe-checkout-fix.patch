@@ -1,0 +1,423 @@
+diff --git a/2k-web/app/account/orders/[reference]/page.tsx b/2k-web/app/account/orders/[reference]/page.tsx
+index 5a35096..b544112 100644
+--- a/2k-web/app/account/orders/[reference]/page.tsx
++++ b/2k-web/app/account/orders/[reference]/page.tsx
+@@ -82,7 +82,9 @@ function OrderDetail() {
+   // This is a display convenience and nothing more. It polls; it never
+   // decides. If the webhook never arrives the order stays unpaid, correctly.
+   useEffect(() => {
+-    if (!returnedFromGateway || !isAuthenticated) return;
++    // Only after a completed attempt. A cancelled payment has nothing to
++    // wait for, and neither does a session that never opened.
++    if (returnedFromGateway !== "success" || !isAuthenticated) return;
+     if (order?.payment_status === "verified") return;
+ 
+     let attempts = 0;
+@@ -230,6 +232,29 @@ function OrderDetail() {
+       <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+         {/* Paying for an order that has not been settled. Renders nothing for
+             cash on delivery or an order already verified. */}
++        {/* ---- what came back from the payment page ----
++
++            Every branch below reads `order.payment_status`, which is the
++            server's word, and uses the query string only to choose the
++            sentence. A shopper who types `?stripe=success` onto an unpaid
++            order gets the "still waiting" panel, because the status says so.
++
++            Equally, a shopper who paid and closed the tab never sends
++            anything — and their order still settles, because the webhook
++            does not need them to come back. */}
++
++        {order.payment_status === "verified" && returnedFromGateway ? (
++          <section className="lg:col-span-2 overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--color-ok-line,#b7dfc4)] bg-[color:var(--color-ok-soft,#eaf7ee)] p-4">
++            <p className="text-[17px] font-black text-[color:var(--color-ok,#1c7a3e)]">
++              {t("payment.paymentSuccessful")}
++            </p>
++            <p className="mt-1 text-[13px]">{t("payment.paymentSuccessfulHint")}</p>
++            <div className="mt-3 flex flex-wrap gap-2">
++              <ButtonLink href="/shop" variant="ghost" size="sm">{t("payment.continueShopping")}</ButtonLink>
++            </div>
++          </section>
++        ) : null}
++
+         {returnedFromGateway === "success" && order.payment_status !== "verified" ? (
+           <Notice tone="info" className="lg:col-span-2">
+             <span className="block text-[15px] font-black">{t("payment.confirmingPayment")}</span>
+@@ -244,6 +269,25 @@ function OrderDetail() {
+           </Notice>
+         ) : null}
+ 
++        {/* The session could not be opened at all — the order exists, unpaid.
++            Distinct from a cancelled payment, because nothing was attempted. */}
++        {returnedFromGateway === "unavailable" && order.payment_status !== "verified" ? (
++          <Notice tone="warn" className="lg:col-span-2">
++            <span className="block text-[15px] font-black">{t("payment.paymentUnavailable")}</span>
++            <span className="mt-1 block text-[13px]">{t("payment.paymentUnavailableHint")}</span>
++          </Notice>
++        ) : null}
++
++        {/* An administrator, or the gateway, could not confirm the money. */}
++        {order.payment_status === "rejected" ? (
++          <Notice tone="danger" className="lg:col-span-2">
++            <span className="block text-[15px] font-black">{t("payment.paymentFailed")}</span>
++            <span className="mt-1 block text-[13px]">
++              {order.payment_note || t("payment.paymentFailedHint")}
++            </span>
++          </Notice>
++        ) : null}
++
+         {order.payment_method !== "cash_on_delivery" ? (
+           <div className="lg:col-span-2">
+             <PayPanel
+diff --git a/2k-web/app/checkout/page.tsx b/2k-web/app/checkout/page.tsx
+index 2896ef7..9b3fc4a 100644
+--- a/2k-web/app/checkout/page.tsx
++++ b/2k-web/app/checkout/page.tsx
+@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
+ import { useEffect, useState } from "react";
+ 
+ import { apiError } from "@/lib/api";
+-import { paymentOptions, type PaymentOptions } from "@/lib/payments";
++import { createCheckoutSession, paymentOptions, type PaymentOptions } from "@/lib/payments";
++import { AddressForm } from "@/components/account/AddressForm";
+ import { BRAND } from "@/lib/brand";
+ import { formatMoney } from "@/lib/format";
+ import shop from "@/lib/shop";
+@@ -69,8 +70,19 @@ function CheckoutContent() {
+   const deliveryFee = hasImport || cart.lines.length === 0 ? 0 : DELIVERY_FEE;
+ 
+   const [placing, setPlacing] = useState(false);
++  // Which step of a card checkout we are on, so the button can say what is
++  // actually happening rather than spinning silently through two round trips
++  // and a redirect.
++  const [phase, setPhase] = useState<"placing" | "session" | "redirecting" | null>(null);
++  const [addingAddress, setAddingAddress] = useState(false);
+   const [error, setError] = useState<string | null>(null);
+ 
++  // The channel the shopper has actually chosen, and whether paying it means
++  // leaving the site. Read from the server's own `is_gateway` flag, never from
++  // the code string — a second gateway later must not need a frontend release.
++  const selectedChannel = options?.channels.find((channel) => channel.code === payment) ?? null;
++  const isGateway = selectedChannel?.is_gateway === true;
++
+   useEffect(() => {
+     let live = true;
+ 
+@@ -164,14 +176,36 @@ function CheckoutContent() {
+     );
+   }
+ 
++  /**
++   * Place the order, and — when the channel is a gateway — take the shopper
++   * straight to it.
++   *
++   * This used to do the same thing for every channel: create the order, empty
++   * the cart, land on the order page. For cash on delivery and Lipa Namba that
++   * is right; for a card it is not. The shopper pressed a button that reads
++   * like paying, got a page that reads like a receipt, and the actual payment
++   * sat behind a second button further down. Nothing was ever wrongly marked
++   * paid — the order is created `awaiting_payment` and only a signed webhook
++   * can settle it — but the flow told a story the money did not match.
++   *
++   * The order still has to exist first: `POST /shop/orders/{ref}/checkout-session`
++   * needs a reference to price and attach the payment to. So the fix is to
++   * chain the two calls, not to defer creating the order.
++   */
+   async function placeOrder(event: React.FormEvent) {
+     event.preventDefault();
+ 
++    // A second submit must not create a second order. The button is disabled
++    // while this runs, but a form can also be submitted with Enter, and a
++    // double tap on a slow connection beats a re-render.
++    if (placing) return;
++
+     // Guard the action itself as well as the page: a session can expire while
+     // the shopper is filling the form in.
+     if (!(await requireAuth())) return;
+ 
+     setPlacing(true);
++    setPhase("placing");
+     setError(null);
+ 
+     try {
+@@ -191,11 +225,45 @@ function CheckoutContent() {
+         payment_method: payment,
+       });
+ 
++      const reference = encodeURIComponent(result.reference);
++
++      if (!isGateway) {
++        // Unchanged: cash on delivery and every manual channel land on the
++        // order, where a till number and a reference field are waiting.
++        cart.clear();
++        router.push(`/account/orders/${reference}?placed=1`);
++        return;
++      }
++
++      // ---- card payment ----
++      //
++      // The order exists and owes money. Ask the server for a hosted Checkout
++      // Session and leave. The server prices it from its own rows; this request
++      // carries no body, so there is no amount for anyone to tamper with.
++      setPhase("session");
++
++      let url: string;
++      try {
++        url = await createCheckoutSession(result.reference);
++      } catch (sessionError) {
++        // The order was created but the payment page could not be opened.
++        // Never re-submit — that would place a second order. Send the shopper
++        // to the order, where the same payment can be retried against the
++        // reference that already exists.
++        cart.clear();
++        router.push(`/account/orders/${reference}?stripe=unavailable`);
++        return;
++      }
++
++      // Only now is the basket spent: if anything above had failed, the
++      // shopper still has their cart.
+       cart.clear();
+-      router.push(`/account/orders/${encodeURIComponent(result.reference)}?placed=1`);
++      setPhase("redirecting");
++      window.location.assign(url);
+     } catch (err) {
+       setError(apiError(err, t("checkout.failed")));
+       setPlacing(false);
++      setPhase(null);
+     }
+   }
+ 
+@@ -276,6 +344,41 @@ function CheckoutContent() {
+               </fieldset>
+             ) : null}
+ 
++            {/* Saving an address without leaving checkout. Reuses the account
++                page's own form rather than growing a second one that would
++                drift from it. */}
++            {addingAddress ? (
++              <div className="mb-3 rounded-[var(--radius-sm)] border border-[color:var(--color-line)] p-3">
++                <AddressForm
++                  initial={null}
++                  forceDefault={saved.length === 0}
++                  onCancel={() => setAddingAddress(false)}
++                  onSubmit={async (values) => {
++                    const list = await shop.createAddress(values);
++                    setSaved(list);
++
++                    // Select whatever the server says is new, so the shopper is
++                    // delivering to the address they just typed.
++                    const created =
++                      list.find((item) => !saved.some((existing) => existing.id === item.id)) ??
++                      list.find((item) => item.is_default) ??
++                      list[0];
++
++                    if (created) chooseAddress(created);
++                    setAddingAddress(false);
++                  }}
++                />
++              </div>
++            ) : (
++              <button
++                type="button"
++                onClick={() => setAddingAddress(true)}
++                className="mb-3 inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-sm)] border border-dashed border-[color:var(--color-line-strong)] px-3 py-2 text-[13px] font-bold text-[color:var(--color-brand)] hover:bg-[color:var(--color-brand-50)]"
++              >
++                + {t("checkout.addNewAddress")}
++              </button>
++            )}
++
+             <div className="space-y-3">
+               <Field
+                 label={t("checkout.deliveryAddress")}
+@@ -338,7 +441,7 @@ function CheckoutContent() {
+                   checked={payment === channel.code}
+                   onSelect={() => setPayment(channel.code)}
+                   title={channel.label}
+-                  body={channel.instructions ?? ""}
++                  body={channel.instructions ?? (channel.is_gateway ? t("payment.gatewayBody") : "")}
+                 />
+               ))}
+ 
+@@ -439,10 +542,28 @@ function CheckoutContent() {
+ 
+             {error ? <Notice tone="danger" className="mt-3">{error}</Notice> : null}
+ 
+-            <Button type="submit" size="lg" className="mt-3 w-full" loading={placing}>
+-              {placing ? t("checkout.placing") : t("checkout.placeOrder")}
++            {/* The label says what the button does. With a card selected it
++                leaves the site, and the shopper should know that before they
++                press it, not after. */}
++            <Button type="submit" size="lg" className="mt-3 w-full" loading={placing} disabled={placing}>
++              {phase === "redirecting"
++                ? t("checkout.redirectingToStripe")
++                : phase === "session"
++                  ? t("checkout.preparingPayment")
++                  : placing
++                    ? t("checkout.placing")
++                    : isGateway
++                      ? t("checkout.payAndPlaceOrder")
++                      : t("checkout.placeOrder")}
+             </Button>
+ 
++            {isGateway && !placing ? (
++              <p className="mt-2 flex items-start justify-center gap-1.5 text-center text-[11px] leading-relaxed text-[color:var(--color-ink-muted)]">
++                <LockIcon className="mt-[1px] h-3 w-3 shrink-0 text-[color:var(--color-brand)]" />
++                {t("checkout.gatewayRedirectNote")}
++              </p>
++            ) : null}
++
+             <p className="mt-2 text-center text-[11px] leading-relaxed text-[color:var(--color-ink-faint)]">
+               {t("checkout.termsPrefix", { brand: BRAND.name })}{" "}
+               <Link href="/legal/terms" className="underline">{t("checkout.termsWord", { brand: BRAND.name })}</Link>.
+diff --git a/2k-web/components/checkout/PayPanel.tsx b/2k-web/components/checkout/PayPanel.tsx
+index 1aab4de..220be44 100644
+--- a/2k-web/components/checkout/PayPanel.tsx
++++ b/2k-web/components/checkout/PayPanel.tsx
+@@ -53,6 +53,11 @@ export function PayPanel({
+   const [done, setDone] = useState(false);
+ 
+   // The till number is fetched, never bundled. See lib/payments.ts.
++  //
++  // The prepaid set is requested because this panel only ever renders for an
++  // order that owes money — a cash-on-delivery order returns null above. That
++  // set contains every channel except cash on delivery, so whichever one the
++  // order was placed with is in it.
+   useEffect(() => {
+     let live = true;
+ 
+diff --git a/2k-web/lib/i18n/dictionaries/en.ts b/2k-web/lib/i18n/dictionaries/en.ts
+index fa2f5cb..cb1cb93 100644
+--- a/2k-web/lib/i18n/dictionaries/en.ts
++++ b/2k-web/lib/i18n/dictionaries/en.ts
+@@ -510,6 +510,11 @@ export const en = {
+     payment: "Payment",
+     yourItems: "Your items ({count})",
+     summary: "Summary",
++    payAndPlaceOrder: "Pay & place order",
++    preparingPayment: "Preparing secure payment",
++    redirectingToStripe: "Redirecting to secure checkout",
++    gatewayRedirectNote: "You will be taken to our secure payment provider to enter your card details.",
++    addNewAddress: "Add a new address",
+     placeOrder: "Place order",
+     placing: "Placing your order",
+     terms: "By placing this order you agree to the {brand} terms of sale.",
+@@ -570,6 +575,17 @@ export const en = {
+     confirmingPaymentHint: "You have returned from the payment page. We update this order the moment the payment is confirmed — this usually takes a few seconds.",
+     paymentCancelled: "Payment cancelled",
+     paymentCancelledHint: "Nothing was charged. You can try again whenever you are ready.",
++    gatewayBody: "Pay securely by card.",
++    paymentSuccessful: "Payment successful",
++    paymentSuccessfulHint: "Your order has been confirmed.",
++    paymentFailed: "Payment unsuccessful",
++    paymentFailedHint: "Your payment could not be completed, so your order has not been confirmed. Nothing has been charged.",
++    paymentUnavailable: "We could not open the payment page",
++    paymentUnavailableHint: "Your order is saved and unpaid. You can start the payment again below.",
++    tryPaymentAgain: "Try payment again",
++    backToCheckout: "Back to checkout",
++    viewOrder: "View order",
++    continueShopping: "Continue shopping",
+     iHavePaid: "I have paid",
+     submitting: "Sending…",
+     submitFailed: "We couldn't record that. Please check the reference and try again.",
+diff --git a/2k-web/lib/i18n/dictionaries/fr.ts b/2k-web/lib/i18n/dictionaries/fr.ts
+index 969350f..32c6daf 100644
+--- a/2k-web/lib/i18n/dictionaries/fr.ts
++++ b/2k-web/lib/i18n/dictionaries/fr.ts
+@@ -503,6 +503,11 @@ export const fr: Dictionary = {
+     payment: "Paiement",
+     yourItems: "Vos articles ({count})",
+     summary: "Récapitulatif",
++    payAndPlaceOrder: "Payer et commander",
++    preparingPayment: "Préparation du paiement sécurisé",
++    redirectingToStripe: "Redirection vers le paiement sécurisé",
++    gatewayRedirectNote: "Vous serez redirigé vers notre prestataire de paiement sécurisé pour saisir vos informations de carte.",
++    addNewAddress: "Ajouter une adresse",
+     placeOrder: "Passer la commande",
+     placing: "Envoi de votre commande",
+     terms: "En passant cette commande, vous acceptez les conditions de vente de {brand}.",
+@@ -563,6 +568,17 @@ export const fr: Dictionary = {
+     confirmingPaymentHint: "Vous revenez de la page de paiement. Nous mettons cette commande à jour dès que le paiement est confirmé — cela prend généralement quelques secondes.",
+     paymentCancelled: "Paiement annulé",
+     paymentCancelledHint: "Rien n'a été débité. Vous pouvez réessayer quand vous le souhaitez.",
++    gatewayBody: "Payez en toute sécurité par carte.",
++    paymentSuccessful: "Paiement réussi",
++    paymentSuccessfulHint: "Votre commande est confirmée.",
++    paymentFailed: "Paiement échoué",
++    paymentFailedHint: "Votre paiement n'a pas abouti, votre commande n'est donc pas confirmée. Rien n'a été débité.",
++    paymentUnavailable: "Impossible d'ouvrir la page de paiement",
++    paymentUnavailableHint: "Votre commande est enregistrée et impayée. Vous pouvez relancer le paiement ci-dessous.",
++    tryPaymentAgain: "Réessayer le paiement",
++    backToCheckout: "Retour au paiement",
++    viewOrder: "Voir la commande",
++    continueShopping: "Continuer mes achats",
+     iHavePaid: "J'ai payé",
+     submitting: "Envoi…",
+     submitFailed: "Enregistrement impossible. Vérifiez la référence et réessayez.",
+diff --git a/2k-web/lib/i18n/dictionaries/sw.ts b/2k-web/lib/i18n/dictionaries/sw.ts
+index 0bc028d..1d9062f 100644
+--- a/2k-web/lib/i18n/dictionaries/sw.ts
++++ b/2k-web/lib/i18n/dictionaries/sw.ts
+@@ -509,6 +509,11 @@ export const sw: Dictionary = {
+     payment: "Malipo",
+     yourItems: "Bidhaa zako ({count})",
+     summary: "Muhtasari",
++    payAndPlaceOrder: "Lipa na uweke oda",
++    preparingPayment: "Tunaandaa malipo salama",
++    redirectingToStripe: "Tunakupeleka kwenye malipo salama",
++    gatewayRedirectNote: "Utapelekwa kwa mtoa huduma wetu wa malipo ili kuweka taarifa za kadi yako.",
++    addNewAddress: "Ongeza anwani mpya",
+     placeOrder: "Weka oda",
+     placing: "Inaweka oda yako",
+     terms: "Kwa kuweka oda hii unakubali masharti ya mauzo ya {brand}.",
+@@ -569,6 +574,17 @@ export const sw: Dictionary = {
+     confirmingPaymentHint: "Umerudi kutoka ukurasa wa malipo. Tunasasisha oda hii mara malipo yatakapothibitishwa — kwa kawaida huchukua sekunde chache.",
+     paymentCancelled: "Malipo yamesitishwa",
+     paymentCancelledHint: "Hakuna kilichokatwa. Unaweza kujaribu tena wakati wowote.",
++    gatewayBody: "Lipa kwa usalama kwa kadi.",
++    paymentSuccessful: "Malipo yamefanikiwa",
++    paymentSuccessfulHint: "Oda yako imethibitishwa.",
++    paymentFailed: "Malipo hayakufanikiwa",
++    paymentFailedHint: "Malipo yako hayakukamilika, hivyo oda yako haijathibitishwa. Hakuna kilichokatwa.",
++    paymentUnavailable: "Hatukuweza kufungua ukurasa wa malipo",
++    paymentUnavailableHint: "Oda yako imehifadhiwa na bado haijalipwa. Unaweza kuanza malipo tena hapa chini.",
++    tryPaymentAgain: "Jaribu kulipa tena",
++    backToCheckout: "Rudi kwenye malipo",
++    viewOrder: "Angalia oda",
++    continueShopping: "Endelea kununua",
+     iHavePaid: "Nimelipa",
+     submitting: "Inatuma…",
+     submitFailed: "Tumeshindwa kuihifadhi. Tafadhali angalia kumbukumbu kisha ujaribu tena.",
+diff --git a/2k-web/lib/i18n/dictionaries/zh.ts b/2k-web/lib/i18n/dictionaries/zh.ts
+index e290997..bd48204 100644
+--- a/2k-web/lib/i18n/dictionaries/zh.ts
++++ b/2k-web/lib/i18n/dictionaries/zh.ts
+@@ -502,6 +502,11 @@ export const zh: Dictionary = {
+     payment: "支付方式",
+     yourItems: "您的商品（{count}）",
+     summary: "订单摘要",
++    payAndPlaceOrder: "支付并下单",
++    preparingPayment: "正在准备安全支付",
++    redirectingToStripe: "正在跳转至安全收银台",
++    gatewayRedirectNote: "我们会将您转至安全支付服务商页面填写卡片信息。",
++    addNewAddress: "添加新地址",
+     placeOrder: "提交订单",
+     placing: "正在提交订单",
+     terms: "提交订单即表示您同意 {brand} 的销售条款。",
+@@ -561,6 +566,17 @@ export const zh: Dictionary = {
+     confirmingPaymentHint: "您已从付款页面返回。付款一经确认，我们会立即更新此订单——通常只需几秒钟。",
+     paymentCancelled: "付款已取消",
+     paymentCancelledHint: "未扣除任何款项。您可以随时重试。",
++    gatewayBody: "使用银行卡安全支付。",
++    paymentSuccessful: "支付成功",
++    paymentSuccessfulHint: "您的订单已确认。",
++    paymentFailed: "支付未成功",
++    paymentFailedHint: "您的付款未能完成，订单尚未确认。未扣除任何款项。",
++    paymentUnavailable: "无法打开支付页面",
++    paymentUnavailableHint: "订单已保存且尚未支付。您可以在下方重新发起支付。",
++    tryPaymentAgain: "重新支付",
++    backToCheckout: "返回结算",
++    viewOrder: "查看订单",
++    continueShopping: "继续购物",
+     iHavePaid: "我已付款",
+     submitting: "提交中…",
+     submitFailed: "无法记录。请检查参考号后重试。",

@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" width="1200" height="400" role="img" aria-label="Big deals. Better prices.">
+<defs>
+  <linearGradient id="gp7690a4" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#0d1a26"/>
+    <stop offset="1" stop-color="#1b2c3e"/>
+  </linearGradient>
+  <radialGradient id="hp7690a4" cx="10%" cy="0%" r="70%">
+    <stop offset="0" stop-color="#5a748f" stop-opacity=".45"/>
+    <stop offset="1" stop-color="#5a748f" stop-opacity="0"/>
+  </radialGradient>
+  <pattern id="dp7690a4" width="20" height="20" patternUnits="userSpaceOnUse">
+    <circle cx="10" cy="10" r="1.6" fill="#ffffff" opacity=".10"/>
+  </pattern>
+</defs>
+<rect width="1200" height="400" fill="url(#gp7690a4)"/>
+<rect width="1200" height="400" fill="url(#dp7690a4)"/>
+<rect width="1200" height="400" fill="url(#hp7690a4)" opacity="0.5"/>
+<g opacity=".45" transform="translate(980,200)"><circle r="150" fill="none" stroke="#9fb2c4" stroke-width="24" opacity=".35"/><circle cx="-70" cy="-80" r="86" fill="none" stroke="#9fb2c4" stroke-width="16" opacity=".28"/></g>
+<g transform="translate(64,104)">
+  <text font-family="system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="18" font-weight="800" fill="#9fb2c4" letter-spacing="3.4">EVERY DAY ON 2KONECT</text>
+  <text y="76" font-family="system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="60" font-weight="900" fill="#ffffff" letter-spacing="-1.4">Big deals. Better prices.</text>
+  <text y="142" font-family="system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="23" font-weight="500" fill="#ffffff" opacity=".78">The biggest price drops across the whole catalogue.</text>
+  <g transform="translate(0,142)">
+    <g transform="translate(0,34)">
+      <rect width="290" height="56" rx="28" fill="#ffffff"/>
+      <text x="145" y="35" text-anchor="middle" font-family="system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="19" font-weight="800" fill="#1b2c3e">See today’s deals</text>
+    </g>
+  </g>
+</g>
+</svg>

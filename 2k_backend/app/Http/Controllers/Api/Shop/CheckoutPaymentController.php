@@ -82,7 +82,15 @@ class CheckoutPaymentController extends Controller
         DB::transaction(function () use ($lines, $data, $reference, $first) {
             // Every line of the checkout carries the same payment, so they all
             // move together — the order is one payment, not one per product.
-            Order::where('reference', $reference)->update([
+            //
+            // Addressed by the ids fetched above, which were already scoped to
+            // the caller, rather than by `reference` alone. `orders.reference`
+            // has an index but no unique constraint, and the legacy checkout
+            // used to take the reference from the request body — so a bare
+            // `where('reference', ...)` could reach another customer's order
+            // and move their payment state. It cannot now, whatever ends up
+            // sharing a reference.
+            Order::whereIn('id', $lines->pluck('id'))->update([
                 'payment_reference'    => $data['payment_reference'],
                 'payment_status'       => 'awaiting_verification',
                 'payment_submitted_at' => now(),

@@ -3,12 +3,12 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\OrderResource\Pages;
+use App\Models\CheckoutPaymentChannel;
 use App\Models\Order;
 use App\Models\OrderEvent;
-use App\Models\Product;
-use App\Models\ProductOffer;
 use App\Support\OrderJourney;
 use App\Support\Sourcing;
+use App\Support\StockReservation;
 use Filament\Forms;
 use Filament\Forms\Form;
 use App\Models\DeliveryRequest;
@@ -272,7 +272,13 @@ class OrderResource extends Resource
                     ->label('Verify payment')
                     ->icon('heroicon-m-check-badge')
                     ->color('success')
-                    ->visible(fn (Order $order) => $order->payment_status === 'awaiting_verification')
+                    // Never offered for a gateway-settled order. A card payment
+                    // is confirmed by a signed webhook from the processor; a
+                    // person pressing "verified" on one would be attesting to a
+                    // bank statement they have not seen, and would overwrite a
+                    // machine-checked fact with a human guess.
+                    ->visible(fn (Order $order) => $order->payment_status === 'awaiting_verification'
+                        && ! static::isGatewayPaid($order))
                     ->requiresConfirmation()
                     ->modalHeading('Confirm this payment arrived')
                     ->modalDescription(fn (Order $order) => 'Reference given: ' . ($order->payment_reference ?: '—')
@@ -290,7 +296,8 @@ class OrderResource extends Resource
                     ->label('Reject payment')
                     ->icon('heroicon-m-x-circle')
                     ->color('danger')
-                    ->visible(fn (Order $order) => $order->payment_status === 'awaiting_verification')
+                    ->visible(fn (Order $order) => $order->payment_status === 'awaiting_verification'
+                        && ! static::isGatewayPaid($order))
                     ->form([
                         Forms\Components\TextInput::make('note')
                             ->label('Why?')
@@ -384,17 +391,23 @@ class OrderResource extends Resource
                     ->visible(fn (Order $order) => ! in_array($order->status, ['cancelled', 'completed'], true))
                     ->requiresConfirmation()
                     ->modalHeading('Cancel this order line?')
-                    ->modalDescription('The reserved stock is returned to the product.')
+                    ->modalDescription('The reserved stock is returned to whichever product, option or offer it came from.')
                     ->action(function (Order $order) {
                         DB::transaction(function () use ($order) {
                             // Cancelling must give the units back, or stock
-                            // leaks away every time an order falls through.
-                            // An import never held local units to return.
-                            if ($order->fulfilment_type !== Sourcing::IMPORT) {
-                                $order->offer_id
-                                    ? ProductOffer::where('id', $order->offer_id)->increment('stock', $order->quantity)
-                                    : Product::where('id', $order->product_id)->increment('stock', $order->quantity);
-                            }
+                            // leaks away every time an order falls through —
+                            // and it must give them back to the row that
+                            // actually held them. This asked only whether the
+                            // line was an import, so cancelling a variant here
+                            // credited the parent product, which had never been
+                            // decremented, while the variant stayed short.
+                            //
+                            // The rule is stated once in StockReservation,
+                            // including the case that makes it subtle: a
+                            // variant restores even for an import, because a
+                            // variant reserves stock where an imported product
+                            // does not.
+                            StockReservation::restore($order);
 
                             $order->update(['status' => 'cancelled']);
 
@@ -457,16 +470,39 @@ class OrderResource extends Resource
      *
      * Every line of one checkout shares a reference and a single payment, so
      * they settle together — a part-verified order would be a fiction.
+     *
+     * Scoped to the buyer as well as the reference. `orders.reference` is
+     * indexed but not unique, and the legacy checkout used to accept the
+     * reference from the request body, so a group could contain rows belonging
+     * to more than one customer. Verifying one payment would then have settled
+     * every order in that group, for everybody in it. Settling by
+     * (reference, buyer) means the blast radius of a poisoned group is one
+     * account's own orders, which is the most a settlement should ever reach.
      */
+    /**
+     * Is this order paid through a gateway that confirms itself?
+     *
+     * Read from the channel row rather than from the code string, so a second
+     * gateway added later needs no change here — the same reason the clients
+     * branch on `is_gateway` instead of on `code === 'stripe'`.
+     */
+    protected static function isGatewayPaid(Order $order): bool
+    {
+        return CheckoutPaymentChannel::where('code', $order->payment_method)
+            ->value('is_gateway') === true;
+    }
+
     protected static function settlePayment(Order $order, string $status, ?string $note): void
     {
         DB::transaction(function () use ($order, $status, $note) {
-            Order::where('reference', $order->reference)->update([
-                'payment_status'      => $status,
-                'payment_note'        => $note,
-                'payment_verified_at' => $status === 'verified' ? now() : null,
-                'payment_verified_by' => auth()->id(),
-            ]);
+            Order::where('reference', $order->reference)
+                ->where('user_id', $order->user_id)
+                ->update([
+                    'payment_status'      => $status,
+                    'payment_note'        => $note,
+                    'payment_verified_at' => $status === 'verified' ? now() : null,
+                    'payment_verified_by' => auth()->id(),
+                ]);
 
             OrderEvent::create([
                 'reference'   => $order->reference,
@@ -511,8 +547,12 @@ class OrderResource extends Resource
                 ],
             );
 
-            // The fee belongs to the checkout, not to each line.
+            // The fee belongs to the checkout, not to each line. Scoped to the
+            // buyer for the same reason settlePayment() is: a reference is not
+            // guaranteed unique across accounts, and a delivery fee must never
+            // land on somebody else's order.
             Order::where('reference', $order->reference)
+                ->where('user_id', $order->user_id)
                 ->orderBy('id')
                 ->limit(1)
                 ->update(['delivery_fee' => $fee]);

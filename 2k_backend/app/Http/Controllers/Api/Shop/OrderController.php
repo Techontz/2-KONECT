@@ -16,6 +16,7 @@ use App\Support\Media;
 use App\Support\OrderJourney;
 use App\Support\Pricing;
 use App\Support\Sourcing;
+use App\Support\StockReservation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -317,13 +318,13 @@ class OrderController extends Controller
                 // this mirrors the reservation above exactly. Imports of the
                 // product itself never held any — they were to be bought in —
                 // so there is nothing to return.
-                if ($line->product_variant_id) {
-                    ProductVariant::where('id', $line->product_variant_id)->increment('stock', $line->quantity);
-                } elseif ($line->fulfilment_type !== Sourcing::IMPORT) {
-                    $line->offer_id
-                        ? ProductOffer::where('id', $line->offer_id)->increment('stock', $line->quantity)
-                        : Product::where('id', $line->product_id)->increment('stock', $line->quantity);
-                }
+                //
+                // The rule itself moved to StockReservation unchanged; this is
+                // where it was written and where it was already correct. It is
+                // shared now because it was not correct everywhere, and a rule
+                // copied three times is a rule that only holds in the copy
+                // somebody last looked at.
+                StockReservation::restore($line);
 
                 $line->update(['status' => 'cancelled']);
             }
@@ -343,13 +344,14 @@ class OrderController extends Controller
 
     /* ---------------------------------------------------------------- */
 
+    /**
+     * Moved to {@see \App\Support\OrderReference} so that every path which
+     * creates orders produces the same thing. Identical logic — this is the
+     * copy that was correct, and the legacy checkout is now held to it.
+     */
     private function newReference(): string
     {
-        do {
-            $reference = '2K-' . strtoupper(Str::random(8));
-        } while (Order::where('reference', $reference)->exists());
-
-        return $reference;
+        return \App\Support\OrderReference::generate();
     }
 
     /**

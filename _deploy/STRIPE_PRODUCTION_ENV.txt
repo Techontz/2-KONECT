@@ -1,0 +1,89 @@
+================================================================
+2KONECT — Stripe environment variables
+Add these to the END of your existing production .env
+================================================================
+
+Do NOT replace your .env. Do NOT remove anything already in it.
+Append the block below, then paste your two real values in.
+
+----------------------------------------------------------------
+ADD THIS BLOCK
+----------------------------------------------------------------
+
+# Stripe — TEST MODE ONLY
+STRIPE_ENABLED=true
+STRIPE_SECRET=PASTE_STRIPE_TEST_RESTRICTED_KEY_HERE
+STRIPE_WEBHOOK_SECRET=PASTE_STRIPE_TEST_WEBHOOK_SECRET_HERE
+STRIPE_ALLOW_LIVE=false
+STRIPE_CURRENCY=TZS
+STRIPE_RETURN_BASE_URL=https://www.2konect.shop
+
+----------------------------------------------------------------
+WHERE THE TWO SECRETS COME FROM
+----------------------------------------------------------------
+
+STRIPE_SECRET
+  Stripe Dashboard -> Developers -> API keys, with the TEST MODE
+  toggle ON. Prefer a RESTRICTED key (starts rk_test_) over the
+  secret key (sk_test_). This integration needs exactly three
+  permissions and nothing else:
+      Checkout Sessions .... write
+      PaymentIntents ....... read
+      Events ............... read
+  A restricted key that leaks can do nothing beyond those.
+
+STRIPE_WEBHOOK_SECRET
+  Stripe Dashboard -> Developers -> Webhooks -> add endpoint
+      URL:    https://api.2konect.shop/api/webhooks/stripe
+      Events: checkout.session.completed
+              checkout.session.async_payment_succeeded
+              checkout.session.async_payment_failed
+              checkout.session.expired
+              charge.refunded
+              charge.dispute.created
+  Then "reveal" the signing secret. It starts whsec_.
+
+  This is NOT the same value as the one `stripe listen` prints
+  locally. A CLI secret will not verify Dashboard-delivered
+  events, and the mismatch looks exactly like a wrong key.
+
+----------------------------------------------------------------
+THE THREE OPTIONAL VARIABLES — LEAVE ALL THREE OUT
+----------------------------------------------------------------
+
+STRIPE_PUBLISHABLE_KEY
+  LEAVE OUT. Nothing in the code reads it. It is declared in
+  config/stripe.php for a future Payment Element integration;
+  hosted Checkout does not use it. Adding it configures nothing
+  and only suggests the frontend needs a key, which it does not.
+
+STRIPE_API_VERSION
+  LEAVE OUT. Defaults to 2026-07-29.dahlia, which is pinned
+  deliberately. Without a pin, your Dashboard's default applies,
+  so somebody clicking "upgrade" there could change the shape of
+  the webhook payloads this code parses — with no deployment and
+  no warning. Only set it if you are deliberately moving version,
+  and re-test the webhook handlers when you do.
+
+STRIPE_SESSION_TTL_MINUTES
+  LEAVE OUT. Defaults to 60 minutes. The floor is clamped to 30
+  (Stripe's minimum) but there is NO upper clamp — a value above
+  1440 (24h) is rejected by Stripe and every session creation
+  fails. There is no reason to set it.
+
+----------------------------------------------------------------
+DO NOT SET
+----------------------------------------------------------------
+
+AZAMPAY_ENABLED
+  Leave it absent. This package intentionally does not ship the
+  AzamPay middleware or its config. Setting AZAMPAY_ENABLED=true
+  would register the callback route with a middleware alias that
+  does not exist on your server, and that endpoint would error.
+  See README-DEPLOY.txt, "One side effect you must know about".
+
+STRIPE_ALLOW_LIVE=true
+  This is the guard that refuses any key beginning sk_live_ or
+  rk_live_. Keep it false. Turning it on is the deliberate act
+  that permits real money, and nothing here has been exercised
+  against a real card yet.

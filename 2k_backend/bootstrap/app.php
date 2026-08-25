@@ -24,6 +24,10 @@ return Application::configure(basePath: dirname(__DIR__))
             // being asked for again on every visit. Never applied globally —
             // see the storefront route group in routes/api.php.
             'cacheable' => \App\Http\Middleware\CacheableResponse::class,
+            // The gate in front of the AzamPay callback. Not a signature
+            // check: AzamPay publishes no signing mechanism, so there is
+            // nothing of theirs to verify. See the middleware's own note.
+            'azampay.callback' => \App\Http\Middleware\VerifyAzamPayCallback::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

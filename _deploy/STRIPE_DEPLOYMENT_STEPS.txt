@@ -1,0 +1,241 @@
+================================================================
+2KONECT — Stripe TEST MODE deployment
+Exact order. Do not reorder 1-5.
+================================================================
+
+PATHS
+  Laravel root on the server is written below as /path/to/2k_backend
+  API host: https://api.2konect.shop
+
+----------------------------------------------------------------
+0. BEFORE YOU START — two checks that decide whether step 5 works
+----------------------------------------------------------------
+
+  cd /path/to/2k_backend
+  php artisan migrate:status | grep 2026_08_23_000010
+
+  Must say "Ran". If it says Pending or prints nothing, the
+  checkout_payment_channels table does not exist yet and
+  migration ...000040 WILL FAIL PART-WAY. Deploy the earlier
+  "international prepayment" release first.
+
+  php -r 'echo PHP_EOL;' ; mysql -e "SELECT VERSION();"
+
+  Need MySQL 5.7+ / MariaDB 10.2+ with DYNAMIC row format.
+  Older engines cap an index key at 767 bytes and the
+  stripe_events primary key (VARCHAR 255) will fail.
+
+  Also confirm the server clock is NTP-synced. Stripe's webhook
+  signature tolerance is 300 seconds; drift over five minutes
+  makes every webhook fail verification, and it looks identical
+  to a wrong secret.
+
+----------------------------------------------------------------
+1. BACK UP THE DATABASE
+----------------------------------------------------------------
+
+  mysqldump -u USER -p DATABASE > ~/2konect-backup-$(date +%F-%H%M).sql
+  ls -lh ~/2konect-backup-*.sql
+
+  Do not continue until you have seen the file and its size.
+
+----------------------------------------------------------------
+2. UPLOAD AND EXTRACT
+----------------------------------------------------------------
+
+  Upload stripe-api.2konect.shop.zip to /domains/api.2konect.shop
+  and extract IN PLACE. The archive has no parent folder: its
+  paths are already project-root relative, so every file lands at
+  its exact destination and merges with what is there.
+
+      cd /domains/api.2konect.shop
+      unzip -o stripe-api.2konect.shop.zip
+      rm stripe-api.2konect.shop.zip
+
+  -o overwrites the 6 replaced files without prompting. Nothing
+  else in the project is touched.
+
+  FIRST, confirm this really is the Laravel root:
+
+      ls /domains/api.2konect.shop/artisan
+
+  If artisan is not there, the Laravel root is somewhere else
+  (often a subfolder, with public_html symlinked into it).
+  Extract into whichever directory contains artisan, NOT into
+  public_html.
+
+  Creates two new directories:
+      app/Services/Stripe/
+      app/Filament/Resources/PaymentResource/Pages/
+
+  Replaces 6 existing files:
+      composer.json
+      composer.lock
+      routes/api.php
+      app/Support/Money.php
+      app/Models/User.php
+      app/Models/CheckoutPaymentChannel.php
+
+  Verify the count (expect 20):
+      cd /domains/api.2konect.shop
+      find app/Services/Stripe app/Filament/Resources/PaymentResource \
+           config/stripe.php database/migrations/2026_08_25_* -type f | wc -l
+
+----------------------------------------------------------------
+3. INSTALL THE STRIPE SDK
+----------------------------------------------------------------
+
+  cd /path/to/2k_backend
+  composer install --no-dev --optimize-autoloader
+
+  Installs stripe/stripe-php v21.2.1 from the uploaded
+  composer.lock. Do NOT run "composer update" — that would move
+  every other package too.
+
+  Verify:
+  php -r 'require "vendor/autoload.php"; echo \Stripe\Stripe::VERSION, PHP_EOL;'
+  Expect: 21.2.1
+
+----------------------------------------------------------------
+4. CHECK MIGRATION STATUS
+----------------------------------------------------------------
+
+  php artisan migrate:status | tail -10
+
+  Expect exactly these four as Pending:
+      2026_08_25_000010_create_payments_table
+      2026_08_25_000020_create_stripe_events_table
+      2026_08_25_000030_add_stripe_customer_id_to_users_table
+      2026_08_25_000040_add_gateway_flag_to_checkout_payment_channels
+
+  If anything else is Pending, STOP and report it before running
+  migrate — this package expects those four and nothing more.
+
+----------------------------------------------------------------
+5. RUN THE MIGRATIONS
+----------------------------------------------------------------
+
+  php artisan migrate --force
+
+  --force is required because APP_ENV=production. It only
+  suppresses the confirmation prompt; it does not make anything
+  destructive. All four migrations are additive: three CREATE
+  TABLE / ADD COLUMN, one that adds is_gateway and inserts one
+  INACTIVE row. No existing column is altered, no data rewritten.
+
+  NEVER run migrate:fresh, migrate:refresh, migrate:reset or
+  db:wipe on this server.
+
+----------------------------------------------------------------
+6. ADD THE .env VARIABLES
+----------------------------------------------------------------
+
+  Append the block from STRIPE_PRODUCTION_ENV.txt to
+  /path/to/2k_backend/.env and paste in your two real test
+  values. Do not remove anything already in the file.
+
+----------------------------------------------------------------
+7. CLEAR AND REBUILD CACHES
+----------------------------------------------------------------
+
+  php artisan config:clear
+  php artisan route:clear
+  php artisan cache:clear
+  php artisan config:cache
+  php artisan route:cache
+
+  config:cache matters: without it Laravel re-reads .env on every
+  request. Every Stripe value flows through config('stripe.*')
+  rather than env(), so caching is safe here.
+
+----------------------------------------------------------------
+8. CONFIRM THE ROUTES EXIST
+----------------------------------------------------------------
+
+  php artisan route:list | grep -i stripe
+
+  Expect exactly two:
+      POST  api/webhooks/stripe
+      POST  api/shop/orders/{reference}/checkout-session
+
+  Nothing listed means STRIPE_ENABLED is not true, or the config
+  cache is stale. Repeat step 7.
+
+  curl -s -o /dev/null -w "%{http_code}\n" \
+    -X POST https://api.2konect.shop/api/webhooks/stripe
+
+  Expect 400 ("Missing signature."). 404 means the route is not
+  live. 503 means STRIPE_WEBHOOK_SECRET is not set.
+
+----------------------------------------------------------------
+9. ACTIVATE THE STRIPE CHANNEL
+----------------------------------------------------------------
+
+  Admin panel -> Settings -> Customer Payment -> "Card payment"
+  -> tick Active -> Save.
+
+  It ships inactive on purpose. Until you tick this, the
+  checkout-session endpoint answers 503 and no shopper is
+  offered it.
+
+  Check the "Order shown" value while you are there: it seeds as
+  0, which puts Card payment ABOVE Lipa Namba. Change it if you
+  want Lipa Namba first.
+
+----------------------------------------------------------------
+10. CONFIGURE THE STRIPE TEST WEBHOOK
+----------------------------------------------------------------
+
+  Stripe Dashboard, TEST MODE -> Developers -> Webhooks -> Add:
+
+      URL     https://api.2konect.shop/api/webhooks/stripe
+      Events  checkout.session.completed
+              checkout.session.async_payment_succeeded
+              checkout.session.async_payment_failed
+              checkout.session.expired
+              charge.refunded
+              charge.dispute.created
+
+  Copy the signing secret into STRIPE_WEBHOOK_SECRET, then
+  repeat step 7. Use "Send test webhook" and confirm a 200.
+
+----------------------------------------------------------------
+11. TEST A PAYMENT
+----------------------------------------------------------------
+
+  Place a real order on the storefront, choose Card payment,
+  then on Stripe's page:
+
+      4242 4242 4242 4242   any future expiry, any CVC
+      4000 0000 0000 9995   decline
+      4000 0025 0000 3155   3-D Secure challenge
+
+  Then check, in this order:
+    - Stripe Dashboard shows the payment succeeded
+    - Dashboard -> Webhooks shows a 200 delivery
+    - Admin panel -> Orders: payment status is "verified"
+    - Admin panel -> Payments: one row, status paid
+    - The order's timeline shows "Payment verified"
+    - Order status (pending/processing) has NOT moved
+    - Product stock has NOT changed a second time
+    - The vendor wallet has NOT been credited
+
+  The last three are the ones worth checking properly. Paying is
+  not fulfilling, and settlement must not touch stock or money
+  owed to a seller.
+
+  Finally, forge the return URL:
+      /account/orders/<REF>/?stripe=success   on an UNPAID order
+  It must still show the order as unpaid. Only the signed
+  webhook may settle anything.
+
+----------------------------------------------------------------
+ROLLBACK
+----------------------------------------------------------------
+
+  Fastest and safest: set STRIPE_ENABLED=false in .env, then
+  php artisan config:cache && php artisan route:cache
+
+  Both Stripe routes disappear immediately. The tables stay
+  (harmless, additive). No need to touch the database, and no
+  reason to restore the backup unless step 5 failed part-way.

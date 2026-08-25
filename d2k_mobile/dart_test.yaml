@@ -1,6 +1,0 @@
-# `live` tests talk to a running Laravel backend. They are excluded from the
-# default run so `flutter test` works without a server; run them explicitly:
-#   flutter test test/live_backend_test.dart
-tags:
-  live:
-    skip: false

@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\Vendor;
 use App\Support\Media;
+use App\Support\StockReservation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -206,11 +207,21 @@ class VendorController extends Controller
         }
 
         DB::transaction(function () use ($order, $data) {
-            // Imports never reserved local stock, so there is none to return.
-            if ($data['status'] === 'cancelled' && $order->fulfilment_type !== \App\Support\Sourcing::IMPORT) {
-                $order->offer_id
-                    ? \App\Models\ProductOffer::where('id', $order->offer_id)->increment('stock', $order->quantity)
-                    : Product::where('id', $order->product_id)->increment('stock', $order->quantity);
+            // Return whatever this line was actually holding.
+            //
+            // This used to ask only whether the line was an import, and then
+            // credit the offer or the product. It never asked about a variant —
+            // so cancelling a combination made two errors at once: the units
+            // came off the variant at checkout and were never given back, while
+            // the parent product, which had never been decremented, gained
+            // stock it does not have. Three cancelled phones lost three real
+            // ones and invented three imaginary ones.
+            //
+            // The rule now lives in one place, including the case that made the
+            // old shape wrong: a variant restores even for an import, because a
+            // variant does reserve stock where an imported product does not.
+            if ($data['status'] === 'cancelled') {
+                StockReservation::restore($order);
             }
 
             $order->update(['status' => $data['status']]);
