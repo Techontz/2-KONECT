@@ -339,16 +339,17 @@ class WebhookProcessor
      * Record the Stripe Customer this shopper now has.
      *
      * Stripe creates one when a session asks it to, and its id only comes back
-     * on the completed event. Storing it is what lets the next checkout offer
-     * their saved card instead of an empty form — a session that names an
-     * existing customer shows that customer's payment methods.
+     * on the completed event. Storing it is what lets the next checkout name
+     * that customer, which is what makes their saved card appear rather than
+     * an empty form.
      *
-     * An opaque identifier, and nothing else. No card number, no expiry, no
-     * CVC has ever reached this application and none is stored here.
+     * An opaque identifier and nothing else. No card number, expiry or CVC has
+     * ever reached this application, and none is stored here — the card lives
+     * at Stripe, attached to this id.
      *
-     * Written only when absent: a shopper's customer id should not change
-     * under them, and a later session that created a second customer must not
-     * overwrite the one their cards are attached to.
+     * Written only when absent. A shopper's cards are attached to one customer,
+     * and a later session that happened to create a second must not move them
+     * off the one their cards are on.
      */
     private function rememberCustomer(object $session, Order $line): void
     {

@@ -546,9 +546,139 @@ class StripeCheckoutSessionTest extends TestCase
         // so the new config is read.
         app()->forgetInstance(\App\Services\Stripe\StripeClientFactory::class);
 
-        $response = $this->createSession();
+        // Pinned to 503 rather than "any error". Tolerating a 500 here was
+        // tolerating the defect: the misconfiguration escaped uncaught, and
+        // the one message that would have explained it went to a stack trace
+        // instead of the log.
+        $this->createSession()->assertStatus(503);
 
-        $this->assertContains($response->status(), [500, 502, 503]);
         $this->assertSame('awaiting_payment', Order::first()->payment_status);
+    }
+
+    /* ---------------------------------------------------------------- */
+    /* going live, and refusing to pretend                               */
+    /* ---------------------------------------------------------------- */
+
+    /**
+     * The guard that protects real money must not itself break the site.
+     *
+     * A live key on a build that has not been permitted to use one makes
+     * StripeClientFactory throw a RuntimeException. That escaped the controller
+     * uncaught, so the shopper met a 500 and the reason lived only in a stack
+     * trace — on the very day somebody is switching a marketplace over to real
+     * payments, which is the worst possible moment for the failure to be
+     * illegible.
+     */
+    public function test_a_live_key_without_permission_is_refused_cleanly_not_with_a_server_error(): void
+    {
+        $this->activateStripe();
+        $this->order();
+
+        config(['stripe.secret' => 'sk_live_placeholder_never_used', 'stripe.allow_live' => false]);
+
+        $this->createSession()->assertStatus(503);
+
+        // Nothing was attempted and nothing was recorded. A payments row for a
+        // session that was never created would be a phantom bill.
+        $this->assertSame([], $this->http->requests);
+        $this->assertSame(0, Payment::count());
+    }
+
+    public function test_a_live_key_with_permission_opens_a_session(): void
+    {
+        $this->activateStripe();
+        $this->order();
+
+        config(['stripe.secret' => 'sk_live_placeholder_never_used', 'stripe.allow_live' => true]);
+
+        $this->createSession()->assertCreated();
+
+        // The transport is stubbed, so this asserts the client was built and
+        // used — not that anything reached Stripe.
+        $this->assertCount(1, $this->http->requests);
+        $this->assertSame(1, Payment::count());
+    }
+
+    public function test_an_empty_secret_is_refused_before_a_session_is_attempted(): void
+    {
+        $this->activateStripe();
+        $this->order();
+
+        // `configured()` guards the obvious case, but a secret emptied after
+        // that check still has to fail safely rather than loudly.
+        config(['stripe.secret' => ' ']);
+
+        $this->createSession()->assertStatus(503);
+
+        $this->assertSame([], $this->http->requests);
+    }
+
+    /* ---------------------------------------------------------------- */
+    /* amounts a card can actually be charged                            */
+    /* ---------------------------------------------------------------- */
+
+    public function test_an_order_totalling_nothing_is_never_sent_to_stripe(): void
+    {
+        $this->activateStripe();
+        $this->order(['total' => 0, 'delivery_fee' => 0, 'price' => 0]);
+
+        $this->createSession()->assertStatus(422);
+
+        $this->assertSame([], $this->http->requests);
+        $this->assertSame(0, Payment::count());
+    }
+
+    public function test_a_negative_total_is_refused_rather_than_charged(): void
+    {
+        $this->activateStripe();
+        $this->order(['total' => -100000, 'delivery_fee' => 0]);
+
+        $this->createSession()->assertStatus(422);
+
+        $this->assertSame([], $this->http->requests);
+        $this->assertSame(0, Payment::count());
+    }
+
+    /**
+     * The floor ships off, so this proves the default changes nothing.
+     *
+     * Stripe enforces its minimum against the currency it settles in, not the
+     * shillings on the page, so the real floor is not knowable from here.
+     * Guessing one and guessing high would refuse orders Stripe would have
+     * taken — which is why the setting exists and why it defaults to nothing.
+     */
+    public function test_no_minimum_is_enforced_by_default(): void
+    {
+        $this->assertSame(0, (int) config('stripe.minimum_minor'));
+
+        $this->activateStripe();
+        $this->order(['total' => 100, 'delivery_fee' => 0]);
+
+        $this->createSession()->assertCreated();
+    }
+
+    public function test_a_configured_minimum_refuses_an_order_beneath_it(): void
+    {
+        $this->activateStripe();
+        config(['stripe.minimum_minor' => 130000]);   // TZS 1,300
+
+        $this->order(['total' => 1000, 'delivery_fee' => 0]);   // TZS 1,000 -> 100000
+
+        $this->createSession()->assertStatus(422);
+
+        $this->assertSame([], $this->http->requests);
+        $this->assertSame(0, Payment::count());
+    }
+
+    public function test_a_configured_minimum_admits_an_order_that_meets_it(): void
+    {
+        $this->activateStripe();
+        config(['stripe.minimum_minor' => 130000]);
+
+        $this->order(['total' => 1300, 'delivery_fee' => 0]);   // exactly the floor
+
+        $this->createSession()->assertCreated();
+
+        $this->assertSame(130000, $this->http->lastParams()['line_items'][0]['price_data']['unit_amount']);
     }
 }

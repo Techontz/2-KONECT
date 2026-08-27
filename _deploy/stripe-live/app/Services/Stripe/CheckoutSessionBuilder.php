@@ -2,6 +2,7 @@
 
 namespace App\Services\Stripe;
 
+use App\Exceptions\UnchargeableOrder;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Support\Money;
@@ -47,7 +48,16 @@ class CheckoutSessionBuilder
         // currency to Stripe despite being quoted in whole shillings, so this
         // multiplies by 100 — verified against Stripe's published zero-decimal
         // list rather than assumed.
-        $amountMinor = Money::toMinorUnits($amount, $currency);
+        try {
+            $amountMinor = Money::toMinorUnits($amount, $currency);
+        } catch (\InvalidArgumentException $e) {
+            // Money refuses a negative amount, and a fractional one in the few
+            // currencies that cannot carry it. Same category of problem as the
+            // checks below, so it leaves this class wearing the same type.
+            throw new UnchargeableOrder($e->getMessage(), 0, $e);
+        }
+
+        $this->assertChargeable($amountMinor, $currency);
 
         $session = $this->stripe->make()->checkout->sessions->create(
             $this->params($lines, $reference, $currency, $amountMinor),
@@ -81,6 +91,41 @@ class CheckoutSessionBuilder
     }
 
     /**
+     * Refuse an amount Stripe could only reject.
+     *
+     * Two different refusals wearing the same coat. A zero or negative total is
+     * not a bill at all — it is an order priced wrongly, or one whose lines have
+     * all been cancelled, and sending it to Stripe turns a data problem into an
+     * API error three layers away from the thing that caused it.
+     *
+     * A total below the configured floor is a different matter: it is a real
+     * order that this account cannot charge for, because Stripe's minimum is
+     * enforced against the currency it settles in rather than the shillings the
+     * shopper sees. That floor ships switched off, so this only ever refuses
+     * what somebody has deliberately told it to.
+     *
+     * Both throw the same exception because the caller does the same thing with
+     * them: tell the shopper the payment cannot be started, and do not create a
+     * session. The message differs so the log says which it was.
+     */
+    private function assertChargeable(int $amountMinor, string $currency): void
+    {
+        if ($amountMinor <= 0) {
+            throw new UnchargeableOrder(
+                sprintf('Refusing to charge a non-positive amount (%d %s minor units).', $amountMinor, $currency),
+            );
+        }
+
+        $floor = (int) config('stripe.minimum_minor', 0);
+
+        if ($floor > 0 && $amountMinor < $floor) {
+            throw new UnchargeableOrder(
+                sprintf('Order total %d is below the configured %s minimum of %d minor units.', $amountMinor, $currency, $floor),
+            );
+        }
+    }
+
+    /**
      * @param  Collection<int, Order>  $lines
      * @return array<string, mixed>
      */
@@ -97,29 +142,30 @@ class CheckoutSessionBuilder
             // out of the Dashboard and into a deployment.
             'line_items' => $this->lineItems($lines, $currency, $amountMinor),
 
-            // ---- who is paying, and whether their card can be offered back ----
+            // ---- letting a shopper keep their card ----
             //
-            // A shopper who has paid before already has a Stripe Customer, and
-            // naming it here is what makes Stripe offer their saved card
-            // instead of an empty form. A first-time shopper has none, so one
-            // is created and the webhook writes its id onto the user.
+            // `payment_method_save` puts a checkbox on Stripe's page: tick it
+            // and the card comes back next time, leave it and nothing is kept.
+            // The shopper decides, which is both the honest arrangement and the
+            // only one that actually works.
             //
-            // `setup_future_usage` is what actually saves the card. Without it
-            // Stripe charges and forgets, and every purchase looks like a
-            // stranger's. It is `on_session` rather than `off_session` because
-            // 2KONECT never charges anybody who is not standing at the
-            // checkout — there is no subscription and no stored-card billing.
+            // The obvious-looking alternative does not. Saving a card with
+            // `setup_future_usage` gives it `allow_redisplay: limited`, and
+            // Stripe documents plainly that such cards "don't appear for return
+            // purchases in Checkout" — so it would store a card the shopper can
+            // never see, while also granting off-session charging that a
+            // marketplace taking payment at the till has no use for. Only
+            // `payment_method_save` produces `allow_redisplay: always`, which
+            // is the value Checkout prefills from.
             //
-            // No card detail reaches this application at any point. Stripe
-            // holds the number; we hold an opaque customer id.
-            ...$this->customerParams($first),
-
-            'payment_intent_data' => [
-                'setup_future_usage' => 'on_session',
-                'metadata' => [
-                    'order_reference' => $reference,
-                ],
+            // It needs a customer to attach the card to, which is what
+            // customerParams() below supplies. Without one Stripe saves neither
+            // the customer nor the card.
+            'saved_payment_method_options' => [
+                'payment_method_save' => 'enabled',
             ],
+
+            ...$this->customerParams($first),
 
             // Both correlate the payment back to the order. `client_reference_id`
             // is the one that shows in the Dashboard; the metadata is what the
@@ -129,6 +175,12 @@ class CheckoutSessionBuilder
                 'order_reference' => $reference,
                 'user_id'         => (string) $first->user_id,
             ],
+            'payment_intent_data' => [
+                'metadata' => [
+                    'order_reference' => $reference,
+                ],
+            ],
+
             // Informational only. The order page refetches and shows whatever
             // the webhook has recorded; neither of these settles anything, and
             // a shopper who edits the URL achieves nothing.
@@ -218,15 +270,18 @@ class CheckoutSessionBuilder
     /**
      * How this shopper is identified to Stripe.
      *
-     * Returns an existing customer when we have one, so their saved cards are
-     * offered; otherwise asks Stripe to create one, which the webhook then
-     * records against the user. Either way the shopper's email is passed so
-     * Stripe can send a receipt and so the Dashboard shows a person rather
-     * than an anonymous charge.
+     * A shopper who has paid before already has a Stripe Customer, and naming
+     * it is what makes their saved card appear instead of an empty form. A
+     * first-time shopper has none, so Stripe is asked to create one and the
+     * webhook writes its id onto the user.
      *
      * `customer` and `customer_creation` are mutually exclusive — sending both
-     * is an API error — which is why this is one method returning one shape or
-     * the other rather than two flags set independently.
+     * is an API error — which is why this returns one shape or the other
+     * rather than two flags set independently.
+     *
+     * The email goes with it so Stripe can send a receipt and the Dashboard
+     * shows a person rather than an anonymous charge. Nothing about the card
+     * itself passes through here, or through this application at all.
      *
      * @return array<string, mixed>
      */

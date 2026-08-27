@@ -2,6 +2,7 @@
 
 namespace App\Services\Stripe;
 
+use App\Exceptions\UnchargeableOrder;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Support\Money;
@@ -47,7 +48,16 @@ class CheckoutSessionBuilder
         // currency to Stripe despite being quoted in whole shillings, so this
         // multiplies by 100 — verified against Stripe's published zero-decimal
         // list rather than assumed.
-        $amountMinor = Money::toMinorUnits($amount, $currency);
+        try {
+            $amountMinor = Money::toMinorUnits($amount, $currency);
+        } catch (\InvalidArgumentException $e) {
+            // Money refuses a negative amount, and a fractional one in the few
+            // currencies that cannot carry it. Same category of problem as the
+            // checks below, so it leaves this class wearing the same type.
+            throw new UnchargeableOrder($e->getMessage(), 0, $e);
+        }
+
+        $this->assertChargeable($amountMinor, $currency);
 
         $session = $this->stripe->make()->checkout->sessions->create(
             $this->params($lines, $reference, $currency, $amountMinor),
@@ -78,6 +88,41 @@ class CheckoutSessionBuilder
             'session_id' => (string) $session->id,
             'payment'    => $payment,
         ];
+    }
+
+    /**
+     * Refuse an amount Stripe could only reject.
+     *
+     * Two different refusals wearing the same coat. A zero or negative total is
+     * not a bill at all — it is an order priced wrongly, or one whose lines have
+     * all been cancelled, and sending it to Stripe turns a data problem into an
+     * API error three layers away from the thing that caused it.
+     *
+     * A total below the configured floor is a different matter: it is a real
+     * order that this account cannot charge for, because Stripe's minimum is
+     * enforced against the currency it settles in rather than the shillings the
+     * shopper sees. That floor ships switched off, so this only ever refuses
+     * what somebody has deliberately told it to.
+     *
+     * Both throw the same exception because the caller does the same thing with
+     * them: tell the shopper the payment cannot be started, and do not create a
+     * session. The message differs so the log says which it was.
+     */
+    private function assertChargeable(int $amountMinor, string $currency): void
+    {
+        if ($amountMinor <= 0) {
+            throw new UnchargeableOrder(
+                sprintf('Refusing to charge a non-positive amount (%d %s minor units).', $amountMinor, $currency),
+            );
+        }
+
+        $floor = (int) config('stripe.minimum_minor', 0);
+
+        if ($floor > 0 && $amountMinor < $floor) {
+            throw new UnchargeableOrder(
+                sprintf('Order total %d is below the configured %s minimum of %d minor units.', $amountMinor, $currency, $floor),
+            );
+        }
     }
 
     /**
