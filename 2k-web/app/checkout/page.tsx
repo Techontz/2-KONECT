@@ -3,7 +3,7 @@
 import { useT } from "@/lib/i18n";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { apiError } from "@/lib/api";
 import { createCheckoutSession, paymentOptions, type PaymentOptions } from "@/lib/payments";
@@ -54,6 +54,10 @@ function CheckoutContent() {
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
   const [saved, setSaved] = useState<AddressType[]>([]);
+  // Bumped whenever an address is saved here. An address-book read that was
+  // already in flight when that happened is discarded rather than applied —
+  // otherwise a slow GET can quietly reinstate the list from before the save.
+  const bookVersion = useRef(0);
   // `null` means "type a different address", so an explicit choice to enter a
   // one-off destination is not overwritten when the saved list arrives.
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -92,12 +96,31 @@ function CheckoutContent() {
   // chosen from the book or saved during checkout — with a name and a phone
   // number a courier can actually use.
   //
-  // Deliberately scoped to gateway channels. Cash on delivery, Lipa Namba and
-  // mobile money keep the free-text field they have always had.
+  // Deliberately scoped to gateway channels. Cash on delivery and every
+  // manual channel keep the free-text field they have always had.
   const structuredAddress = selectedId !== null
     ? saved.find((item) => item.id === selectedId) ?? null
     : null;
   const needsStructuredAddress = isGateway && structuredAddress === null;
+
+  /**
+   * Whether this order can be paid for at all.
+   *
+   * Only genuinely required things. A card checkout needs an address a courier
+   * can be sent to; every checkout needs somewhere to deliver, a number to
+   * ring, something in the basket and a method the server actually offered.
+   * Nothing here asks for a channel by name — a checkout must never be held up
+   * waiting for a payment method that is no longer switched on.
+   */
+  const hasDeliveryTarget = isGateway ? structuredAddress !== null : address.trim() !== "";
+  const canPay =
+    !placing &&
+    cart.lines.length > 0 &&
+    hasDeliveryTarget &&
+    phone.trim() !== "" &&
+    // The server decides what is on offer; an empty string means it named
+    // nothing, and there is then nothing to press.
+    payment !== "";
 
   useEffect(() => {
     let live = true;
@@ -130,12 +153,22 @@ function CheckoutContent() {
     if (!ready || !isAuthenticated) return;
 
     let cancelled = false;
+    // What the book looked like when this request left. If anything is saved
+    // while it is in flight, the answer it eventually brings back is older
+    // than what the shopper is looking at, and must not be written.
+    const startedAt = bookVersion.current;
 
     shop
       .addresses()
       .then((list) => {
-        if (cancelled || list.length === 0) return;
+        if (cancelled || bookVersion.current !== startedAt) return;
+
+        // Written even when empty. Returning early here meant a shopper who
+        // had deleted every address kept seeing the old ones until reload.
         setSaved(list);
+
+        if (list.length === 0) return;
+
         const preferred = list.find((item) => item.is_default) ?? list[0];
         setSelectedId(preferred.id);
         setAddress(preferred.formatted);
@@ -160,6 +193,33 @@ function CheckoutContent() {
     setSelectedId(item.id);
     setAddress(item.formatted);
     if (item.phone) setPhone(item.phone);
+  }
+
+  /**
+   * Adopt what the server just wrote, and make any older read stale.
+   *
+   * Both the add and the edit paths end here, so there is one rule about which
+   * address ends up selected rather than two that can drift. Bumping the
+   * version is what stops a slow GET issued before the save from landing
+   * afterwards and replacing the new address with the list that predates it.
+   *
+   * `address` is the row the server says it wrote. Falling back to the book is
+   * only for an older API that does not return it; the id is never guessed by
+   * diffing lists, which is what used to happen and what went wrong whenever
+   * the local list was not what the server had.
+   */
+  function adoptSaved(result: { address: AddressType | null; addresses: AddressType[] }) {
+    bookVersion.current += 1;
+
+    setSaved(result.addresses);
+
+    const chosen =
+      result.address ??
+      result.addresses.find((item) => item.is_default) ??
+      result.addresses[0] ??
+      null;
+
+    if (chosen) chooseAddress(chosen);
   }
 
 
@@ -197,8 +257,8 @@ function CheckoutContent() {
    * straight to it.
    *
    * This used to do the same thing for every channel: create the order, empty
-   * the cart, land on the order page. For cash on delivery and Lipa Namba that
-   * is right; for a card it is not. The shopper pressed a button that reads
+   * the cart, land on the order page. For cash on delivery and the manual
+   * channels that is right; for a card it is not. The shopper pressed a button that reads
    * like paying, got a page that reads like a receipt, and the actual payment
    * sat behind a second button further down. Nothing was ever wrongly marked
    * paid — the order is created `awaiting_payment` and only a signed webhook
@@ -388,14 +448,9 @@ function CheckoutContent() {
                   initial={editing}
                   onCancel={() => setEditing(null)}
                   onSubmit={async (values) => {
-                    const list = await shop.updateAddress(editing.id, values);
-                    setSaved(list);
-
                     // Stays selected. Correcting a house number should not
                     // quietly change where the order is going.
-                    const updated = list.find((item) => item.id === editing.id);
-                    if (updated) chooseAddress(updated);
-
+                    adoptSaved(await shop.updateAddress(editing.id, values));
                     setEditing(null);
                   }}
                 />
@@ -412,17 +467,10 @@ function CheckoutContent() {
                   forceDefault={saved.length === 0}
                   onCancel={() => setAddingAddress(false)}
                   onSubmit={async (values) => {
-                    const list = await shop.createAddress(values);
-                    setSaved(list);
-
-                    // Select whatever the server says is new, so the shopper is
-                    // delivering to the address they just typed.
-                    const created =
-                      list.find((item) => !saved.some((existing) => existing.id === item.id)) ??
-                      list.find((item) => item.is_default) ??
-                      list[0];
-
-                    if (created) chooseAddress(created);
+                    // Selected because the server said this is the row it
+                    // wrote — not because it is the one missing from a list
+                    // this page happened to be holding.
+                    adoptSaved(await shop.createAddress(values));
                     setAddingAddress(false);
                   }}
                 />
@@ -468,7 +516,10 @@ function CheckoutContent() {
 
           {/* ---- payment ---- */}
           <section className="rounded-[var(--radius-md)] border border-[color:var(--color-line)] bg-[color:var(--color-surface)] p-4">
-            <h2 className="mb-3 text-[15px] font-black">{t("checkout.payment")}</h2>
+            <h2 className="text-[15px] font-black">{t("payment.chooseMethod")}</h2>
+            <p className="mb-3 mt-1 text-[12px] text-[color:var(--color-ink-muted)]">
+              {t("payment.chooseMethodHint")}
+            </p>
 
             {/* Anything from abroad is prepaid, and the reason is stated
                 rather than left as a missing option. */}
@@ -499,7 +550,12 @@ function CheckoutContent() {
                   checked={payment === channel.code}
                   onSelect={() => setPayment(channel.code)}
                   title={channel.label}
-                  body={channel.instructions ?? (channel.is_gateway ? t("payment.gatewayBody") : "")}
+                  // A manual channel's instructions are configuration: the
+                  // till number and what to do after paying live on the
+                  // server because they change without a release. A gateway
+                  // has none of that — nothing to copy, nothing to quote —
+                  // so its description is ours to write and to translate.
+                  body={channel.is_gateway ? t("payment.gatewayBody") : channel.instructions ?? ""}
                 />
               ))}
 
@@ -614,7 +670,7 @@ function CheckoutContent() {
               size="lg"
               className="mt-3 w-full"
               loading={placing}
-              disabled={placing || needsStructuredAddress}
+              disabled={!canPay}
             >
               {phase === "redirecting"
                 ? t("checkout.redirectingToStripe")

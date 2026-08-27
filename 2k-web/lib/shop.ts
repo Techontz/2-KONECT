@@ -22,6 +22,13 @@ import type {
 } from "./types";
 
 /**
+ * What the address endpoints answer with: the row that was written, and the
+ * book as it now stands.
+ */
+export type SavedAddress = { address: Address | null; addresses: Address[] };
+
+
+/**
  * Typed client for the public storefront API.
  *
  * Every network call the storefront makes goes through here, so request
@@ -322,14 +329,29 @@ export const shop = {
     return data.addresses;
   },
 
-  async createAddress(payload: AddressInput): Promise<Address[]> {
-    const { data } = await api.post<{ addresses: Address[] }>("/shop/addresses", payload);
-    return data.addresses;
+  /**
+   * Save a new address, and say which one it is.
+   *
+   * The endpoint returns both the row it created and the whole book. Callers
+   * used to take only the book and work out which entry was new by diffing it
+   * against the list they were already holding — which is guesswork dressed as
+   * logic, and wrong the moment that list is stale or another device has added
+   * something. The server already knows. Return what it said.
+   */
+  async createAddress(payload: AddressInput): Promise<SavedAddress> {
+    const { data } = await api.post<{ address: Address; addresses: Address[] }>(
+      "/shop/addresses",
+      payload,
+    );
+    return { address: data.address ?? null, addresses: data.addresses ?? [] };
   },
 
-  async updateAddress(id: number, payload: AddressInput): Promise<Address[]> {
-    const { data } = await api.put<{ addresses: Address[] }>(`/shop/addresses/${id}`, payload);
-    return data.addresses;
+  async updateAddress(id: number, payload: AddressInput): Promise<SavedAddress> {
+    const { data } = await api.put<{ address: Address; addresses: Address[] }>(
+      `/shop/addresses/${id}`,
+      payload,
+    );
+    return { address: data.address ?? null, addresses: data.addresses ?? [] };
   },
 
   async deleteAddress(id: number): Promise<Address[]> {

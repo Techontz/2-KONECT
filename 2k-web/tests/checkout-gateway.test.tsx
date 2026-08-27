@@ -201,8 +201,6 @@ describe("the cart", () => {
  * Scoped to gateways on purpose. The manual channels keep the free-text field
  * they have always had, and these assert that too.
  */
-type Saved = { id: number; is_default: boolean };
-
 function needsStructuredAddress(
   gateway: boolean,
   selectedId: number | null,
@@ -211,11 +209,6 @@ function needsStructuredAddress(
   const structured = selectedId !== null ? saved.find((a) => a.id === selectedId) ?? null : null;
   return gateway && structured === null;
 }
-
-const BOOK: Saved[] = [
-  { id: 1, is_default: true },
-  { id: 2, is_default: false },
-];
 
 describe("the card address guard", () => {
   it("blocks a card checkout with no address chosen", () => {
@@ -246,43 +239,184 @@ describe("the card address guard", () => {
 /**
  * Adding and editing an address without losing the basket.
  *
- * Both reuse the account page's own endpoints, which return the whole book, so
- * the selection is re-derived from the server's answer rather than guessed.
+ * The page no longer works out which address is new by diffing the returned
+ * book against the one it was holding. That was guesswork: it is only correct
+ * while the local list is exactly what the server had, which stops being true
+ * the moment a request is slow or another device has saved something. The
+ * endpoint returns the row it wrote. Use it.
  */
-function selectAfterCreate(before: Saved[], after: Saved[]): number | null {
-  const created =
-    after.find((item) => !before.some((existing) => existing.id === item.id)) ??
-    after.find((item) => item.is_default) ??
-    after[0];
-  return created?.id ?? null;
+type Saved = { id: number; is_default: boolean };
+
+/** adoptSaved(), as the page applies it. */
+function adopt(result: { address: Saved | null; addresses: Saved[] }): number | null {
+  const chosen =
+    result.address ?? result.addresses.find((a) => a.is_default) ?? result.addresses[0] ?? null;
+  return chosen?.id ?? null;
 }
 
-describe("address selection", () => {
-  it("a newly created address becomes the selected one", () => {
-    const after: Saved[] = [...BOOK, { id: 3, is_default: false }];
-    expect(selectAfterCreate(BOOK, after)).toBe(3);
+const BOOK: Saved[] = [
+  { id: 1, is_default: true },
+  { id: 2, is_default: false },
+];
+
+describe("adopting what the server wrote", () => {
+  it("selects the address the server says it created", () => {
+    const created = { id: 3, is_default: false };
+    expect(adopt({ address: created, addresses: [...BOOK, created] })).toBe(3);
   });
 
-  it("the first address a customer ever saves is selected", () => {
-    expect(selectAfterCreate([], [{ id: 7, is_default: true }])).toBe(7);
+  it("selects the first address a shopper ever saves", () => {
+    const created = { id: 7, is_default: true };
+    expect(adopt({ address: created, addresses: [created] })).toBe(7);
   });
 
-  it("an edited address stays selected", () => {
-    // updateAddress returns the whole book; the same id must still be chosen,
-    // because correcting a house number should not silently redirect an order.
-    const editedId = 2;
-    const after: Saved[] = [{ id: 1, is_default: true }, { id: 2, is_default: false }];
-    expect(after.find((a) => a.id === editedId)?.id).toBe(editedId);
+  it("keeps an edited address selected", () => {
+    // Correcting a house number must not silently redirect the order.
+    const edited = { id: 2, is_default: false };
+    expect(adopt({ address: edited, addresses: BOOK })).toBe(2);
   });
 
-  it("the default address is what gets preselected on arrival", () => {
-    const preferred = BOOK.find((a) => a.is_default) ?? BOOK[0];
-    expect(preferred.id).toBe(1);
+  it("selects the right row even when the returned book is not what we held", () => {
+    // The case the old diff got wrong. Another device added id 9 in the
+    // meantime, so two entries are unknown to this page — but only one of
+    // them is the row this save wrote.
+    const created = { id: 3, is_default: false };
+    const book = [...BOOK, { id: 9, is_default: false }, created];
+    expect(adopt({ address: created, addresses: book })).toBe(3);
   });
 
-  it("with no default, the first address is preselected", () => {
-    const none: Saved[] = [{ id: 5, is_default: false }, { id: 6, is_default: false }];
-    const preferred = none.find((a) => a.is_default) ?? none[0];
-    expect(preferred.id).toBe(5);
+  it("falls back to the default when an older API returns no row", () => {
+    expect(adopt({ address: null, addresses: BOOK })).toBe(1);
+  });
+
+  it("selects nothing when there is nothing to select", () => {
+    expect(adopt({ address: null, addresses: [] })).toBeNull();
+  });
+});
+
+/**
+ * A slow read must not undo a save that happened while it was in flight.
+ *
+ * The address book is fetched once on sign-in. On a cold shared host that
+ * request can take seconds, and a shopper who saves an address inside that
+ * window used to watch it vanish: the GET landed afterwards carrying the list
+ * from before the save, and overwrote it.
+ */
+function bookGuard() {
+  let version = 0;
+  let list: Saved[] = [];
+
+  return {
+    read(startedAt: number, result: Saved[]) {
+      if (version !== startedAt) return;   // stale — issued before a save
+      list = result;
+    },
+    save(result: Saved[]) {
+      version += 1;
+      list = result;
+    },
+    version: () => version,
+    list: () => list,
+  };
+}
+
+describe("a saved address survives an in-flight refresh", () => {
+  it("discards a read that was issued before the save", () => {
+    const book = bookGuard();
+    const startedAt = book.version();          // GET leaves with the book empty
+
+    book.save([{ id: 5, is_default: true }]);  // shopper saves while it is out
+    book.read(startedAt, []);                  // the stale GET finally lands
+
+    expect(book.list()).toEqual([{ id: 5, is_default: true }]);
+  });
+
+  it("discards a stale read that carries the older, shorter book", () => {
+    // The reported case: one address already saved, a second added while the
+    // refresh was in flight. The old code reinstated the list of one.
+    const book = bookGuard();
+    const startedAt = book.version();
+
+    book.save([{ id: 1, is_default: true }, { id: 2, is_default: false }]);
+    book.read(startedAt, [{ id: 1, is_default: true }]);
+
+    expect(book.list()).toHaveLength(2);
+  });
+
+  it("still applies a read when nothing was saved while it was out", () => {
+    const book = bookGuard();
+    const startedAt = book.version();
+
+    book.read(startedAt, BOOK);
+
+    expect(book.list()).toEqual(BOOK);
+  });
+
+  it("applies an empty book rather than ignoring it", () => {
+    // Returning early on an empty list meant a shopper who had deleted every
+    // address kept seeing the old ones until they reloaded.
+    const book = bookGuard();
+    book.save(BOOK);
+    const startedAt = book.version();
+
+    book.read(startedAt, []);
+
+    expect(book.list()).toEqual([]);
+  });
+});
+
+/**
+ * When "Pay and place order" may be pressed.
+ *
+ * Only genuinely required things, and never a named payment method — holding
+ * a checkout open waiting for a channel that has been switched off is how the
+ * page came to be advertising Lipa Namba after it stopped being offered.
+ */
+function canPay(s: {
+  placing: boolean; lines: number; gateway: boolean;
+  structured: Saved | null; address: string; phone: string; payment: string;
+}): boolean {
+  const hasDeliveryTarget = s.gateway ? s.structured !== null : s.address.trim() !== "";
+  return !s.placing && s.lines > 0 && hasDeliveryTarget && s.phone.trim() !== "" && s.payment !== "";
+}
+
+const READY = {
+  placing: false, lines: 1, gateway: true,
+  structured: { id: 1, is_default: true } as Saved | null,
+  address: "Msasani, Kinondoni, Dar es Salaam", phone: "0712345678", payment: "stripe",
+};
+
+describe("the pay button", () => {
+  it("is enabled once a card checkout has a saved address and a phone", () => {
+    expect(canPay(READY)).toBe(true);
+  });
+
+  it("is disabled while an order is being placed", () => {
+    expect(canPay({ ...READY, placing: true })).toBe(false);
+  });
+
+  it("is disabled without a phone number", () => {
+    expect(canPay({ ...READY, phone: "   " })).toBe(false);
+  });
+
+  it("is disabled with an empty basket", () => {
+    expect(canPay({ ...READY, lines: 0 })).toBe(false);
+  });
+
+  it("is disabled when the server offered no payment method", () => {
+    expect(canPay({ ...READY, payment: "" })).toBe(false);
+  });
+
+  it("is disabled for a card checkout with no structured address", () => {
+    expect(canPay({ ...READY, structured: null })).toBe(false);
+  });
+
+  it("accepts a typed address for a manual channel", () => {
+    // Cash on delivery never needed the address book.
+    expect(canPay({ ...READY, gateway: false, structured: null, payment: "cash_on_delivery" })).toBe(true);
+  });
+
+  it("is disabled for a manual channel with nothing typed", () => {
+    expect(canPay({ ...READY, gateway: false, structured: null, address: "  ", payment: "cash_on_delivery" })).toBe(false);
   });
 });

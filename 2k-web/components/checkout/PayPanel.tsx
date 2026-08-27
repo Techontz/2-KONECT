@@ -129,7 +129,11 @@ export function PayPanel({
     <section className="overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--color-brand-200)] bg-[color:var(--color-surface)]">
       <header className="brand-ground px-4 py-3">
         <p className="text-[15px] font-black text-white">
-          {t("payment.payWith", { method: channel?.label ?? t("payment.lipaNamba") })}
+          {/* The label is the server's. The fallback names no method at all:
+              it used to say "Lipa Namba", which meant a channel the backend
+              had not described was announced to the shopper as one specific
+              method — occasionally one that was no longer switched on. */}
+          {channel?.label ? t("payment.payWith", { method: channel.label }) : t("checkout.payment")}
         </p>
       </header>
 

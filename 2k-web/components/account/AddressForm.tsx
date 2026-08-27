@@ -91,9 +91,27 @@ export function AddressForm({
     return Object.keys(next).length === 0;
   }
 
-  async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    if (!validate()) return;
+  /**
+   * Save, without ever telling an enclosing form to submit.
+   *
+   * This used to be a <form onSubmit>, which was fine on the account page and
+   * quietly broken at checkout: the checkout page wraps everything in its own
+   * <form onSubmit={placeOrder}> and renders this inside it. Nesting a form in
+   * a form is invalid HTML, but the damage was not the validity — `submit`
+   * bubbles, and React replays events through its tree, so every click on
+   * "Save address" also ran placeOrder. Off a gateway channel that placed the
+   * order outright, emptied the cart and navigated away; the address the
+   * shopper had just typed went with it. It fired even when validation here
+   * had failed and nothing was saved at all.
+   *
+   * So this is no longer a form. Nothing bubbles, because no submit event is
+   * ever raised. Enter is handled below so the keyboard still works.
+   */
+  async function handleSubmit(event?: { preventDefault(): void; stopPropagation(): void }) {
+    event?.preventDefault();
+    event?.stopPropagation();
+
+    if (saving || !validate()) return;
 
     setSaving(true);
     try {
@@ -113,9 +131,28 @@ export function AddressForm({
     }
   }
 
+  /**
+   * Enter saves the address, and goes no further.
+   *
+   * Without this, losing the <form> would trade one bug for a quieter one: a
+   * text input inside an enclosing form submits *that* form on Enter, so the
+   * shopper pressing return after typing their street would place the order.
+   * Textareas keep Enter as a newline, which is what it means there.
+   */
+  function handleKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (event.key !== "Enter") return;
+    if ((event.target as HTMLElement).tagName === "TEXTAREA") return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    void handleSubmit();
+  }
+
   return (
-    <form
-      onSubmit={handleSubmit}
+    <div
+      role="group"
+      aria-label={initial ? t("address.formEdit") : t("address.formAdd")}
+      onKeyDown={handleKeyDown}
       className="mb-4 rounded-[var(--radius-md)] bg-[color:var(--color-surface)] p-4 ring-1 ring-[color:var(--color-line)]"
     >
       <h2 className="mb-3 text-[16px] font-black">
@@ -210,14 +247,16 @@ export function AddressForm({
       </label>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <Button type="submit" disabled={saving}>
+        {/* Explicitly type="button". A submit button here would look for a
+            form to submit and find the checkout's. */}
+        <Button type="button" onClick={handleSubmit} disabled={saving}>
           {saving ? t("common.saving") : initial ? t("address.saveChanges") : t("address.saveAddress")}
         </Button>
         <Button type="button" variant="ghost" onClick={onCancel} disabled={saving}>
           {t("common.cancel")}
         </Button>
       </div>
-    </form>
+    </div>
   );
 }
 

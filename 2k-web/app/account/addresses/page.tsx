@@ -132,10 +132,13 @@ function AddressesContent() {
             setEditing(null);
           }}
           onSubmit={async (values: AddressInput) => {
-            await run(() =>
-              editing
-                ? shop.updateAddress(editing.id, values)
-                : shop.createAddress(values),
+            // Both endpoints now answer with the row they wrote as well as
+            // the book; this page only needs the book.
+            await run(async () =>
+              (editing
+                ? await shop.updateAddress(editing.id, values)
+                : await shop.createAddress(values)
+              ).addresses,
             );
             setAdding(false);
             setEditing(null);
