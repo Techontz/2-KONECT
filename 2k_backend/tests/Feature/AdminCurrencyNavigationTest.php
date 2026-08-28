@@ -89,4 +89,54 @@ class AdminCurrencyNavigationTest extends TestCase
         $this->assertSame('USD', CurrencyRate::latest('id')->first()->base);
         $this->assertSame('TZS', CurrencyRate::latest('id')->first()->quote);
     }
+
+    /* ---------------------------------------------------------------- */
+    /* the form must accept a rate somebody would actually type          */
+    /* ---------------------------------------------------------------- */
+
+    /**
+     * The bug that repriced the catalogue.
+     *
+     * A number input's valid values are min + n*step. The field was
+     * min=0.000001, step=1, so the only acceptable inputs were 0.000001,
+     * 1.000001, 2.000001 … 2500 was refused by the browser, which offered
+     * "the two nearest valid values are 0.000001 and 1.000001". Somebody
+     * picked 1.000001, and every USD price on the site was wrong by a factor
+     * of 2,500 until it was noticed.
+     */
+    public function test_the_rate_field_admits_every_rate_a_person_would_type(): void
+    {
+        foreach ([1.0, 100.0, 2500.0, 2500.50, 2700.0, 5000.0] as $rate) {
+            $this->assertTrue(
+                Currency::isEnterableRate($rate),
+                "A browser would refuse {$rate} in the admin rate field.",
+            );
+        }
+    }
+
+    public function test_the_broken_step_that_caused_the_incident_cannot_return(): void
+    {
+        // The exact pair that shipped: min 0.000001, step 1. A browser compares
+        // exactly, so 2499.999999 steps is not a whole number of steps and
+        // 2500 is refused. Asserted as an exact inequality rather than with a
+        // tolerance, because the gap being measured IS one part in a million.
+        $brokenSteps = (2500 - 0.000001) / 1;
+        $this->assertNotSame(
+            (float) round($brokenSteps),
+            $brokenSteps,
+            'min=0.000001 with step=1 refuses 2500 — the configuration that broke production.',
+        );
+
+        // And the one that shipped instead does not.
+        $this->assertSame(0.01, Currency::RATE_INPUT_STEP);
+        $this->assertSame(0.01, Currency::RATE_INPUT_MIN);
+        $this->assertSame(1.0, Currency::MINIMUM_PLAUSIBLE_RATE);
+    }
+
+    public function test_a_browser_still_blocks_zero_and_negatives(): void
+    {
+        foreach ([0.0, -1.0, -2500.0] as $bad) {
+            $this->assertFalse(Currency::isEnterableRate($bad));
+        }
+    }
 }

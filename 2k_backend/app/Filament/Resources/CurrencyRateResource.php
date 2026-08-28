@@ -60,16 +60,50 @@ class CurrencyRateResource extends Resource
                         ->suffix('TZS')
                         ->numeric()
                         ->required()
-                        // The floor is what stops the reciprocal being typed
-                        // in by mistake. Nothing errors when it is: the site
-                        // simply starts quoting a 2.7 million shilling phone
-                        // at 2.7 million dollars, which is exactly what
-                        // happened at 1.000001.
-                        ->minValue(\App\Support\Currency::MINIMUM_PLAUSIBLE_RATE)
-                        ->step(1)
+                        // ---- step and min, and why they matter ----
+                        //
+                        // A number input's valid values are min + n*step. This
+                        // was min=0.000001 with step=1, so the only values the
+                        // browser would accept were 0.000001, 1.000001,
+                        // 2.000001 … — 2500 was refused outright, and the
+                        // browser helpfully offered "the two nearest valid
+                        // values are 0.000001 and 1.000001".
+                        //
+                        // Somebody picked 1.000001. That became the live
+                        // marketplace rate, and every USD price on the site was
+                        // wrong by a factor of 2,500 until it was noticed. A
+                        // broken step on one form quietly repriced a catalogue.
+                        //
+                        // 0.01 admits every rate anybody would type — 1, 100,
+                        // 2500, 2500.50, 2700 — and leaves judgement about
+                        // whether a value makes sense to the rule below, which
+                        // can explain itself. A browser step error cannot.
+                        ->step(\App\Support\Currency::RATE_INPUT_STEP)
+                        ->minValue(\App\Support\Currency::RATE_INPUT_MIN)
+                        ->rule(fn () => function (string $attribute, $value, \Closure $fail) {
+                            if (! is_numeric($value)) {
+                                $fail('Enter a number, for example 2500.');
+
+                                return;
+                            }
+
+                            if ((float) $value <= 0) {
+                                $fail('An exchange rate must be greater than zero.');
+
+                                return;
+                            }
+
+                            if ((float) $value < \App\Support\Currency::MINIMUM_PLAUSIBLE_RATE) {
+                                $fail(sprintf(
+                                    'A rate below 1 looks inverted. Enter how many Tanzanian Shillings one '
+                                    . 'US dollar is worth — for example 2500. You may have meant %s.',
+                                    rtrim(rtrim(number_format(1 / (float) $value, 2), '0'), '.'),
+                                ));
+                            }
+                        })
                         ->helperText(
-                            'How many Tanzanian Shillings one US dollar is worth. For example 2500. '
-                            . 'Not the other way round — 0.0004 is the reciprocal and will be refused.'
+                            'How many Tanzanian Shillings one US dollar is worth — for example 2500, '
+                            . 'or 2500.50. Not the other way round: 0.0004 is the reciprocal and is refused.'
                         ),
 
                     Forms\Components\TextInput::make('note')

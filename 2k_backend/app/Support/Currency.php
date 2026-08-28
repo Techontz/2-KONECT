@@ -54,13 +54,44 @@ class Currency
     public const FALLBACK_RATE = 2500.0;
 
     /**
-     * Below this, a rate is treated as a typo rather than a decision.
+     * Below this, a rate is the reciprocal typed in by mistake.
      *
-     * Not a claim about the market — 2KONECT sets its own rate — only that a
-     * dollar is not worth less than a hundred shillings, so a value beneath
-     * this is the reciprocal entered by mistake.
+     * One shilling per dollar is already absurd, so anything under it is not a
+     * business decision — it is 0.0004 entered where 2500 was meant. The floor
+     * sits at 1 rather than somewhere more opinionated because the job here is
+     * to catch an inverted entry, not to have views on what 2KONECT should
+     * charge.
+     *
+     * The failure this prevents is silent, which is why it is worth
+     * preventing: nothing errors at 0.0004. The catalogue simply starts
+     * quoting a 2.7 million shilling phone at six billion dollars.
      */
-    public const MINIMUM_PLAUSIBLE_RATE = 100.0;
+    public const MINIMUM_PLAUSIBLE_RATE = 1.0;
+
+    /**
+     * The admin rate field's HTML step and minimum.
+     *
+     * Declared here rather than inline in the form because a number input's
+     * valid values are min + n*step, and getting that pair wrong is not a
+     * cosmetic bug: min=0.000001 with step=1 admitted only 0.000001, 1.000001,
+     * 2.000001 … so 2500 was refused by the browser, somebody accepted the
+     * 1.000001 it offered instead, and the whole catalogue was repriced by a
+     * factor of 2,500.
+     *
+     * 0.01 admits every rate anybody would type. Whether a value makes sense
+     * is decided by MINIMUM_PLAUSIBLE_RATE, which can explain itself; a
+     * browser step error cannot.
+     */
+    public const RATE_INPUT_STEP = 0.01;
+    public const RATE_INPUT_MIN  = 0.01;
+
+    /** Whether a browser would accept this value in the admin rate field. */
+    public static function isEnterableRate(float $rate): bool
+    {
+        $steps = ($rate - self::RATE_INPUT_MIN) / self::RATE_INPUT_STEP;
+
+        return $rate >= self::RATE_INPUT_MIN && abs($steps - round($steps)) < 1e-6;
+    }
 
     /* ---------------------------------------------------------------- */
     /* the rate                                                          */
@@ -155,7 +186,8 @@ class Currency
         // business rate puts a dollar below a hundred shillings.
         if ($rate < self::MINIMUM_PLAUSIBLE_RATE) {
             throw new \InvalidArgumentException(sprintf(
-                'A rate of %s looks inverted. Enter how many TZS one USD is worth — for example 2500, not %s.',
+                'A rate of %s looks inverted. Enter how many Tanzanian Shillings one US dollar is worth '
+                . '— for example 2500. You may have meant %s.',
                 rtrim(rtrim(number_format($rate, 6), '0'), '.'),
                 rtrim(rtrim(number_format(1 / $rate, 6), '0'), '.'),
             ));

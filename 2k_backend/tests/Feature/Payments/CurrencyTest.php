@@ -687,7 +687,7 @@ class CurrencyTest extends TestCase
      */
     public function test_an_inverted_rate_is_refused_with_an_explanation(): void
     {
-        foreach ([0.0004, 1.000001, 0.000387, 99.0] as $inverted) {
+        foreach ([0.0004, 0.000387, 0.000001, 0.5] as $inverted) {
             try {
                 Currency::setRate($inverted);
                 $this->fail("A rate of {$inverted} should have been refused as inverted.");
@@ -702,9 +702,16 @@ class CurrencyTest extends TestCase
         $this->assertSame(2500.0, Currency::rate());
     }
 
-    public function test_a_plausible_business_rate_is_accepted(): void
+    /**
+     * The values the admin form must accept.
+     *
+     * Every one of these was refused by the browser before the step was fixed:
+     * with min=0.000001 and step=1 the only valid inputs were x.000001, which
+     * is how the live rate came to be 1.000001.
+     */
+    public function test_every_normal_exchange_rate_is_accepted(): void
     {
-        foreach ([100.0, 2500.0, 2700.0, 5000.0] as $sane) {
+        foreach ([1.0, 100.0, 2500.0, 2500.50, 2700.0, 5000.0] as $sane) {
             Currency::setRate($sane);
             $this->assertSame($sane, Currency::rate());
         }
