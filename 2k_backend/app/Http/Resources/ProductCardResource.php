@@ -44,7 +44,12 @@ class ProductCardResource extends JsonResource
             // choose — and the dearest here is 19% above the cheapest.
             'price' => $variants->hasVariants
                 ? Money::payload($variants->priceFrom, null)
-                : Money::payload($this->new_price, $this->old_price),
+                : Money::payload(
+                    // Converted from the seller's own currency first. Without
+                    // this a listing quoted at $20 renders as "TZS 20".
+                    $this->resource->inBaseCurrency((float) $this->new_price),
+                    $this->old_price !== null ? $this->resource->inBaseCurrency((float) $this->old_price) : null,
+                ),
             'price_from' => $variants->isRange(),
             'rating' => [
                 'average' => $rating ? round((float) $rating, 1) : 0.0,

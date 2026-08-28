@@ -15,6 +15,14 @@ return Application::configure(basePath: dirname(__DIR__))
         // unless the alias is overridden here, so the app's own version — the
         // one that answers API routes with 401 JSON rather than a redirect to
         // the admin login — was never actually being used.
+        // Every API response that carries a price is quoted in one currency,
+        // decided once per request. Prepended rather than aliased because a
+        // price can appear on almost any endpoint and none of them should have
+        // to remember to opt in.
+        $middleware->api(prepend: [
+            \App\Http\Middleware\ResolveDisplayCurrency::class,
+        ]);
+
         $middleware->alias([
             'auth' => \App\Http\Middleware\Authenticate::class,
             // Signed-in-if-you-are, public-if-you-are-not. Used by endpoints

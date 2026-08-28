@@ -75,6 +75,10 @@ Route::prefix('shop')->group(function () {
     // renders them before it knows who is buying; it exposes only what is
     // meant to be read off the screen — the till number, name and wording.
     Route::get('/payment-channels', [ShopCheckoutPaymentController::class, 'channels']);
+
+    // What currency to offer this visitor, and the rate every converted price
+    // on every other endpoint was produced with. Public: a price is public.
+    Route::get('/currency', \App\Http\Controllers\Api\Shop\CurrencyController::class);
     Route::get('/categories/{id}', [ShopCatalogController::class, 'category'])
         ->whereNumber('id')->middleware('cacheable:300,1800');
 

@@ -5,6 +5,7 @@ namespace App\Services\Stripe;
 use App\Exceptions\UnchargeableOrder;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Support\Currency;
 use App\Support\Money;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -35,7 +36,21 @@ class CheckoutSessionBuilder
     {
         $first = $lines->first();
         $reference = (string) $first->reference;
-        $currency = strtoupper((string) config('stripe.currency', Money::BASE));
+
+        // ---- the currency this order is actually charged in ----
+        //
+        // Taken from the order, not from a global setting and never from the
+        // request. The customer was shown a figure in a particular currency at
+        // a particular rate; both were written onto the order at the moment it
+        // was placed, and this charges exactly that. A rate changed between
+        // placing and paying cannot move the amount, and a client cannot ask
+        // to be billed in something cheaper.
+        //
+        // `config('stripe.currency')` remains the default for anything placed
+        // before the snapshot existed.
+        $currency = Currency::normalise(
+            $first->charge_currency ?: config('stripe.currency', Money::BASE),
+        );
 
         // The total, from the database. `total` is the line's own money and
         // `delivery_fee` sits on one line of the checkout — summing both across
@@ -43,6 +58,13 @@ class CheckoutSessionBuilder
         // the shopper, so the figure on the Stripe page is the figure on the
         // order page.
         $amount = round((float) $lines->sum('total') + (float) $lines->sum('delivery_fee'), 2);
+
+        // Converted with the order's own rate, not today's. This is the whole
+        // point of the snapshot: what the customer agreed to pay is what the
+        // card is asked for, whatever an administrator has done since.
+        if ($currency !== Money::BASE) {
+            $amount = Currency::fromBase($amount, $currency, (float) $first->exchange_rate ?: null);
+        }
 
         // The only conversion, and it lives in Money. TZS is a two-decimal
         // currency to Stripe despite being quoted in whole shillings, so this
@@ -218,8 +240,14 @@ class CheckoutSessionBuilder
         $items = [];
         $running = 0;
 
+        $rate = (float) ($lines->first()->exchange_rate ?? 0) ?: null;
+
         foreach ($lines as $line) {
-            $lineMinor = Money::toMinorUnits((float) $line->total, $currency);
+            $lineAmount = $currency === Money::BASE
+                ? (float) $line->total
+                : Currency::fromBase((float) $line->total, $currency, $rate);
+
+            $lineMinor = Money::toMinorUnits($lineAmount, $currency);
             $running += $lineMinor;
 
             $items[] = [

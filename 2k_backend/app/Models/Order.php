@@ -58,6 +58,10 @@ class Order extends Model
         'estimated_arrival_at',
         'tracking_number',
         'carrier',
+    
+        'display_currency',
+        'charge_currency',
+        'exchange_rate',
     ];
 
     protected $casts = [
@@ -71,7 +75,8 @@ class Order extends Model
         'eta_min_days' => 'integer',
         'eta_max_days' => 'integer',
         'estimated_arrival_at' => 'date',
-    ];
+    
+        'exchange_rate' => 'decimal:6',];
 
     /**
      * The last line of defence for the prepayment rule.

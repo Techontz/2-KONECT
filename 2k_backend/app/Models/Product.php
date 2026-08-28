@@ -9,6 +9,27 @@ class Product extends Model
 {
     use HasFactory;
 
+    /**
+     * A stored price as canonical shillings.
+     *
+     * The seller's own figure is never rewritten — a listing quoted at $20
+     * holds 20, and `base_currency` says what that 20 means. This is what
+     * turns it into the currency everything else in the system counts in.
+     *
+     * {@see \App\Support\Pricing} does the same conversion for anything it
+     * resolves. This exists for the payloads that read `new_price` straight
+     * off the row: a listing card has no basket, no quantity and no tier to
+     * resolve, but it still has to show the right number.
+     */
+    public function inBaseCurrency(?float $amount): ?float
+    {
+        if ($amount === null) {
+            return null;
+        }
+
+        return \App\Support\Currency::toBase((float) $amount, $this->base_currency);
+    }
+
     protected $fillable = [
         'vendor_id',
         'category_id',
@@ -29,6 +50,7 @@ class Product extends Model
         'lead_time_max_days',
         'shipping_method',
         'fulfilment_location',
+        'base_currency',
     ];
 
     protected $casts = [

@@ -37,7 +37,10 @@ class ProductDetailResource extends JsonResource
             'images'      => $images,
             'price'       => $variants->hasVariants
                 ? Money::payload($variants->priceFrom, null)
-                : Money::payload($this->new_price, $this->old_price),
+                : Money::payload(
+                    $this->resource->inBaseCurrency((float) $this->new_price),
+                    $this->old_price !== null ? $this->resource->inBaseCurrency((float) $this->old_price) : null,
+                ),
             'stock'       => $variants->hasVariants ? $variants->stock : (int) $this->stock,
             'in_stock'    => $variants->hasVariants ? $variants->inStock() : $this->stock > 0,
 
@@ -154,7 +157,10 @@ class ProductDetailResource extends JsonResource
             'id'       => null,
             'price'    => $variants->hasVariants
                 ? Money::payload($variants->priceFrom, null)
-                : Money::payload($this->new_price, $this->old_price),
+                : Money::payload(
+                    $this->resource->inBaseCurrency((float) $this->new_price),
+                    $this->old_price !== null ? $this->resource->inBaseCurrency((float) $this->old_price) : null,
+                ),
             'stock'    => $variants->hasVariants ? $variants->stock : (int) $this->stock,
             'in_stock' => $variants->hasVariants
                 ? $variants->inStock()

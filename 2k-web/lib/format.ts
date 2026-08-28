@@ -1,28 +1,40 @@
 import { BRAND } from "./brand";
 
 /**
- * Currency handling for the storefront.
+ * Currency formatting for the storefront.
  *
- * The API prices everything in the canonical currency (TZS) and says so in
- * `price.currency`. Display currency is a presentation concern handled here
- * and nowhere else — no component performs its own conversion arithmetic.
+ * ---- this file no longer converts anything ----
+ *
+ * It used to hold `RATES = { USD: 0.000387 }` — a second copy of a rate that
+ * also lived in the backend, in a different direction, with no mechanism to
+ * keep the two in step. Whichever drifted first would have shown a customer one
+ * price on the product page and a different one in the basket.
+ *
+ * The API now sends prices already converted, in the currency the request asked
+ * for, at the rate an administrator set. Every payload carries `currency` and
+ * the canonical `base_current` beside it. So this file's whole job is putting a
+ * symbol and the right number of digits around a figure the server computed.
+ *
+ * If you find yourself wanting to multiply by a rate here, the rate you want is
+ * on the payload — and the fact that you need it means the server should have
+ * done the sum.
  */
 
 export type CurrencyCode = "TZS" | "USD";
-
-/** Rates expressed as "1 TZS = X target", mirroring config/money.php. */
-const RATES: Record<CurrencyCode, number> = {
-  TZS: 1,
-  USD: 0.000387,
-};
 
 const FRACTION_DIGITS: Record<CurrencyCode, number> = {
   TZS: 0, // Shilling amounts are quoted whole; decimals are noise.
   USD: 2,
 };
 
-export function convert(baseAmount: number, to: CurrencyCode): number {
-  return baseAmount * (RATES[to] ?? 1);
+/**
+ * Kept as an identity so no call site breaks, and deliberately does nothing.
+ *
+ * @deprecated The server converts. Read `price.current`, which is already in
+ * `price.currency`.
+ */
+export function convert(amount: number, _to?: CurrencyCode): number {
+  return amount;
 }
 
 /** `TZS 45,000` / `$17.41` — the canonical way to render a price. */

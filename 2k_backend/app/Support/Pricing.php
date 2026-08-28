@@ -63,6 +63,25 @@ class Pricing
         $tier = $tiersApply ? self::tierFor($product, $quantity) : null;
         $unitPrice = $tier !== null ? (float) $tier->unit_price : $basePrice;
 
+        // ---- the seller's currency, converted once ----
+        //
+        // A seller's figure is stored exactly as they typed it, in the currency
+        // they chose; their $20 stays 20 and is never overwritten with 50,000.
+        // This is the one place it becomes canonical shillings, because this is
+        // the one place a price is resolved — offers, variants and quantity
+        // tiers all pass through here and all inherit the listing's currency,
+        // so there is nothing further downstream that needs to know.
+        //
+        // Everything after this point is TZS, as it has always been. An order
+        // priced from a dollar listing and one priced from a shilling listing
+        // are the same kind of thing by the time either is written down.
+        $currency = $product->base_currency ?? Currency::BASE;
+
+        if (Currency::normalise($currency) !== Currency::BASE) {
+            $basePrice = Currency::toBase($basePrice, $currency);
+            $unitPrice = Currency::toBase($unitPrice, $currency);
+        }
+
         // Stock narrows as the choice narrows: a variant's own count beats the
         // offer's, which beats the product's.
         if ($variant !== null) {

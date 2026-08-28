@@ -109,28 +109,34 @@ class Money
     }
 
     /**
-     * Rates expressed as "1 TZS = X target". Override in config/money.php to
-     * plug in a live feed without touching any calling code.
+     * The currency this request's prices are being quoted in.
+     *
+     * Bound by {@see \App\Http\Middleware\ResolveDisplayCurrency}. Falls back
+     * to the canonical currency outside a request — a queue worker, a console
+     * command, a test that has not asked for anything else.
      */
-    public static function rates(): array
+    public static function displayCurrency(): string
     {
-        return config('money.rates', [
-            'TZS' => 1.0,
-            'USD' => 0.000387,
-        ]);
+        $key = \App\Http\Middleware\ResolveDisplayCurrency::KEY;
+
+        return app()->bound($key) ? Currency::normalise(app()->make($key)) : self::BASE;
     }
 
     public static function supported(): array
     {
-        return array_keys(self::rates());
+        return Currency::SUPPORTED;
     }
 
-    /** Convert a base-currency (TZS) amount into `$currency`. */
+    /**
+     * Convert a canonical amount for display.
+     *
+     * Every rate this touches comes from {@see Currency}, which reads the one
+     * an administrator set. There is no rate in this file and no arithmetic
+     * that could become one.
+     */
     public static function convert(float $amount, string $currency = self::BASE): float
     {
-        $rate = self::rates()[strtoupper($currency)] ?? 1.0;
-
-        return $amount * $rate;
+        return Currency::fromBase($amount, $currency);
     }
 
     /**
@@ -149,11 +155,32 @@ class Money
             $discount = (int) round((($was - $current) / $was) * 100);
         }
 
+        $display = self::displayCurrency();
+        $rate    = Currency::rate();
+
         return [
-            'currency'         => self::BASE,
-            'current'          => round($current, 2),
-            'was'              => $was !== null ? round($was, 2) : null,
+            // What the customer is reading, already converted. The client
+            // formats this; it never converts it. Two conversions with two
+            // rates is how a basket stops agreeing with the product page it
+            // was filled from.
+            'currency'         => $display,
+            'current'          => Currency::fromBase($current, $display, $rate),
+            'was'              => $was !== null ? Currency::fromBase($was, $display, $rate) : null,
+            // Computed from the canonical amounts, not the converted ones, so
+            // a discount does not drift by a percentage point with the rate.
             'discount_percent' => $discount,
+
+            // The canonical figure, always sent. Anything that has to reason
+            // about money rather than print it — a total, a comparison, a
+            // reconciliation — uses this and stays currency-independent.
+            'base_currency'    => self::BASE,
+            'base_current'     => round($current, 2),
+            'base_was'         => $was !== null ? round($was, 2) : null,
+
+            // Carried so a client can say "converted at 2,500" where that
+            // helps, and so a bug in conversion is visible rather than
+            // inferred.
+            'exchange_rate'    => $display === self::BASE ? null : $rate,
         ];
     }
 }

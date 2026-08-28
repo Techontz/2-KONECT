@@ -71,8 +71,13 @@ class OrderController extends Controller
         $user      = $request->user();
         $reference = $this->newReference();
 
+        // Read before the transaction so every line of one checkout carries the
+        // same rate, even if an administrator changes it mid-request.
+        $displayCurrency = \App\Support\Money::displayCurrency();
+        $snapshotRate    = \App\Support\Currency::rate();
+
         try {
-            $result = DB::transaction(function () use ($data, $user, $reference) {
+            $result = DB::transaction(function () use ($data, $user, $reference, $displayCurrency, $snapshotRate) {
                 $subtotal = 0;
                 $lines    = [];
 
@@ -178,6 +183,19 @@ class OrderController extends Controller
                         'price'            => $unitPrice,
                         'total'            => $lineTotal,
                         'status'           => 'pending',
+                        // ---- what the money meant today ----
+                        //
+                        // `total` stays canonical shillings. These three record
+                        // the context, and they are written once and never
+                        // recomputed: an administrator will move the rate, and
+                        // when they do, this order must go on saying what it
+                        // said. Without the snapshot a $100 order placed at
+                        // 2,500 would quietly become $92.59 the day the rate
+                        // reached 2,700 — invoice, receipt and order history
+                        // all rewritten by a setting changed months later.
+                        'display_currency' => $displayCurrency,
+                        'charge_currency'  => $displayCurrency,
+                        'exchange_rate'    => $snapshotRate,
                         'payment_method'   => $data['payment_method'],
                         'payment_provider' => $data['payment_provider'] ?? null,
                         // Cash on delivery owes nothing up front; every other
