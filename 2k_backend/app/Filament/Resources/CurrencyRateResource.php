@@ -36,7 +36,11 @@ class CurrencyRateResource extends Resource
     protected static ?string $model = CurrencyRate::class;
 
     protected static ?string $navigationGroup = 'Settings';
-    protected static ?int $navigationSort = 2;
+    // Last in the Settings group. It was 2, which collided with Payment
+    // Methods and left the order down to whichever Filament happened to
+    // register first — a menu that moves between deployments for no reason
+    // anyone can see.
+    protected static ?int $navigationSort = 10;
     protected static ?string $navigationIcon = 'heroicon-o-currency-dollar';
     protected static ?string $navigationLabel = 'Currency';
     protected static ?string $modelLabel = 'exchange rate';

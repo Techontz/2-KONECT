@@ -550,4 +550,26 @@ class CurrencyTest extends TestCase
         $this->assertEqualsWithDelta(2500.0, (float) $order->exchange_rate, 0.001);
         $this->assertEqualsWithDelta(100000.0, (float) $order->total, 0.5);
     }
+
+    /**
+     * A missing rates table must not take the storefront down.
+     *
+     * This is the deployment window between code landing and `migrate`
+     * running, and it is ordinary rather than exotic. Every price on every page
+     * asks for the rate, so an exception here is not a wrong price — it is a
+     * shop that will not open.
+     */
+    public function test_a_missing_rates_table_falls_back_instead_of_failing(): void
+    {
+        \Illuminate\Support\Facades\Schema::drop('currency_rates');
+        Currency::forget();
+
+        $this->assertSame(Currency::FALLBACK_RATE, Currency::rate());
+        $this->assertFalse(Currency::isConfigured());
+        $this->assertNull(Currency::current());
+
+        // And the storefront still answers.
+        $this->getJson('/api/shop/products')->assertOk();
+        $this->getJson('/api/shop/currency')->assertOk()->assertJsonPath('default_currency', 'TZS');
+    }
 }

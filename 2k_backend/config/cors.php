@@ -9,10 +9,25 @@ return [
 
     'allowed_methods' => ['*'],
 
-    // The domains the storefront is served from in production. Both brands are
-    // listed while DNS moves: the previous one still resolves and dropping it
-    // here would break the live site the moment this deploys.
+    // ---- the domains the storefront is actually served from ----
+    //
+    // `2konect.shop` is the live one and was missing from this list. It had
+    // been added by hand on the production server instead, which worked right
+    // up until a deployment shipped this file and replaced it — and then every
+    // browser request from the storefront was blocked by CORS at once. The
+    // API answered 200 to curl the whole time, because curl does not enforce
+    // CORS, so it looked like the frontend had broken.
+    //
+    // The lesson is in the list, not the comment: a domain the site is served
+    // from belongs in version control, where a deployment carries it, rather
+    // than in a file edited on a server where the next deployment removes it.
+    //
+    // `.com` and the previous brand stay while their DNS still resolves.
+    // Dropping one here breaks that site the moment this deploys, which is
+    // exactly the mistake being fixed.
     'allowed_origins' => [
+        'https://2konect.shop',
+        'https://www.2konect.shop',
         'https://2konect.com',
         'https://www.2konect.com',
         'https://direct2kariakoo.com',
@@ -32,6 +47,10 @@ return [
         '#^http://172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}(:\d+)?$#',
     ],
 
+    // Wide on purpose. The storefront sends `X-Currency` on every request and
+    // will send others; a request header is not a credential, and an explicit
+    // list here is a second place to remember to update when the frontend adds
+    // one. `allowed_origins` above is what actually restricts access.
     'allowed_headers' => ['*'],
 
     'exposed_headers' => [],

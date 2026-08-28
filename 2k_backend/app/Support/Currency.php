@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\CurrencyRate;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * The only place money changes currency.
@@ -56,36 +57,59 @@ class Currency
     /* the rate                                                          */
     /* ---------------------------------------------------------------- */
 
-    /** How many TZS one USD buys, as the administrator set it. */
+    /**
+     * How many TZS one USD buys, as the administrator set it.
+     *
+     * Falls back rather than throwing when the table cannot be read. That is
+     * not defensiveness for its own sake: this is called by every price on
+     * every page, so an exception here is not a broken rate — it is a
+     * storefront that will not load at all. The window it covers is real and
+     * ordinary: code deployed a minute before `migrate` runs, a replica that
+     * has not caught up, a database blip. A shop that quotes a placeholder for
+     * thirty seconds is better than one that shows nothing.
+     */
     public static function rate(): float
     {
         return (float) Cache::rememberForever(self::CACHE_KEY, function () {
-            $active = CurrencyRate::active()
-                ->where('base', self::QUOTE)
-                ->where('quote', self::BASE)
-                ->latest('id')
-                ->first();
-
-            return $active ? (float) $active->rate : self::FALLBACK_RATE;
+            return self::activeRow()?->rate !== null
+                ? (float) self::activeRow()->rate
+                : self::FALLBACK_RATE;
         });
     }
 
     /** Whether the rate in use is a real one or the placeholder. */
     public static function isConfigured(): bool
     {
-        return CurrencyRate::active()
-            ->where('base', self::QUOTE)
-            ->where('quote', self::BASE)
-            ->exists();
+        return self::activeRow() !== null;
     }
 
     public static function current(): ?CurrencyRate
     {
-        return CurrencyRate::active()
-            ->where('base', self::QUOTE)
-            ->where('quote', self::BASE)
-            ->latest('id')
-            ->first();
+        return self::activeRow();
+    }
+
+    /**
+     * The active row, or null for any reason at all.
+     *
+     * "No rate has been set" and "the table is not there yet" are different
+     * problems with the same correct answer at this layer: use the documented
+     * placeholder and let the admin screen say so.
+     */
+    private static function activeRow(): ?CurrencyRate
+    {
+        try {
+            return CurrencyRate::active()
+                ->where('base', self::QUOTE)
+                ->where('quote', self::BASE)
+                ->latest('id')
+                ->first();
+        } catch (\Throwable $e) {
+            Log::warning('Currency rate unavailable; using the placeholder.', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
     }
 
     /**
