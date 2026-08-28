@@ -85,6 +85,65 @@ class Currency
     public const RATE_INPUT_STEP = 0.01;
     public const RATE_INPUT_MIN  = 0.01;
 
+    /**
+     * Turn whatever the form submitted into a rate, or refuse it.
+     *
+     * This exists because `(float) $submitted` did not. A cast is not a check:
+     * PHP turns `true` into 1.0, a non-empty array into 1.0, and "abc" into
+     * 0.0, all without a murmur. So a form that sent anything other than the
+     * number the administrator typed produced a rate of 1 — and a rate of 1
+     * does not look like a failure. It looks like a marketplace where a
+     * 2.7 million shilling phone costs 2.7 million dollars.
+     *
+     * That is what happened. `currency_rates` holds a row with rate 1.000000
+     * and the note "2800", written by a form the administrator had typed 2800
+     * into. Whatever reached the cast was not "2800", and the cast agreed to
+     * it anyway.
+     *
+     * So: a string of digits, or a real int/float. Nothing else. Commas and
+     * spaces are refused rather than silently truncated — "2,800" casts to 2.0
+     * in PHP, which is its own quiet disaster.
+     *
+     * @param  mixed  $submitted
+     * @throws \InvalidArgumentException
+     */
+    public static function parseRate($submitted): float
+    {
+        if (is_bool($submitted) || is_array($submitted) || is_object($submitted) || $submitted === null) {
+            throw new \InvalidArgumentException(sprintf(
+                'The exchange rate was submitted as %s rather than a number. Nothing has been saved.',
+                get_debug_type($submitted),
+            ));
+        }
+
+        if (is_string($submitted)) {
+            $trimmed = trim($submitted);
+
+            // A cast would read "2,800" as 2 and "2 800" as 2. Both are worse
+            // than an error, because both look like a rate.
+            if (! preg_match('/^\d+(\.\d+)?$/', $trimmed)) {
+                throw new \InvalidArgumentException(sprintf(
+                    'Could not read "%s" as an exchange rate. Enter digits only, for example 2500 or 2500.50.',
+                    $submitted,
+                ));
+            }
+
+            $submitted = $trimmed;
+        }
+
+        if (! is_numeric($submitted)) {
+            throw new \InvalidArgumentException('The exchange rate must be a number.');
+        }
+
+        $rate = (float) $submitted;
+
+        if (! is_finite($rate)) {
+            throw new \InvalidArgumentException('The exchange rate must be a finite number.');
+        }
+
+        return $rate;
+    }
+
     /** Whether a browser would accept this value in the admin rate field. */
     public static function isEnterableRate(float $rate): bool
     {
