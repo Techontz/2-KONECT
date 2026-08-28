@@ -119,7 +119,7 @@ class Pricing
             'stock'        => $stock,
             'availability' => $availability,
             'purchasable'  => $purchasable,
-            'tier'         => $tier?->payload(),
+            'tier'         => $tier?->payload($product->base_currency),
             'tiers_apply'  => $tiersApply,
             'reason'       => $reason,
         ];

@@ -41,6 +41,20 @@ class ProductDetailResource extends JsonResource
                     $this->resource->inBaseCurrency((float) $this->new_price),
                     $this->old_price !== null ? $this->resource->inBaseCurrency((float) $this->old_price) : null,
                 ),
+
+            // ---- the seller's own figure, unconverted ----
+            //
+            // `price` above is what a shopper reads: converted to whatever
+            // currency they asked for. This is what the seller typed, in the
+            // currency they typed it in, and it is what their edit form has to
+            // be filled with. Seeding that form from the display price would
+            // have a seller who quoted $20 open the page while browsing in
+            // shillings, see 50,000, and save it as their new base price.
+            'base_price' => [
+                'amount'   => (float) $this->new_price,
+                'was'      => $this->old_price !== null ? (float) $this->old_price : null,
+                'currency' => $this->base_currency ?? 'TZS',
+            ],
             'stock'       => $variants->hasVariants ? $variants->stock : (int) $this->stock,
             'in_stock'    => $variants->hasVariants ? $variants->inStock() : $this->stock > 0,
 
@@ -197,7 +211,7 @@ class ProductDetailResource extends JsonResource
 
         return $this->priceTiers
             ->sortBy('min_quantity')
-            ->map(fn ($tier) => $tier->payload())
+            ->map(fn ($tier) => $tier->payload($this->base_currency))
             ->values()
             ->all();
     }

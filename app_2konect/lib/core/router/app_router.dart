@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/account/account_screen.dart';
 import '../../features/account/addresses_screen.dart';
+import '../../features/account/currency_screen.dart';
 import '../../features/account/language_screen.dart';
 import '../../features/auth/auth_screen.dart';
 import '../../features/cart/cart_screen.dart';
@@ -207,6 +208,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/language',
         parentNavigatorKey: rootNavigatorKey,
         builder: (_, _) => const LanguageScreen(),
+      ),
+      GoRoute(
+        path: '/currency',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, _) => const CurrencyScreen(),
       ),
       GoRoute(
         path: '/sell',

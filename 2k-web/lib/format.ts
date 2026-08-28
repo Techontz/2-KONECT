@@ -1,4 +1,12 @@
-import { BRAND } from "./brand";
+import {
+  type CurrencyCode,
+  currencyDecimals,
+  formatCurrency,
+  formatCurrencyAmount,
+  getActiveCurrency,
+} from "./currency";
+
+export type { CurrencyCode };
 
 /**
  * Currency formatting for the storefront.
@@ -20,13 +28,6 @@ import { BRAND } from "./brand";
  * done the sum.
  */
 
-export type CurrencyCode = "TZS" | "USD";
-
-const FRACTION_DIGITS: Record<CurrencyCode, number> = {
-  TZS: 0, // Shilling amounts are quoted whole; decimals are noise.
-  USD: 2,
-};
-
 /**
  * Kept as an identity so no call site breaks, and deliberately does nothing.
  *
@@ -37,36 +38,31 @@ export function convert(amount: number, _to?: CurrencyCode): number {
   return amount;
 }
 
-/** `TZS 45,000` / `$17.41` — the canonical way to render a price. */
+/**
+ * `TZS 50,000` / `$20.00` — the canonical way to render a price.
+ *
+ * The amount is already in the display currency: the server converted it, at
+ * the rate an administrator set, before it ever reached the browser. This puts
+ * a symbol and the right number of digits around it and does nothing else.
+ *
+ * Defaults to the *active* currency rather than a build-time constant, which
+ * is what makes every existing call site currency-aware without any of them
+ * having to know that currencies exist. It used to default to `BRAND.currency`
+ * and multiply by a rate hardcoded in this file.
+ */
 export function formatMoney(
-  baseAmount: number | null | undefined,
-  currency: CurrencyCode = BRAND.currency as CurrencyCode
+  amount: number | null | undefined,
+  currency: CurrencyCode = getActiveCurrency(),
 ): string {
-  if (baseAmount === null || baseAmount === undefined || Number.isNaN(baseAmount)) {
-    return "";
-  }
-
-  const value = convert(baseAmount, currency);
-  const digits = FRACTION_DIGITS[currency] ?? 0;
-  const formatted = value.toLocaleString("en-US", {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  });
-
-  return currency === "USD" ? `$${formatted}` : `${currency} ${formatted}`;
+  return formatCurrency(amount, currency);
 }
 
 /** Amount without the currency label, for tight card layouts. */
 export function formatAmount(
-  baseAmount: number | null | undefined,
-  currency: CurrencyCode = BRAND.currency as CurrencyCode
+  amount: number | null | undefined,
+  currency: CurrencyCode = getActiveCurrency(),
 ): string {
-  if (baseAmount === null || baseAmount === undefined) return "";
-  const digits = FRACTION_DIGITS[currency] ?? 0;
-  return convert(baseAmount, currency).toLocaleString("en-US", {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  });
+  return formatCurrencyAmount(amount, currency);
 }
 
 /**
@@ -80,9 +76,9 @@ export function formatAmount(
  */
 export function compactAmount(
   baseAmount: number,
-  currency: CurrencyCode = BRAND.currency as CurrencyCode
+  currency: CurrencyCode = getActiveCurrency()
 ): string {
-  const value = convert(baseAmount, currency);
+  const value = baseAmount;   // already in `currency`; the server converted it
 
   const unit =
     value >= 1_000_000 ? { divisor: 1_000_000, suffix: "M" }
@@ -105,7 +101,7 @@ export function compactAmount(
 /** `TZS 250K` — the compact amount with its currency, for prose and labels. */
 export function formatCompactMoney(
   baseAmount: number,
-  currency: CurrencyCode = BRAND.currency as CurrencyCode
+  currency: CurrencyCode = getActiveCurrency()
 ): string {
   const compact = compactAmount(baseAmount, currency);
   return currency === "USD" ? `$${compact}` : `${currency} ${compact}`;

@@ -15,6 +15,7 @@ import type { Address as AddressType } from "@/lib/types";
 import { useAuth } from "@/lib/store/auth";
 import { useHydrated } from "@/lib/useHydrated";
 import { lineSourcing, unitPrice, useCart, keyOf } from "@/lib/store/cart";
+import { useCurrency } from "@/lib/store/currency";
 import { useLocation } from "@/lib/store/location";
 import { LocationPicker } from "@/components/location/LocationPicker";
 import { SiteChrome } from "@/components/layout/SiteChrome";
@@ -47,6 +48,7 @@ function CheckoutContent() {
   const cart = useCart();
   const router = useRouter();
   const { location: pinned, setLocation } = useLocation();
+  const { currency } = useCurrency();
 
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
@@ -657,6 +659,20 @@ function CheckoutContent() {
                       : t("checkout.deliveredAcrossCity", { city: BRAND.city })}
                 </p>
               </div>
+            ) : null}
+
+            {/* ---- what the card will actually be charged ----
+                A shopper reading "$100.00" must not discover at the bank that
+                something else was taken. The order is charged in the currency
+                it was placed in, which is the one on screen — this states it
+                rather than leaving it to be assumed. */}
+            {isGateway ? (
+              <p className="mt-3 rounded-[var(--radius-sm)] bg-[color:var(--color-brand-50)] px-3 py-2 text-[12px] font-semibold text-[color:var(--color-ink)]">
+                {t("payment.chargedIn", { amount: formatMoney(total) })}
+                <span className="mt-0.5 block font-normal text-[color:var(--color-ink-muted)]">
+                  {t("payment.processedIn", { currency })}
+                </span>
+              </p>
             ) : null}
 
             {error ? <Notice tone="danger" className="mt-3">{error}</Notice> : null}

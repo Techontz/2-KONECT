@@ -74,7 +74,10 @@ class ProductVariant extends Model
         return [
             'id'       => $this->id,
             'sku'      => $this->sku,
-            'price'    => \App\Support\Money::payload($this->unitPrice($product), null),
+            'price'    => \App\Support\Money::payload(
+                \App\Support\Currency::toBase($this->unitPrice($product), $product->base_currency),
+                null,
+            ),
             'stock'    => (int) $this->stock,
             'in_stock' => $this->stock > 0,
             'options'  => $this->options->map(fn ($o) => [

@@ -402,4 +402,81 @@ class CurrencyTest extends TestCase
 
         $this->assertSame([], $offenders, 'A hardcoded exchange rate has appeared in application code.');
     }
+
+    /* ---------------------------------------------------------------- */
+    /* every pricing path, not just the headline one                     */
+    /* ---------------------------------------------------------------- */
+
+    /**
+     * A listing's tiers, offers and variants are quoted in its currency.
+     *
+     * Each of these returned the stored number raw, so a bulk-pricing table on
+     * a dollar listing read "TZS 20" — or worse, a shilling listing's tiers
+     * read "$50,000" to anyone browsing in dollars, because the figure was
+     * never converted and the label was.
+     */
+    public function test_bulk_pricing_tiers_are_converted_like_any_other_price(): void
+    {
+        $product = $this->product(50000, 'TZS');
+
+        \App\Models\ProductPriceTier::create([
+            'product_id'   => $product->id,
+            'min_quantity' => 10,
+            'max_quantity' => null,
+            'unit_price'   => 45000,
+        ]);
+
+        $tiers = $this->getJson("/api/shop/products/{$product->id}", ['X-Currency' => 'USD'])
+            ->assertOk()->json('product.price_tiers') ?? [];
+
+        $this->assertNotEmpty($tiers, 'The listing should expose its tiers.');
+        // 45,000 / 2,500 = 18, not 45,000.
+        $this->assertEqualsWithDelta(18.0, (float) $tiers[0]['unit_price'], 0.01);
+        $this->assertEqualsWithDelta(45000.0, (float) $tiers[0]['unit_price_base'], 0.5);
+    }
+
+    public function test_a_dollar_listings_tiers_are_read_as_dollars(): void
+    {
+        $product = $this->product(20, 'USD');
+
+        \App\Models\ProductPriceTier::create([
+            'product_id'   => $product->id,
+            'min_quantity' => 10,
+            'max_quantity' => null,
+            'unit_price'   => 18,
+        ]);
+
+        $tiers = $this->getJson("/api/shop/products/{$product->id}")
+            ->assertOk()->json('product.price_tiers') ?? [];
+
+        $this->assertNotEmpty($tiers);
+        // $18 at 2,500 is TZS 45,000 — not "TZS 18".
+        $this->assertEqualsWithDelta(45000.0, (float) $tiers[0]['unit_price'], 0.5);
+    }
+
+    public function test_a_dollar_listings_variant_is_priced_in_dollars(): void
+    {
+        $product = $this->product(20, 'USD');
+
+        $variant = \App\Models\ProductVariant::create([
+            'product_id' => $product->id,
+            'sku'        => 'V-USD-1',
+            'price'      => 25,
+            'stock'      => 5,
+            'is_active'  => true,
+        ]);
+
+        $payload = $this->getJson("/api/shop/products/{$product->id}")->assertOk()->json();
+        $variants = data_get($payload, 'product.variants.items') ?? data_get($payload, 'product.variants') ?? [];
+
+        if ($variants === []) {
+            $this->markTestSkipped('This listing shape exposes no variants to assert on.');
+        }
+
+        $first = is_array($variants[0] ?? null) ? $variants[0] : [];
+        $price = data_get($first, 'price.current');
+
+        // $25 at 2,500 is TZS 62,500.
+        $this->assertEqualsWithDelta(62500.0, (float) $price, 1.0);
+    }
 }

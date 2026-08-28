@@ -16,7 +16,11 @@ class Money {
   /// `TZS 45,000` — the canonical way to render a price.
   static String format(num? amount, [String currency = 'TZS']) {
     if (amount == null) return '';
-    return '$currency ${amountOnly(amount, currency)}';
+
+    // `$20.00`, not `USD 20.00`. Matching the website exactly: the same order
+    // shown on a phone and on a laptop must read identically.
+    final value = amountOnly(amount, currency);
+    return currency == 'USD' ? '\$$value' : '$currency $value';
   }
 
   /// The amount without the currency label, for tight card layouts.

@@ -14,6 +14,7 @@ import { useLocation } from "@/lib/store/location";
 import { useWishlist } from "@/lib/store/wishlist";
 import { LocationPicker } from "@/components/location/LocationPicker";
 import { LogoLink } from "@/components/brand/Logo";
+import { CurrencySwitcher } from "./CurrencySwitcher";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 
 /**
@@ -107,6 +108,7 @@ export function Header({ onOpenMenu }: { onOpenMenu?(): void }) {
             <Link href="/help" prefetch={false} className="text-white/85 transition-colors hover:text-white">
               {t("header.help")}
             </Link>
+            <CurrencySwitcher tone="dark" />
             <LanguageSwitcher tone="dark" compact />
           </span>
         </div>

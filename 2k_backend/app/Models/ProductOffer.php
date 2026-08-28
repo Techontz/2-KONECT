@@ -48,11 +48,20 @@ class ProductOffer extends Model
      * Identical in structure to the primary offer built from the product row,
      * so the UI compares like with like instead of special-casing.
      */
-    public function payload(): array
+    public function payload(?string $baseCurrency = null): array
     {
+        // An offer is an alternative price for the same listing, so it is
+        // quoted in the listing's currency — not assumed to be shillings.
+        $currency = $baseCurrency ?? $this->product?->base_currency;
+
         return [
             'id'       => $this->id,
-            'price'    => Money::payload((float) $this->price, $this->was_price !== null ? (float) $this->was_price : null),
+            'price'    => Money::payload(
+                \App\Support\Currency::toBase((float) $this->price, $currency),
+                $this->was_price !== null
+                    ? \App\Support\Currency::toBase((float) $this->was_price, $currency)
+                    : null,
+            ),
             'stock'    => (int) $this->stock,
             // An import is ordered on demand, so it is buyable without local
             // stock; local stock is what it says it is.

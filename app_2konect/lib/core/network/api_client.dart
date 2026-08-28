@@ -13,6 +13,12 @@ import 'api_exception.dart';
 /// the storefront is browsable signed out, so an unauthorised wishlist read is
 /// a normal outcome rather than an error worth interrupting for.
 class ApiClient {
+  /// The currency every request asks for.
+  ///
+  /// Written by CurrencyController and read here. One value, one writer — the
+  /// app never converts anything, it only says what it wants.
+  static String displayCurrency = 'TZS';
+
   ApiClient({required TokenStore tokens, Dio? dio})
       : _tokens = tokens,
         _dio = dio ?? Dio() {
@@ -31,6 +37,16 @@ class ApiClient {
         if (token != null && token.isNotEmpty) {
           options.headers['Authorization'] = 'Bearer $token';
         }
+
+        // Which currency the answer should be priced in. Read from a plain
+        // value rather than a provider: this interceptor runs outside the
+        // widget tree, and a request fired from the tap that changed the
+        // currency must already carry the new one.
+        //
+        // The server treats anything it does not support as shillings, so this
+        // can never make a request fail.
+        options.headers['X-Currency'] = ApiClient.displayCurrency;
+
         handler.next(options);
       },
       onError: (error, handler) async {

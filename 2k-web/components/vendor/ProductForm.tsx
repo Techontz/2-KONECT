@@ -55,8 +55,12 @@ export function ProductForm({ product }: { product?: ProductDetail }) {
     category_id: product?.category?.id ?? 0,
     subcategory_id: product?.subcategory?.id ?? 0,
     description: product?.description ?? "",
-    new_price: product?.price.current ?? 0,
-    old_price: product?.price.was ?? 0,
+    // The seller's own numbers, not the converted ones a shopper sees. Seeding
+    // from `price.current` would have a seller who quoted $20 open this page
+    // while browsing in shillings, see 50,000, and save that as their price.
+    new_price: product?.base_price?.amount ?? product?.price.current ?? 0,
+    old_price: product?.base_price?.was ?? product?.price.was ?? 0,
+    base_currency: (product?.base_price?.currency ?? "TZS") as "TZS" | "USD",
     stock: product?.stock ?? 0,
     // Where this stock is. Defaults to local, which is what a seller holding
     // goods in Tanzania means and what every existing listing already is.
@@ -166,6 +170,7 @@ export function ProductForm({ product }: { product?: ProductDetail }) {
           description: form.description,
           new_price: form.new_price,
           old_price: form.old_price || undefined,
+          base_currency: form.base_currency,
           stock: form.stock,
           short_description: form.short_description || undefined,
           availability: form.availability,
@@ -188,6 +193,7 @@ export function ProductForm({ product }: { product?: ProductDetail }) {
           description: form.description,
           new_price: form.new_price,
           old_price: form.old_price || undefined,
+          base_currency: form.base_currency,
           stock: form.stock,
           availability: form.availability,
           source_country: form.source_country || undefined,
@@ -534,11 +540,35 @@ export function ProductForm({ product }: { product?: ProductDetail }) {
           <h2 className="mb-3 text-[15px] font-extrabold">{t("productForm.pricing")}</h2>
 
           <div className="space-y-3">
-            <Field label={t("productForm.price")} required type="number" min={0} step={1}
+            {/* ---- which currency these figures are in ----
+                Asked before the prices, because it changes what they mean.
+                Whatever is typed below is stored exactly as typed: 2KONECT
+                converts it for shoppers at the rate its administrators set,
+                and never rewrites the seller's own number. */}
+            <label className="block">
+              <span className="mb-1 block text-[12px] font-bold text-[color:var(--color-ink-muted)]">
+                {t("productForm.priceCurrency")}
+              </span>
+              <select
+                value={form.base_currency}
+                onChange={(event) => update("base_currency", event.target.value as "TZS" | "USD")}
+                className="h-11 w-full rounded-[var(--radius-sm)] border border-[color:var(--color-line-strong)] bg-[color:var(--color-surface)] px-3 text-sm outline-none focus:border-[color:var(--color-brand)]"
+              >
+                <option value="TZS">🇹🇿 TZS — Tanzanian Shilling</option>
+                <option value="USD">🇺🇸 USD — US Dollar</option>
+              </select>
+              <span className="mt-1 block text-[11px] text-[color:var(--color-ink-muted)]">
+                {t("productForm.priceCurrencyHint")}
+              </span>
+            </label>
+
+            <Field
+              label={`${t("productForm.price")} (${form.base_currency})`}
+              required type="number" min={0} step={form.base_currency === "USD" ? 0.01 : 1}
               value={form.new_price || ""}
               onChange={(event) => update("new_price", Number(event.target.value))} />
 
-            <Field label={t("productForm.wasPrice")} type="number" min={0} step={1}
+            <Field label={`${t("productForm.wasPrice")} (${form.base_currency})`} type="number" min={0} step={form.base_currency === "USD" ? 0.01 : 1}
               value={form.old_price || ""}
               onChange={(event) => update("old_price", Number(event.target.value))} />
 

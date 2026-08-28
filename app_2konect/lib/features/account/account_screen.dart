@@ -8,6 +8,7 @@ import '../../core/config/env.dart';
 import '../../core/theme/tokens.dart';
 import '../../models/account.dart';
 import '../../providers/cart.dart';
+import '../../providers/currency.dart';
 import '../../providers/language.dart';
 import '../../providers/orders.dart';
 import '../../providers/session.dart';
@@ -132,6 +133,12 @@ class AccountScreen extends ConsumerWidget {
                 label: ref.t('language.label'),
                 note: ref.watch(languageProvider).language.label,
                 onTap: () => context.push('/language'),
+              ),
+              _Tile(
+                icon: Icons.payments_outlined,
+                label: ref.t('currency.label'),
+                note: ref.watch(currencyControllerProvider).currency.code,
+                onTap: () => context.push('/currency'),
               ),
               _Tile(
                 icon: Icons.storefront_outlined,

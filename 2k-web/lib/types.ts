@@ -207,6 +207,14 @@ export interface ChatThread extends ChatParticipant {
 }
 
 export interface ProductDetail {
+  /**
+   * The seller's own price, in the currency they entered it in.
+   *
+   * `price` is what a shopper reads — converted server-side to whatever
+   * currency they asked for. This is the unconverted original, and it is what
+   * the seller's edit form must be filled with.
+   */
+  base_price?: { amount: number; was: number | null; currency: "TZS" | "USD" };
   id: number;
   name: string;
   /** One-line summary, separate from the long-form description. */
