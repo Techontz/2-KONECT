@@ -317,9 +317,10 @@ export function ProductForm({ product }: { product?: ProductDetail }) {
         </section>
 
         {/* Optional, and inert unless the seller uses them. */}
-        <PriceTierEditor tiers={tiers} onChange={setTiers} />
+        <PriceTierEditor tiers={tiers} onChange={setTiers} currency={form.base_currency} />
 
         <VariantEditor
+          currency={form.base_currency}
           attributes={attributes}
           axes={axes}
           onAxes={setAxes}

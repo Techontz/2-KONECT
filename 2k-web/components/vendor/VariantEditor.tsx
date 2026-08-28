@@ -30,6 +30,7 @@ export function VariantEditor({
   variants,
   onChange,
   productPrice,
+  currency = "TZS",
 }: {
   attributes: SellerAttribute[];
   /** Attribute ids the product varies on. */
@@ -38,6 +39,8 @@ export function VariantEditor({
   variants: VariantDraft[];
   onChange(next: VariantDraft[]): void;
   productPrice: number;
+  /** The listing's base currency — a variant is priced in it, not in shillings by assumption. */
+  currency?: "TZS" | "USD";
 }) {
   const t = useT();
   // Only a curated list can become a choice.
@@ -170,7 +173,7 @@ export function VariantEditor({
                   </label>
                   <label className="block">
                     <span className="mb-1 block text-[11px] font-semibold text-[color:var(--color-ink-muted)]">
-                      {t("productForm.price")} <span className="font-normal">{t("productForm.optionalWord")}</span>
+                      {t("productForm.price")} ({currency}) <span className="font-normal">{t("productForm.optionalWord")}</span>
                     </span>
                     <input
                       type="number" min={0} step="0.01" inputMode="decimal"

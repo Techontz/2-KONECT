@@ -479,4 +479,75 @@ class CurrencyTest extends TestCase
         // $25 at 2,500 is TZS 62,500.
         $this->assertEqualsWithDelta(62500.0, (float) $price, 1.0);
     }
+
+    /**
+     * The §10 case, asserted field by field.
+     *
+     * Order A is placed at 2,500. The administrator later moves the rate to
+     * 2,700. Every financial fact about Order A must be byte-for-byte what it
+     * was — not "about the same", not "recalculable", identical.
+     */
+    public function test_order_a_is_financially_identical_after_the_rate_moves(): void
+    {
+        $order = $this->placeOrder('USD');
+
+        $before = [
+            'display_currency' => $order->display_currency,
+            'charge_currency'  => $order->charge_currency,
+            'exchange_rate'    => (string) $order->exchange_rate,
+            'price'            => (string) $order->price,
+            'total'            => (string) $order->total,
+            'delivery_fee'     => (string) $order->delivery_fee,
+            'quantity'         => (int) $order->quantity,
+        ];
+
+        // What the card would be asked for, computed the way the builder does.
+        $chargedBefore = round(
+            ((float) $order->total + (float) $order->delivery_fee) / (float) $order->exchange_rate,
+            2,
+        );
+
+        Currency::setRate(2700.0);
+        $this->assertSame(2700.0, Currency::rate(), 'The new rate is in force for everything else.');
+
+        $order->refresh();
+
+        foreach ($before as $field => $value) {
+            $this->assertSame(
+                $value,
+                is_int($value) ? (int) $order->{$field} : (string) $order->{$field},
+                "orders.{$field} moved when the exchange rate did.",
+            );
+        }
+
+        $chargedAfter = round(
+            ((float) $order->total + (float) $order->delivery_fee) / (float) $order->exchange_rate,
+            2,
+        );
+
+        // $40 stays $40. At today's rate it would be $37.04.
+        $this->assertEqualsWithDelta($chargedBefore, $chargedAfter, 0.001);
+        $this->assertEqualsWithDelta(40.0, $chargedAfter, 0.01);
+    }
+
+    /**
+     * And the same for an order that has not been paid yet.
+     *
+     * An unpaid order is a bill the customer has already been quoted. Repricing
+     * it because a setting moved would be changing what somebody owes after
+     * they agreed to it.
+     */
+    public function test_an_unpaid_order_is_not_repriced_by_a_rate_change(): void
+    {
+        $order = $this->placeOrder('USD');
+        Order::where('reference', $order->reference)->update(['payment_status' => 'awaiting_payment']);
+
+        Currency::setRate(3000.0);
+
+        $order->refresh();
+
+        $this->assertSame('USD', $order->charge_currency);
+        $this->assertEqualsWithDelta(2500.0, (float) $order->exchange_rate, 0.001);
+        $this->assertEqualsWithDelta(100000.0, (float) $order->total, 0.5);
+    }
 }

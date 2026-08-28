@@ -23,9 +23,12 @@ export interface TierDraft {
 export function PriceTierEditor({
   tiers,
   onChange,
+  currency = "TZS",
 }: {
   tiers: TierDraft[];
   onChange(next: TierDraft[]): void;
+  /** The listing's base currency, so the column says what these figures are. */
+  currency?: "TZS" | "USD";
 }) {
   const t = useT();
   const problems = validate(tiers, t);
@@ -53,7 +56,7 @@ export function PriceTierEditor({
           <div className="hidden gap-2 text-[11px] font-bold uppercase tracking-wide text-[color:var(--color-ink-faint)] sm:grid sm:grid-cols-[1fr_1fr_1.2fr_44px]">
             <span>{t("productForm.fromUnits")}</span>
             <span>{t("productForm.toBlank")}</span>
-            <span>{t("productForm.priceEach")}</span>
+            <span>{t("productForm.priceEach")} ({currency})</span>
             <span />
           </div>
 
