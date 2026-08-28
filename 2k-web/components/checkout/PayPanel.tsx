@@ -31,6 +31,7 @@ import { CopyValue } from "./CopyValue";
 export function PayPanel({
   reference,
   amount,
+  currency,
   method,
   status,
   onSubmitted,
@@ -39,6 +40,14 @@ export function PayPanel({
   reference: string;
   /** What is owed, in the base currency. */
   amount: number;
+  /**
+   * The currency `amount` is in — the order's own, not the reader's.
+   *
+   * Without it this panel formatted a shilling total with whatever symbol the
+   * display currency happened to be, so a TZS 7,000 order offered to collect
+   * "$7,000.00".
+   */
+  currency: "TZS" | "USD";
   /** The channel code chosen at checkout. */
   method: string | null;
   status: PaymentStatus;
@@ -83,6 +92,7 @@ export function PayPanel({
       <GatewayPanel
         reference={reference}
         amount={amount}
+        currency={currency}
         channel={channel}
         status={status}
       />
@@ -164,7 +174,7 @@ export function PayPanel({
         <CopyValue
           label={t("payment.amountToPay")}
           value={String(Math.round(amount))}
-          display={formatMoney(amount)}
+          display={formatMoney(amount, currency)}
         />
 
         {channel?.instructions ? (
@@ -219,11 +229,14 @@ export function PayPanel({
 function GatewayPanel({
   reference,
   amount,
+  currency,
   channel,
   status,
 }: {
   reference: string;
   amount: number;
+  /** The order's own currency, so the figure and the symbol agree. */
+  currency: "TZS" | "USD";
   channel: PaymentChannel;
   status: PaymentStatus;
 }) {
@@ -264,7 +277,7 @@ function GatewayPanel({
           <span className="text-[13px] text-[color:var(--color-ink-muted)]">
             {t("payment.amountToPay")}
           </span>
-          <span className="text-[22px] font-black tracking-[-0.02em]">{formatMoney(amount)}</span>
+          <span className="text-[22px] font-black tracking-[-0.02em]">{formatMoney(amount, currency)}</span>
         </div>
 
         {channel.instructions ? (

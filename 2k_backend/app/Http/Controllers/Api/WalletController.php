@@ -32,6 +32,10 @@ class WalletController extends Controller
         // A seller with no wallet row yet has earned nothing — that is a zero
         // balance, not an error, and the console renders it the same way.
         return response()->json([
+            // A seller's wallet is in shillings and always has been. Saying so
+            // is what stops the console rendering it with the reader's own
+            // display symbol.
+            'currency' => \App\Support\Currency::BASE,
             'balance'  => (float) ($vendor->wallet->balance ?? 0),
             'currency' => 'TZS',
             'payouts'  => $vendor->withdrawals()
@@ -40,6 +44,7 @@ class WalletController extends Controller
                 ->get()
                 ->map(fn ($payout) => [
                     'id'             => $payout->id,
+                    'currency'       => \App\Support\Currency::BASE,
                     'amount'         => (float) $payout->amount,
                     'method'         => $payout->method,
                     'account_number' => $payout->account_number,

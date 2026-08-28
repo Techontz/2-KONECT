@@ -174,7 +174,7 @@ export function DeliveryRequestForm({
                       <span className="text-[13px] font-extrabold">{option.label}</span>
                       <span className="text-[12px] text-[color:var(--color-ink-muted)]">{option.note}</span>
                       <span className="text-[12px] font-bold text-[color:var(--color-brand)]">
-                        {option.fee > 0 ? formatMoney(option.fee) : "Free"}
+                        {option.fee > 0 ? formatMoney(option.fee, "TZS") : "Free"}
                       </span>
                     </button>
                   );
@@ -245,7 +245,7 @@ export function DeliveryRequestForm({
             <div className="flex items-center justify-between gap-3 border-t border-[color:var(--color-line)] pt-3">
               <p className="text-[13px]">
                 <span className="text-[color:var(--color-ink-muted)]">{t("delivery.deliveryFee")}</span>{" "}
-                <span className="font-black">{fee > 0 ? formatMoney(fee) : "Free"}</span>
+                <span className="font-black">{fee > 0 ? formatMoney(fee, "TZS") : "Free"}</span>
               </p>
               <Button type="submit" size="lg" loading={submitting}>
                 {submitting ? t("delivery.sending") : t("delivery.confirm")}

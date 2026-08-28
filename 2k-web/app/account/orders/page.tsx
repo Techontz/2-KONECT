@@ -153,7 +153,7 @@ function OrderCard({ order }: { order: Order }) {
         </div>
 
         <p className="text-right">
-          <span className="block text-[17px] font-black">{formatMoney(order.total)}</span>
+          <span className="block text-[17px] font-black">{formatMoney(order.total, order.currency)}</span>
           <span
             className={`text-[12px] font-bold ${
               order.status === "cancelled" || order.status === "refunded"

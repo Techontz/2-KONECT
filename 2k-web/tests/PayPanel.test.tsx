@@ -73,7 +73,7 @@ describe("a gateway channel", () => {
   beforeEach(() => paymentOptions.mockResolvedValue(options([gateway])));
 
   it("renders a redirect button rather than a reference form", async () => {
-    render(<PayPanel reference="2K-AAAA1111" amount={103000} method="stripe" status="awaiting_payment" />);
+    render(<PayPanel reference="2K-AAAA1111" amount={103000} currency="TZS" method="stripe" status="awaiting_payment" />);
 
     await waitFor(() => expect(screen.getByText("payment.paySecurely")).toBeInTheDocument());
 
@@ -83,7 +83,7 @@ describe("a gateway channel", () => {
   });
 
   it("shows no till number, because a gateway has none", async () => {
-    render(<PayPanel reference="2K-AAAA1111" amount={103000} method="stripe" status="awaiting_payment" />);
+    render(<PayPanel reference="2K-AAAA1111" amount={103000} currency="TZS" method="stripe" status="awaiting_payment" />);
 
     await waitFor(() => expect(screen.getByText("payment.paySecurely")).toBeInTheDocument());
 
@@ -91,7 +91,7 @@ describe("a gateway channel", () => {
   });
 
   it("does not create a session merely by rendering", async () => {
-    render(<PayPanel reference="2K-AAAA1111" amount={103000} method="stripe" status="awaiting_payment" />);
+    render(<PayPanel reference="2K-AAAA1111" amount={103000} currency="TZS" method="stripe" status="awaiting_payment" />);
 
     await waitFor(() => expect(screen.getByText("payment.paySecurely")).toBeInTheDocument());
 
@@ -104,7 +104,7 @@ describe("a manual channel is unchanged", () => {
   beforeEach(() => paymentOptions.mockResolvedValue(options([manual])));
 
   it("still shows the till number and the reference form", async () => {
-    render(<PayPanel reference="2K-BBBB2222" amount={50000} method="lipa_namba" status="awaiting_payment" />);
+    render(<PayPanel reference="2K-BBBB2222" amount={50000} currency="TZS" method="lipa_namba" status="awaiting_payment" />);
 
     await waitFor(() => expect(screen.getByText("555123")).toBeInTheDocument());
 
@@ -113,7 +113,7 @@ describe("a manual channel is unchanged", () => {
   });
 
   it("still shows the waiting state once a reference has been submitted", async () => {
-    render(<PayPanel reference="2K-BBBB2222" amount={50000} method="lipa_namba" status="awaiting_verification" />);
+    render(<PayPanel reference="2K-BBBB2222" amount={50000} currency="TZS" method="lipa_namba" status="awaiting_verification" />);
 
     await waitFor(() =>
       expect(screen.getByText("payment.statusPendingVerification")).toBeInTheDocument(),
@@ -126,7 +126,7 @@ describe("nothing here can settle an order", () => {
     paymentOptions.mockResolvedValue(options([gateway]));
 
     const { container } = render(
-      <PayPanel reference="2K-CCCC3333" amount={103000} method="stripe" status="verified" />,
+      <PayPanel reference="2K-CCCC3333" amount={103000} currency="TZS" method="stripe" status="verified" />,
     );
 
     await waitFor(() => expect(container).toBeEmptyDOMElement());
@@ -136,7 +136,7 @@ describe("nothing here can settle an order", () => {
     paymentOptions.mockResolvedValue(options([manual]));
 
     const { container } = render(
-      <PayPanel reference="2K-DDDD4444" amount={50000} method="cash_on_delivery" status="not_required" />,
+      <PayPanel reference="2K-DDDD4444" amount={50000} currency="TZS" method="cash_on_delivery" status="not_required" />,
     );
 
     await waitFor(() => expect(container).toBeEmptyDOMElement());
@@ -150,7 +150,7 @@ describe("nothing here can settle an order", () => {
     paymentOptions.mockResolvedValue(options([gateway]));
     window.history.pushState({}, "", "/account/orders/2K-EEEE5555/?stripe=success");
 
-    render(<PayPanel reference="2K-EEEE5555" amount={103000} method="stripe" status="awaiting_payment" />);
+    render(<PayPanel reference="2K-EEEE5555" amount={103000} currency="TZS" method="stripe" status="awaiting_payment" />);
 
     await waitFor(() => expect(screen.getByText("payment.paySecurely")).toBeInTheDocument());
   });

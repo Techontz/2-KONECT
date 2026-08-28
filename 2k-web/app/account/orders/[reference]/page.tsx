@@ -179,7 +179,7 @@ function OrderDetail() {
           </div>
 
           <div className="text-right">
-            <p className="text-[24px] font-black tracking-[-0.02em]">{formatMoney(order.total)}</p>
+            <p className="text-[24px] font-black tracking-[-0.02em]">{formatMoney(order.total, order.currency)}</p>
             <p className="text-[12px] text-[color:var(--color-ink-muted)]">
               {order.payment_method === "cash_on_delivery"
                 ? t("orders.cashOnDelivery")
@@ -293,6 +293,7 @@ function OrderDetail() {
             <PayPanel
               reference={order.reference}
               amount={order.total}
+              currency={order.currency}
               method={order.payment_method}
               status={order.payment_status}
               onSubmitted={load}
@@ -344,13 +345,13 @@ function OrderDetail() {
                       </span>
                     ) : null}
                   </span>
-                  <span className="shrink-0 text-[13px] font-bold">{formatMoney(item.total)}</span>
+                  <span className="shrink-0 text-[13px] font-bold">{formatMoney(item.total, order.currency)}</span>
                 </li>
               ))}
             </ul>
 
             <dl className="mt-3 space-y-1.5 border-t border-[color:var(--color-line)] pt-3 text-[13px]">
-              <Row label={t("orders.subtotal")} value={formatMoney(order.subtotal)} />
+              <Row label={t("orders.subtotal")} value={formatMoney(order.subtotal, order.currency)} />
               {/* An imported order is quoted no delivery at checkout, so a
                   zero here is not "free" — it is "not decided yet". Saying
                   TZS 0 would promise a free delivery nobody has agreed to. */}
@@ -358,15 +359,15 @@ function OrderDetail() {
                 label={t("orders.delivery")}
                 value={
                   order.delivery_fee > 0
-                    ? formatMoney(order.delivery_fee)
+                    ? formatMoney(order.delivery_fee, order.currency)
                     : order.fulfilment?.is_local === false
                       ? t("payment.deliveryNotAdded")
-                      : formatMoney(0)
+                      : formatMoney(0, order.currency)
                 }
               />
               <div className="flex justify-between gap-3 border-t border-[color:var(--color-line)] pt-1.5">
                 <dt className="font-black">{t("orders.total")}</dt>
-                <dd className="text-[17px] font-black">{formatMoney(order.total)}</dd>
+                <dd className="text-[17px] font-black">{formatMoney(order.total, order.currency)}</dd>
               </div>
             </dl>
           </section>

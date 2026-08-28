@@ -60,9 +60,17 @@ class CurrencyRateResource extends Resource
                         ->suffix('TZS')
                         ->numeric()
                         ->required()
-                        ->minValue(0.000001)
+                        // The floor is what stops the reciprocal being typed
+                        // in by mistake. Nothing errors when it is: the site
+                        // simply starts quoting a 2.7 million shilling phone
+                        // at 2.7 million dollars, which is exactly what
+                        // happened at 1.000001.
+                        ->minValue(\App\Support\Currency::MINIMUM_PLAUSIBLE_RATE)
                         ->step(1)
-                        ->helperText('For example 2500, meaning one US dollar is worth 2,500 Tanzanian Shillings.'),
+                        ->helperText(
+                            'How many Tanzanian Shillings one US dollar is worth. For example 2500. '
+                            . 'Not the other way round — 0.0004 is the reciprocal and will be refused.'
+                        ),
 
                     Forms\Components\TextInput::make('note')
                         ->label('Reason for the change')

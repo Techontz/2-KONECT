@@ -64,6 +64,7 @@ class VendorController extends Controller
                 'orders'         => (clone $orders)->count(),
                 'orders_pending' => (clone $orders)->where('status', 'pending')->count(),
                 'units_sold'     => (int) (clone $orders)->whereNotIn('status', ['cancelled'])->sum('quantity'),
+                'currency'       => \App\Support\Currency::BASE,
                 'earnings'       => round((float) $earned, 2),
                 'paid_out'       => round((float) $paidOut, 2),
                 'currency'       => 'TZS',
@@ -162,6 +163,13 @@ class VendorController extends Controller
                 'payment'         => \App\Support\OrderGate::paymentBadge($order),
                 'next_status' => $this->nextStage($order),
                 'quantity'   => (int) $order->quantity,
+                // Shillings, and now labelled as such. The seller console used
+                // to receive a bare number and render it with whatever symbol
+                // the reader's display currency happened to be, so a
+                // TZS 7,000 line read "$7,000.00" to anybody browsing in
+                // dollars. A seller is paid in shillings; that is what they
+                // are shown.
+                'currency'   => \App\Support\Currency::BASE,
                 'price'      => (float) $order->price,
                 'total'      => (float) $order->total,
                 'placed_at'  => optional($order->created_at)->toIso8601String(),

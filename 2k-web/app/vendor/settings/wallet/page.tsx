@@ -99,7 +99,7 @@ export default function VendorWalletPage() {
               Available balance
             </p>
             <p className="mt-1 text-[34px] font-black tracking-[-0.03em] text-white sm:text-[42px]">
-              {formatMoney(balance)}
+              {formatMoney(balance, "TZS")}
             </p>
             <p className="mt-1 text-[13px] text-white/70">
               Earned on completed orders. Payouts are reviewed before they are sent.
@@ -116,7 +116,7 @@ export default function VendorWalletPage() {
 
             {balance < minimum ? (
               <p className="mt-2 text-[12px] text-white/60">
-                The minimum payout is {formatMoney(minimum)}.
+                The minimum payout is {formatMoney(minimum, "TZS")}.
               </p>
             ) : null}
           </section>
@@ -203,7 +203,7 @@ export default function VendorWalletPage() {
               <ul className="divide-y divide-[color:var(--color-line)]">
                 {wallet.payouts.map((payout) => (
                   <li key={payout.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 p-4">
-                    <span className="text-[15px] font-black">{formatMoney(payout.amount)}</span>
+                    <span className="text-[15px] font-black">{formatMoney(payout.amount, "TZS")}</span>
                     <span className="text-[13px] text-[color:var(--color-ink-muted)]">
                       {payout.method}
                       {payout.account_number ? ` · ${payout.account_number}` : ""}

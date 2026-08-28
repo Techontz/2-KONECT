@@ -1,10 +1,23 @@
 /** Shapes returned by the Laravel storefront API (`/api/shop/*`). */
 
 export interface Price {
-  currency: string;
+  /**
+   * The currency `current` and `was` are already in.
+   *
+   * The server converted them, at the rate an administrator set, before they
+   * reached the browser. Typed narrowly so a call site cannot format one of
+   * these amounts without naming which currency it is — the looseness here is
+   * what allowed a shilling figure to be rendered with a dollar sign.
+   */
+  currency: "TZS" | "USD";
   current: number;
   was: number | null;
   discount_percent: number | null;
+  /** The canonical figure, for anything comparing rather than printing. */
+  base_currency?: "TZS";
+  base_current?: number;
+  base_was?: number | null;
+  exchange_rate?: number | null;
 }
 
 export interface Rating {
@@ -503,7 +516,23 @@ export interface Order {
   subtotal: number;
   delivery_fee: number;
   total: number;
-  currency: string;
+  /**
+   * The currency the three amounts above are in.
+   *
+   * The order's own, taken from its snapshot — not the currency the reader
+   * happens to be browsing in. An order records an agreement and does not
+   * follow a preference, so one placed at $2.80 reads $2.80 forever.
+   *
+   * It was typed `string` and always sent 'TZS' regardless, which is what let
+   * a shilling amount be rendered with a dollar sign.
+   */
+  currency: "TZS" | "USD";
+  exchange_rate?: number | null;
+  /** The canonical figures, for anything reconciling rather than printing. */
+  base_currency?: "TZS";
+  base_subtotal?: number;
+  base_delivery_fee?: number;
+  base_total?: number;
   payment_method: string | null;
   /** Whether the money arrived, as opposed to which method was chosen. */
   payment_status:

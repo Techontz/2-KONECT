@@ -100,7 +100,7 @@ export function PriceTierEditor({
                 </p>
               ) : (
                 <p className="mt-1 text-[11.5px] text-[color:var(--color-ink-faint)]">
-                  {describe(tier, t)}
+                  {describe(tier, t, currency)}
                 </p>
               )}
             </div>
@@ -119,12 +119,12 @@ export function PriceTierEditor({
   );
 }
 
-function describe(tier: TierDraft, t: Translate): string {
+function describe(tier: TierDraft, t: Translate, currency: "TZS" | "USD"): string {
   if (tier.min_quantity === "" || tier.unit_price === "") return t("productForm.tierIncomplete");
   const range = tier.max_quantity === ""
     ? t("productForm.tierOrMore", { count: Number(tier.min_quantity).toLocaleString() })
     : `${Number(tier.min_quantity).toLocaleString()}–${Number(tier.max_quantity).toLocaleString()}`;
-  return t("productForm.tierEach", { range, price: formatMoney(Number(tier.unit_price)) });
+  return t("productForm.tierEach", { range, price: formatMoney(Number(tier.unit_price), currency) });
 }
 
 /**

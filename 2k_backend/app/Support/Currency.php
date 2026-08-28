@@ -53,6 +53,15 @@ class Currency
      */
     public const FALLBACK_RATE = 2500.0;
 
+    /**
+     * Below this, a rate is treated as a typo rather than a decision.
+     *
+     * Not a claim about the market — 2KONECT sets its own rate — only that a
+     * dollar is not worth less than a hundred shillings, so a value beneath
+     * this is the reciprocal entered by mistake.
+     */
+    public const MINIMUM_PLAUSIBLE_RATE = 100.0;
+
     /* ---------------------------------------------------------------- */
     /* the rate                                                          */
     /* ---------------------------------------------------------------- */
@@ -128,6 +137,28 @@ class Currency
     {
         if ($rate <= 0) {
             throw new \InvalidArgumentException('An exchange rate must be greater than zero.');
+        }
+
+        // ---- the inverted-rate guard ----
+        //
+        // The rate is "how many shillings one dollar buys", so it is a number
+        // in the thousands. A value near 1 is almost always the reciprocal
+        // typed in by mistake — and the mistake is close to invisible, because
+        // nothing errors: the catalogue simply starts quoting a 2.7 million
+        // shilling phone at 2.7 million dollars.
+        //
+        // That happened. Production ran at 1.000001 for a while and every USD
+        // price on the site was wrong by a factor of 2,500.
+        //
+        // The floor is deliberately generous. It is not a claim about the real
+        // exchange rate — 2KONECT sets its own — only that no plausible
+        // business rate puts a dollar below a hundred shillings.
+        if ($rate < self::MINIMUM_PLAUSIBLE_RATE) {
+            throw new \InvalidArgumentException(sprintf(
+                'A rate of %s looks inverted. Enter how many TZS one USD is worth — for example 2500, not %s.',
+                rtrim(rtrim(number_format($rate, 6), '0'), '.'),
+                rtrim(rtrim(number_format(1 / $rate, 6), '0'), '.'),
+            ));
         }
 
         $created = DB::transaction(function () use ($rate, $userId, $note) {

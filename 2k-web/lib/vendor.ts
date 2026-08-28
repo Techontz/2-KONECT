@@ -98,6 +98,15 @@ export interface VendorStats {
 
 export interface VendorOrder {
   id: number;
+  /**
+   * Shillings.
+   *
+   * A seller is paid in shillings and their console shows shillings, whatever
+   * currency the person reading happens to be browsing in. This field exists
+   * so the amount is never rendered with a symbol borrowed from somewhere
+   * else — which is exactly how a TZS 7,000 line came to read "$7,000.00".
+   */
+  currency?: "TZS";
   reference: string;
   status: string;
   status_label: string;

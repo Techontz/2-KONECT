@@ -398,6 +398,16 @@ class OrderController extends Controller
     private function presentGroup($lines): array
     {
         $first  = $lines->first();
+
+        // The order's own snapshot decides both the currency and the rate. A
+        // legacy order predating the snapshot has neither, and was placed and
+        // paid in shillings, so that is what it stays.
+        $orderCurrency = \App\Support\Currency::normalise($first->display_currency);
+        $orderRate     = (float) $first->exchange_rate ?: \App\Support\Currency::rate();
+
+        $money = fn (float $amount): float => $orderCurrency === \App\Support\Currency::BASE
+            ? \App\Support\Currency::round($amount, $orderCurrency)
+            : \App\Support\Currency::fromBase($amount, $orderCurrency, $orderRate);
         $status = $this->rollUpStatus($lines);
 
         $subtotal = (float) $lines->sum('total');
@@ -463,10 +473,34 @@ class OrderController extends Controller
 
             'placed_at'        => optional($first->created_at)->toIso8601String(),
             'item_count'       => (int) $lines->sum('quantity'),
-            'subtotal'         => round($subtotal, 2),
-            'delivery_fee'     => round($delivery, 2),
-            'total'            => round($subtotal + $delivery, 2),
-            'currency'         => 'TZS',
+            // ---- the money, in the currency this order was agreed in ----
+            //
+            // Converted with the order's OWN rate, not today's, and into the
+            // order's own currency, not whatever the customer happens to be
+            // browsing in. Both were written onto the order when it was placed.
+            //
+            // That is the whole point. A $2.80 order placed at 2,500 must read
+            // $2.80 forever — not $2.59 because an administrator moved the rate
+            // in March, and not TZS 7,000 because the reader has since switched
+            // their display currency. An order is a record of an agreement, and
+            // an agreement does not follow a preference.
+            //
+            // `currency` is now the real answer rather than a hardcoded 'TZS',
+            // which is what let the frontend put a dollar sign in front of a
+            // shilling amount.
+            'subtotal'         => $money(round($subtotal, 2)),
+            'delivery_fee'     => $money(round($delivery, 2)),
+            'total'            => $money(round($subtotal + $delivery, 2)),
+            'currency'         => $orderCurrency,
+            'exchange_rate'    => $orderCurrency === \App\Support\Currency::BASE
+                ? null
+                : $orderRate,
+            // The canonical figures travel alongside, so anything reconciling
+            // rather than printing has a currency-independent number.
+            'base_currency'    => \App\Support\Currency::BASE,
+            'base_subtotal'    => round($subtotal, 2),
+            'base_delivery_fee'=> round($delivery, 2),
+            'base_total'       => round($subtotal + $delivery, 2),
             'payment_method'   => $first->payment_method,
             // Whether the money has actually arrived. The buyer's own view of
             // an order is where they pay for it and where they learn it was
@@ -491,12 +525,14 @@ class OrderController extends Controller
                 ] : null,
                 'vendor'   => $line->vendor?->business_name,
                 'quantity' => (int) $line->quantity,
-                'price'    => (float) $line->price,
+                'price'    => $money((float) $line->price),
+                'base_price' => (float) $line->price,
                 // The combination that was bought, in the words it was bought
                 // under. Read from the order's own snapshot, never looked up
                 // against today's configuration.
                 'options'  => $line->variant_options ?: null,
-                'total'    => (float) $line->total,
+                'total'    => $money((float) $line->total),
+                'base_total' => (float) $line->total,
                 'status'   => $line->status,
                 'sourcing' => Sourcing::payload(
                     $line->fulfilment_type,

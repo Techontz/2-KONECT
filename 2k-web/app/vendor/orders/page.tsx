@@ -166,9 +166,9 @@ export default function VendorOrdersPage() {
                   <div className="min-w-0 flex-1">
                     <p className="clamp-2 text-[13px] font-semibold">{order.product?.name ?? t("seller.productRemoved")}</p>
                     <p className="text-[12px] text-[color:var(--color-ink-muted)]">
-                      {order.quantity} × {formatMoney(order.price)}
+                      {order.quantity} × {formatMoney(order.price, order.currency ?? "TZS")}
                     </p>
-                    <p className="mt-1 text-[15px] font-extrabold">{formatMoney(order.total)}</p>
+                    <p className="mt-1 text-[15px] font-extrabold">{formatMoney(order.total, order.currency ?? "TZS")}</p>
                   </div>
                 </div>
 

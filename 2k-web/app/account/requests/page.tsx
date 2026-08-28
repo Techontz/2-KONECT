@@ -173,7 +173,7 @@ function RequestCard({ request, onCancel }: { request: SourcingRequest; onCancel
           <p className="text-[11px] font-bold uppercase tracking-wider text-[color:var(--color-brand)]">
             We found it
           </p>
-          <p className="mt-0.5 text-[20px] font-black">{formatMoney(request.quote.price)}</p>
+          <p className="mt-0.5 text-[20px] font-black">{formatMoney(request.quote.price, (request.quote.currency as "TZS" | "USD") ?? "TZS")}</p>
           {request.quote.eta_max ? (
             <p className="text-[12px] text-[color:var(--color-ink-muted)]">
               Arrives in {request.quote.eta_min ?? request.quote.eta_max}–{request.quote.eta_max} days

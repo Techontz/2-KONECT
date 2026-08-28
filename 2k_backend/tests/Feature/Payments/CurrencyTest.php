@@ -322,7 +322,16 @@ class CurrencyTest extends TestCase
         $payload = $this->getJson("/api/shop/orders/{$order->reference}", ['X-Currency' => 'USD'])
             ->assertOk()->json('order');
 
-        $this->assertEqualsWithDelta(100000.0, (float) $payload['total'], 0.5);
+        // $40 at the rate it was placed at, not $37.04 at today's. The order
+        // carries its own currency and its own rate, so neither a rate change
+        // nor the reader's current preference can move it.
+        $this->assertSame('USD', $payload['currency']);
+        $this->assertEqualsWithDelta(40.0, (float) $payload['total'], 0.01);
+        $this->assertEqualsWithDelta(2500.0, (float) $payload['exchange_rate'], 0.001);
+
+        // The canonical figure travels alongside, untouched.
+        $this->assertSame('TZS', $payload['base_currency']);
+        $this->assertEqualsWithDelta(100000.0, (float) $payload['base_total'], 0.5);
     }
 
     public function test_a_rate_change_rewrites_no_financial_record(): void
@@ -571,5 +580,154 @@ class CurrencyTest extends TestCase
         // And the storefront still answers.
         $this->getJson('/api/shop/products')->assertOk();
         $this->getJson('/api/shop/currency')->assertOk()->assertJsonPath('default_currency', 'TZS');
+    }
+
+    /* ---------------------------------------------------------------- */
+    /* the reported bug: an order's money must know its own currency     */
+    /* ---------------------------------------------------------------- */
+
+    /**
+     * The order endpoint used to return a raw shilling figure and a hardcoded
+     * `'currency' => 'TZS'`, whatever the order was actually agreed in. The
+     * web then rendered it with the *reader's* display currency, so a
+     * TZS 7,000 order read "$7,000.00" to anyone browsing in dollars.
+     */
+    public function test_a_shilling_order_says_it_is_in_shillings(): void
+    {
+        $order = $this->placeOrder('TZS');
+
+        Sanctum::actingAs($this->shopper);
+        // Asked for in dollars on purpose: an order does not follow a reader's
+        // preference.
+        $payload = $this->getJson("/api/shop/orders/{$order->reference}", ['X-Currency' => 'USD'])
+            ->assertOk()->json('order');
+
+        $this->assertSame('TZS', $payload['currency']);
+        $this->assertEqualsWithDelta(100000.0, (float) $payload['total'], 0.5);
+        $this->assertNull($payload['exchange_rate']);
+    }
+
+    public function test_a_dollar_order_is_converted_at_its_own_rate(): void
+    {
+        $order = $this->placeOrder('USD');
+
+        Sanctum::actingAs($this->shopper);
+        $payload = $this->getJson("/api/shop/orders/{$order->reference}", ['X-Currency' => 'TZS'])
+            ->assertOk()->json('order');
+
+        $this->assertSame('USD', $payload['currency']);
+        $this->assertEqualsWithDelta(40.0, (float) $payload['total'], 0.01);
+        $this->assertEqualsWithDelta(100000.0, (float) $payload['base_total'], 0.5);
+    }
+
+    /** The exact figure from the report: TZS 7,000 at 2,500 is $2.80. */
+    public function test_seven_thousand_shillings_is_two_dollars_eighty(): void
+    {
+        $this->assertEqualsWithDelta(2.80, Currency::fromBase(7000, 'USD'), 0.001);
+        $this->assertEqualsWithDelta(1080.0, Currency::fromBase(2700000, 'USD'), 0.001);
+        $this->assertEqualsWithDelta(1000.0, Currency::fromBase(2500000, 'USD'), 0.001);
+    }
+
+    public function test_an_orders_items_carry_the_orders_currency_too(): void
+    {
+        $order = $this->placeOrder('USD');
+
+        Sanctum::actingAs($this->shopper);
+        $item = $this->getJson("/api/shop/orders/{$order->reference}")->assertOk()->json('order.items.0');
+
+        // 2 x TZS 50,000 = TZS 100,000 -> $40, and the line price $20.
+        $this->assertEqualsWithDelta(20.0, (float) $item['price'], 0.01);
+        $this->assertEqualsWithDelta(40.0, (float) $item['total'], 0.01);
+        $this->assertEqualsWithDelta(50000.0, (float) $item['base_price'], 0.5);
+    }
+
+    /**
+     * A rate change must not move an order that has already been placed —
+     * asserted through the API the customer actually reads, not just the row.
+     */
+    public function test_the_order_endpoint_does_not_reprice_history(): void
+    {
+        $order = $this->placeOrder('USD');
+
+        Sanctum::actingAs($this->shopper);
+        $before = $this->getJson("/api/shop/orders/{$order->reference}")->json('order.total');
+
+        Currency::setRate(2700.0);
+
+        Sanctum::actingAs($this->shopper);
+        $after = $this->getJson("/api/shop/orders/{$order->reference}")->json('order.total');
+
+        // $40 stays $40. At 2,700 it would read $37.04.
+        $this->assertEqualsWithDelta(40.0, (float) $before, 0.01);
+        $this->assertEqualsWithDelta((float) $before, (float) $after, 0.001);
+    }
+
+    /** A seller is paid in shillings, and their console is told so. */
+    public function test_the_seller_console_labels_its_amounts_as_shillings(): void
+    {
+        $this->placeOrder('USD');
+
+        // Asked for in dollars, deliberately. The seller's money is shillings
+        // whatever the person reading happens to be browsing in.
+        Sanctum::actingAs($this->vendor->user);
+        $row = $this->getJson('/api/shop/vendor/orders', ['X-Currency' => 'USD'])
+            ->assertOk()->json('orders.0');
+
+        $this->assertSame('TZS', $row['currency']);
+        $this->assertEqualsWithDelta(100000.0, (float) $row['total'], 0.5);
+    }
+
+    /**
+     * A reciprocal typed in by mistake must be refused.
+     *
+     * This is not hypothetical. Production ran at 1.000001 for a while and
+     * nothing errored — the site simply quoted a TZS 2,700,000 phone at
+     * $2,699,997.30, because the code was doing exactly what it was told.
+     * A wrong rate is invisible in a way a wrong price is not.
+     */
+    public function test_an_inverted_rate_is_refused_with_an_explanation(): void
+    {
+        foreach ([0.0004, 1.000001, 0.000387, 99.0] as $inverted) {
+            try {
+                Currency::setRate($inverted);
+                $this->fail("A rate of {$inverted} should have been refused as inverted.");
+            } catch (\InvalidArgumentException $e) {
+                $this->assertStringContainsString('looks inverted', $e->getMessage());
+                // And it says what to type instead.
+                $this->assertStringContainsString('2500', $e->getMessage());
+            }
+        }
+
+        // The rate in use is unchanged by a refused attempt.
+        $this->assertSame(2500.0, Currency::rate());
+    }
+
+    public function test_a_plausible_business_rate_is_accepted(): void
+    {
+        foreach ([100.0, 2500.0, 2700.0, 5000.0] as $sane) {
+            Currency::setRate($sane);
+            $this->assertSame($sane, Currency::rate());
+        }
+    }
+
+    /**
+     * The figure the report asked for, end to end through the API.
+     */
+    public function test_two_point_seven_million_shillings_reads_as_one_thousand_and_eighty_dollars(): void
+    {
+        Currency::setRate(2500.0);
+        $product = $this->product(2700000, 'TZS');
+
+        $usd = $this->getJson("/api/shop/products/{$product->id}", ['X-Currency' => 'USD'])->assertOk()->json();
+        $price = data_get($usd, 'product.price') ?? data_get($usd, 'data.price') ?? data_get($usd, 'price');
+
+        $this->assertSame('USD', $price['currency']);
+        $this->assertEqualsWithDelta(1080.0, (float) $price['current'], 0.01);
+
+        $tzs = $this->getJson("/api/shop/products/{$product->id}", ['X-Currency' => 'TZS'])->assertOk()->json();
+        $tzsPrice = data_get($tzs, 'product.price') ?? data_get($tzs, 'data.price') ?? data_get($tzs, 'price');
+
+        $this->assertSame('TZS', $tzsPrice['currency']);
+        $this->assertEqualsWithDelta(2700000.0, (float) $tzsPrice['current'], 0.5);
     }
 }

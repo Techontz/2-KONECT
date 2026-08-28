@@ -163,7 +163,7 @@ export default function DeliveriesPage() {
 
                     <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
                       <span className="text-[13px] font-bold">
-                        {request.fee > 0 ? formatMoney(request.fee) : "Free"}
+                        {request.fee > 0 ? formatMoney(request.fee, "TZS") : "Free"}
                       </span>
                       {!["delivered", "cancelled"].includes(request.status) ? (
                         <button

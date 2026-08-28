@@ -98,8 +98,8 @@ export default function VendorDashboardPage() {
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Earnings"
-          value={formatMoney(stats.earnings)}
-          hint={`${formatMoney(stats.paid_out)} completed`}
+          value={formatMoney(stats.earnings, "TZS")}
+          hint={`${formatMoney(stats.paid_out, "TZS")} completed`}
           tone="success"
         />
         <StatCard
@@ -148,7 +148,7 @@ export default function VendorDashboardPage() {
                   <span className="shrink-0 text-right">
                     <span className="block text-[13px] font-bold">{product.units} sold</span>
                     <span className="block text-[11px] text-[color:var(--color-ink-muted)]">
-                      {formatMoney(product.revenue)}
+                      {formatMoney(product.revenue, "TZS")}
                     </span>
                   </span>
                 </li>
@@ -244,7 +244,7 @@ function SalesTrend({ trend }: { trend: { date: string; total: number }[] }) {
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-[15px] font-extrabold">Last 30 days</h2>
         <span className="text-[13px] text-[color:var(--color-ink-muted)]">
-          <span className="font-bold text-[color:var(--color-ink)]">{formatMoney(total)}</span> earned
+          <span className="font-bold text-[color:var(--color-ink)]">{formatMoney(total, "TZS")}</span> earned
         </span>
       </div>
 
@@ -252,7 +252,7 @@ function SalesTrend({ trend }: { trend: { date: string; total: number }[] }) {
         {trend.map((point) => (
           <span
             key={point.date}
-            title={`${point.date}: ${formatMoney(point.total)}`}
+            title={`${point.date}: ${formatMoney(point.total, "TZS")}`}
             className="flex-1 rounded-t-[2px] bg-[color:var(--color-brand)] transition-opacity hover:opacity-70"
             style={{
               // A floor of 2% keeps zero-sale days visible as a baseline tick

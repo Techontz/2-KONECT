@@ -166,7 +166,7 @@ function ProductsContent() {
                         {product.category?.name ?? "—"}
                       </td>
                       <td className="px-3 py-2.5">
-                        <span className="font-bold">{formatMoney(product.price.current)}</span>
+                        <span className="font-bold">{formatMoney(product.price.current, product.price.currency)}</span>
                         {product.price.discount_percent ? (
                           <span className="ml-1 text-[11px] text-[color:var(--color-sale)]">
                             −{product.price.discount_percent}%
