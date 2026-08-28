@@ -159,11 +159,16 @@ class CurrencyTest extends TestCase
             ->assertJsonPath('country', 'TZ')
             ->assertJsonPath('detected', true)
             ->assertJsonPath('suggested_currency', 'TZS')
-            ->assertJsonPath('exchange_rate.rate', 2500);
+            // No rate is published any more: nothing customer-facing converts,
+            // so a rate here would only invite something to start.
+            ->assertJsonPath('exchange_rate', null);
 
+        // A visitor from anywhere else is offered shillings too. There is one
+        // marketplace currency and no choice to make.
         $this->getJson('/api/shop/currency', ['X-Country' => 'US'])
             ->assertOk()
-            ->assertJsonPath('suggested_currency', 'USD');
+            ->assertJsonPath('suggested_currency', 'TZS')
+            ->assertJsonCount(1, 'supported');
     }
 
     public function test_the_endpoint_still_answers_when_nothing_is_detected(): void
@@ -200,34 +205,52 @@ class CurrencyTest extends TestCase
         $this->assertEqualsWithDelta(50000.0, (float) $price['current'], 0.5);
     }
 
-    public function test_a_shilling_price_shows_as_dollars_using_the_admin_rate(): void
+    /**
+     * Asking for dollars gets shillings.
+     *
+     * The header is ignored rather than refused: an older mobile build still
+     * sends it, and the right answer to a client asking for a currency the
+     * marketplace does not use is the one it does.
+     */
+    public function test_a_price_is_shillings_even_when_dollars_are_requested(): void
     {
         $product = $this->product(50000, 'TZS');
 
         $payload = $this->getJson("/api/shop/products/{$product->id}", ['X-Currency' => 'USD'])->assertOk()->json();
         $price = data_get($payload, 'product.price') ?? data_get($payload, 'data.price') ?? data_get($payload, 'price');
 
-        $this->assertSame('USD', $price['currency']);
-        $this->assertEqualsWithDelta(20.0, (float) $price['current'], 0.01);
-
-        // The canonical figure travels with it, so anything that has to reason
-        // about money rather than print it stays currency-independent.
-        $this->assertSame('TZS', $price['base_currency']);
+        $this->assertSame('TZS', $price['currency']);
+        // 50,000 exactly. Not 20, not anything a rate could have produced.
+        $this->assertEqualsWithDelta(50000.0, (float) $price['current'], 0.5);
         $this->assertEqualsWithDelta(50000.0, (float) $price['base_current'], 0.5);
-        $this->assertEqualsWithDelta(2500.0, (float) $price['exchange_rate'], 0.001);
+        $this->assertNull($price['exchange_rate']);
     }
 
-    public function test_changing_the_rate_changes_what_new_visitors_see(): void
+    /**
+     * The rate cannot reach a shelf price any more.
+     *
+     * This is the property that makes the exchange-rate bug harmless to the
+     * catalogue: a wrong rate used to reprice every product on the site. Now
+     * nothing customer-facing divides by it at all.
+     */
+    public function test_changing_the_rate_does_not_move_a_single_shelf_price(): void
     {
         $product = $this->product(50000, 'TZS');
 
-        Currency::setRate(2000.0);
+        foreach ([1.0, 2000.0, 2800.0, 1.000001] as $rate) {
+            Currency::setRate($rate);
 
-        $payload = $this->getJson("/api/shop/products/{$product->id}", ['X-Currency' => 'USD'])->assertOk()->json();
-        $price = data_get($payload, 'product.price') ?? data_get($payload, 'data.price') ?? data_get($payload, 'price');
+            $payload = $this->getJson("/api/shop/products/{$product->id}", ['X-Currency' => 'USD'])->assertOk()->json();
+            $price = data_get($payload, 'product.price') ?? data_get($payload, 'data.price') ?? data_get($payload, 'price');
 
-        // 50,000 / 2,000 = 25, not 20.
-        $this->assertEqualsWithDelta(25.0, (float) $price['current'], 0.01);
+            $this->assertSame('TZS', $price['currency']);
+            $this->assertEqualsWithDelta(
+                50000.0,
+                (float) $price['current'],
+                0.5,
+                "A rate of {$rate} moved a shelf price. Nothing customer-facing may convert.",
+            );
+        }
     }
 
     public function test_an_unsupported_currency_is_ignored_rather_than_refused(): void
@@ -269,7 +292,16 @@ class CurrencyTest extends TestCase
     /* HISTORY MUST NOT MOVE                                             */
     /* ---------------------------------------------------------------- */
 
-    private function placeOrder(string $currency): Order
+    /**
+     * Place an order the way the storefront does — always in shillings now.
+     *
+     * `$legacy` stamps the snapshot an order placed before the currency
+     * selector was removed would carry. Those orders still exist and must go
+     * on rendering in the currency they were agreed in, so they are written
+     * directly rather than pretended into being through a header that no
+     * longer does anything.
+     */
+    private function placeOrder(string $currency = 'TZS', ?array $legacy = null): Order
     {
         Sanctum::actingAs($this->shopper);
 
@@ -280,23 +312,50 @@ class CurrencyTest extends TestCase
             'payment_method'   => Channel::CASH_ON_DELIVERY,
         ], ['X-Currency' => $currency])->assertCreated()->json('order.reference');
 
+        if ($legacy !== null) {
+            Order::where('reference', $reference)->update($legacy);
+        }
+
         return Order::where('reference', $reference)->firstOrFail();
     }
 
-    public function test_an_order_records_the_rate_it_was_placed_at(): void
-    {
-        $order = $this->placeOrder('USD');
+    /** The snapshot a pre-removal USD order carries. */
+    private const LEGACY_USD = [
+        'display_currency' => 'USD',
+        'charge_currency'  => 'USD',
+        'exchange_rate'    => 2500,
+    ];
 
-        $this->assertSame('USD', $order->display_currency);
-        $this->assertSame('USD', $order->charge_currency);
-        $this->assertEqualsWithDelta(2500.0, (float) $order->exchange_rate, 0.001);
-        // The canonical total is untouched by any of it.
-        $this->assertEqualsWithDelta(100000.0, (float) $order->total, 0.5);
+    /** A new order is shillings, whatever a client asks for. */
+    public function test_a_new_order_is_always_placed_in_shillings(): void
+    {
+        foreach (['TZS', 'USD'] as $asked) {
+            $order = $this->placeOrder($asked);
+
+            $this->assertSame('TZS', $order->display_currency, "Asking for {$asked} produced a non-TZS order.");
+            $this->assertSame('TZS', $order->charge_currency);
+            $this->assertEqualsWithDelta(100000.0, (float) $order->total, 0.5);
+
+            Order::query()->delete();
+        }
+    }
+
+    /** The snapshot still exists, and still governs, for orders that have one. */
+    public function test_a_legacy_dollar_order_still_reads_in_dollars(): void
+    {
+        $order = $this->placeOrder('TZS', self::LEGACY_USD);
+
+        Sanctum::actingAs($this->shopper);
+        $payload = $this->getJson("/api/shop/orders/{$order->reference}")->assertOk()->json('order');
+
+        $this->assertSame('USD', $payload['currency']);
+        $this->assertEqualsWithDelta(40.0, (float) $payload['total'], 0.01);
+        $this->assertEqualsWithDelta(100000.0, (float) $payload['base_total'], 0.5);
     }
 
     public function test_an_order_does_not_change_when_the_rate_changes(): void
     {
-        $order = $this->placeOrder('USD');
+        $order = $this->placeOrder('TZS', self::LEGACY_USD);
 
         Currency::setRate(2700.0);
 
@@ -315,7 +374,7 @@ class CurrencyTest extends TestCase
 
     public function test_the_customers_own_order_page_shows_the_rate_it_was_placed_at(): void
     {
-        $order = $this->placeOrder('USD');
+        $order = $this->placeOrder('TZS', self::LEGACY_USD);
         Currency::setRate(2700.0);
 
         Sanctum::actingAs($this->shopper);
@@ -424,7 +483,7 @@ class CurrencyTest extends TestCase
      * read "$50,000" to anyone browsing in dollars, because the figure was
      * never converted and the label was.
      */
-    public function test_bulk_pricing_tiers_are_converted_like_any_other_price(): void
+    public function test_bulk_pricing_tiers_are_shillings_like_any_other_price(): void
     {
         $product = $this->product(50000, 'TZS');
 
@@ -439,8 +498,9 @@ class CurrencyTest extends TestCase
             ->assertOk()->json('product.price_tiers') ?? [];
 
         $this->assertNotEmpty($tiers, 'The listing should expose its tiers.');
-        // 45,000 / 2,500 = 18, not 45,000.
-        $this->assertEqualsWithDelta(18.0, (float) $tiers[0]['unit_price'], 0.01);
+        // 45,000 exactly — a bulk table is priced like everything else, in
+        // shillings, whatever a client asks for.
+        $this->assertEqualsWithDelta(45000.0, (float) $tiers[0]['unit_price'], 0.5);
         $this->assertEqualsWithDelta(45000.0, (float) $tiers[0]['unit_price_base'], 0.5);
     }
 
@@ -498,7 +558,7 @@ class CurrencyTest extends TestCase
      */
     public function test_order_a_is_financially_identical_after_the_rate_moves(): void
     {
-        $order = $this->placeOrder('USD');
+        $order = $this->placeOrder('TZS', self::LEGACY_USD);
 
         $before = [
             'display_currency' => $order->display_currency,
@@ -548,7 +608,7 @@ class CurrencyTest extends TestCase
      */
     public function test_an_unpaid_order_is_not_repriced_by_a_rate_change(): void
     {
-        $order = $this->placeOrder('USD');
+        $order = $this->placeOrder('TZS', self::LEGACY_USD);
         Order::where('reference', $order->reference)->update(['payment_status' => 'awaiting_payment']);
 
         Currency::setRate(3000.0);
@@ -609,7 +669,7 @@ class CurrencyTest extends TestCase
 
     public function test_a_dollar_order_is_converted_at_its_own_rate(): void
     {
-        $order = $this->placeOrder('USD');
+        $order = $this->placeOrder('TZS', self::LEGACY_USD);
 
         Sanctum::actingAs($this->shopper);
         $payload = $this->getJson("/api/shop/orders/{$order->reference}", ['X-Currency' => 'TZS'])
@@ -630,7 +690,7 @@ class CurrencyTest extends TestCase
 
     public function test_an_orders_items_carry_the_orders_currency_too(): void
     {
-        $order = $this->placeOrder('USD');
+        $order = $this->placeOrder('TZS', self::LEGACY_USD);
 
         Sanctum::actingAs($this->shopper);
         $item = $this->getJson("/api/shop/orders/{$order->reference}")->assertOk()->json('order.items.0');
@@ -647,7 +707,7 @@ class CurrencyTest extends TestCase
      */
     public function test_the_order_endpoint_does_not_reprice_history(): void
     {
-        $order = $this->placeOrder('USD');
+        $order = $this->placeOrder('TZS', self::LEGACY_USD);
 
         Sanctum::actingAs($this->shopper);
         $before = $this->getJson("/api/shop/orders/{$order->reference}")->json('order.total');
@@ -665,7 +725,7 @@ class CurrencyTest extends TestCase
     /** A seller is paid in shillings, and their console is told so. */
     public function test_the_seller_console_labels_its_amounts_as_shillings(): void
     {
-        $this->placeOrder('USD');
+        $this->placeOrder('TZS', self::LEGACY_USD);
 
         // Asked for in dollars, deliberately. The seller's money is shillings
         // whatever the person reading happens to be browsing in.
@@ -720,21 +780,104 @@ class CurrencyTest extends TestCase
     /**
      * The figure the report asked for, end to end through the API.
      */
-    public function test_two_point_seven_million_shillings_reads_as_one_thousand_and_eighty_dollars(): void
+    /**
+     * The figures from the report, in the only currency the marketplace has.
+     *
+     * These used to assert a conversion. They now assert that no conversion
+     * happens — a stored 7,000 is TZS 7,000 on the shelf, and nothing about
+     * the exchange rate can make it anything else.
+     */
+    public function test_stored_prices_reach_the_shelf_unchanged(): void
     {
-        Currency::setRate(2500.0);
-        $product = $this->product(2700000, 'TZS');
+        Currency::setRate(2800.0);
 
-        $usd = $this->getJson("/api/shop/products/{$product->id}", ['X-Currency' => 'USD'])->assertOk()->json();
-        $price = data_get($usd, 'product.price') ?? data_get($usd, 'data.price') ?? data_get($usd, 'price');
+        foreach ([7000, 2500000, 2700000] as $stored) {
+            $product = $this->product($stored, 'TZS');
 
-        $this->assertSame('USD', $price['currency']);
-        $this->assertEqualsWithDelta(1080.0, (float) $price['current'], 0.01);
+            foreach (['TZS', 'USD', 'KES', ''] as $asked) {
+                $payload = $this->getJson("/api/shop/products/{$product->id}", ['X-Currency' => $asked])
+                    ->assertOk()->json();
+                $price = data_get($payload, 'product.price') ?? data_get($payload, 'data.price') ?? data_get($payload, 'price');
 
-        $tzs = $this->getJson("/api/shop/products/{$product->id}", ['X-Currency' => 'TZS'])->assertOk()->json();
-        $tzsPrice = data_get($tzs, 'product.price') ?? data_get($tzs, 'data.price') ?? data_get($tzs, 'price');
+                $this->assertSame('TZS', $price['currency']);
+                $this->assertEqualsWithDelta(
+                    (float) $stored,
+                    (float) $price['current'],
+                    0.5,
+                    "{$stored} came back as {$price['current']} when the client asked for '{$asked}'.",
+                );
+            }
+        }
+    }
 
-        $this->assertSame('TZS', $tzsPrice['currency']);
-        $this->assertEqualsWithDelta(2700000.0, (float) $tzsPrice['current'], 0.5);
+    /* ---------------------------------------------------------------- */
+    /* neither a customer nor a vendor can choose a currency             */
+    /* ---------------------------------------------------------------- */
+
+    /**
+     * A vendor cannot price in dollars, even by asking the API directly.
+     *
+     * The field was removed from the form, but a form is a suggestion. This
+     * asserts the server ignores it: `base_currency` is written, never read
+     * from the request.
+     */
+    public function test_a_vendor_cannot_submit_a_currency(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+        Sanctum::actingAs($this->vendor->user);
+
+        $this->post('/api/products', [
+            'name'           => 'Smuggled In Dollars',
+            'category_id'    => $this->category->id,
+            'subcategory_id' => $this->subcategory->id,
+            'new_price'      => 20,
+            'base_currency'  => 'USD',   // the thing being ignored
+            'stock'          => 5,
+            'availability'   => 'local',
+            'description'    => 'A listing that tries to price itself in dollars.',
+            'images'         => [\Illuminate\Http\UploadedFile::fake()->image('p.jpg')],
+        ], ['Accept' => 'application/json'])->assertSuccessful();
+
+        $product = \App\Models\Product::where('name', 'Smuggled In Dollars')->first();
+
+        $this->assertNotNull($product);
+        $this->assertSame('TZS', $product->base_currency, 'A vendor managed to set a currency.');
+        // And the figure is untouched: 20 shillings, not 20 dollars converted.
+        $this->assertEqualsWithDelta(20.0, (float) $product->new_price, 0.001);
+    }
+
+    /**
+     * A customer cannot switch the marketplace to dollars.
+     *
+     * Asserted against the catalogue rather than a helper, because the header
+     * is the only lever a client has left and this is what happens when it is
+     * pulled.
+     */
+    public function test_a_customer_cannot_switch_the_marketplace_to_dollars(): void
+    {
+        Currency::setRate(2800.0);
+        $product = $this->product(7000, 'TZS');
+
+        foreach (['USD', 'usd', 'KES', 'anything', ''] as $asked) {
+            $payload = $this->getJson("/api/shop/products/{$product->id}", ['X-Currency' => $asked])
+                ->assertOk()->json();
+            $price = data_get($payload, 'product.price') ?? data_get($payload, 'data.price') ?? data_get($payload, 'price');
+
+            $this->assertSame('TZS', $price['currency']);
+            // 7,000 exactly. Never 2.50, never 2.80, never anything a rate made.
+            $this->assertEqualsWithDelta(7000.0, (float) $price['current'], 0.5);
+        }
+    }
+
+    /** And the endpoint offers nothing to switch to. */
+    public function test_the_currency_endpoint_offers_one_currency_and_no_rate(): void
+    {
+        $payload = $this->getJson('/api/shop/currency')->assertOk()->json();
+
+        $this->assertCount(1, $payload['supported']);
+        $this->assertSame('TZS', $payload['supported'][0]['code']);
+        $this->assertSame('TZS', $payload['default_currency']);
+        $this->assertSame('TZS', $payload['suggested_currency']);
+        $this->assertNull($payload['exchange_rate']);
     }
 }

@@ -1,131 +1,114 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
   DEFAULT_CURRENCY,
   formatCurrency,
-  setActiveCurrency,
+  formatCurrencyAmount,
+  getActiveCurrency,
 } from "@/lib/currency";
 
 /**
- * A number and a symbol must describe the same currency.
+ * There is one marketplace currency, and no way to change it.
  *
- * They stopped doing so. `formatMoney(amount)` was changed to default to the
- * *display* currency, which made every call site currency-aware in one line —
- * and silently mislabelled every amount that had not been converted. Product
- * prices were fine, because the server converts those. Order and seller
- * amounts were not: they arrive as canonical shillings, so a TZS 7,000 order
- * rendered as "$7,000.00" to anybody browsing in dollars.
+ * These used to test a currency switcher. The switcher is gone: 2KONECT
+ * prices in shillings and shows shillings, so a shelf price no longer depends
+ * on an exchange rate being right. That dependency is what made a mistyped
+ * rate reprice the entire catalogue, twice.
  *
- * The fix is that an amount now travels with its currency and every call site
- * that renders one names it. These are the arithmetic and formatting facts
- * that fix depends on.
+ * What remains testable is that nothing converts, nothing can be switched,
+ * and a stored figure reaches the screen unchanged.
  */
 
-beforeEach(() => setActiveCurrency(DEFAULT_CURRENCY));
-
-/** What the server does. Reproduced here only to pin the expected figures. */
-const RATE = 2500;
-const toUsd = (tzs: number) => Math.round((tzs / RATE) * 100) / 100;
-
-describe("the reported bug", () => {
-  it("never renders a shilling amount with a dollar sign", () => {
-    // The exact case from production: base TZS 7,000.
-    expect(formatCurrency(7000, "TZS")).toBe("TZS 7,000");
-    expect(formatCurrency(7000, "TZS")).not.toContain("$");
+describe("the marketplace currency", () => {
+  it("is shillings", () => {
+    expect(DEFAULT_CURRENCY).toBe("TZS");
+    expect(getActiveCurrency()).toBe("TZS");
   });
 
-  it("shows TZS 7,000 as $2.80 once it has actually been converted", () => {
-    expect(toUsd(7000)).toBe(2.8);
-    expect(formatCurrency(toUsd(7000), "USD")).toBe("$2.80");
+  it("cannot be changed — there is no setter to call", async () => {
+    const currency = await import("@/lib/currency");
+
+    // A customer cannot select USD because nothing exists to select it with.
+    for (const gone of ["setActiveCurrency", "writeStoredCurrency", "readStoredCurrency", "CURRENCY_HEADER"]) {
+      expect(currency).not.toHaveProperty(gone);
+    }
   });
 
-  it("does not put decimals on shillings", () => {
-    expect(formatCurrency(7000, "TZS")).not.toBe("TZS 7,000.00");
+  it("has no store or switcher left to mount", async () => {
+    const { existsSync } = await import("node:fs");
+
+    // Checked on disk rather than by import, because TypeScript already
+    // refuses to resolve them — which is the same proof, one layer earlier.
+    expect(existsSync("lib/store/currency.tsx")).toBe(false);
+    expect(existsSync("components/layout/CurrencySwitcher.tsx")).toBe(false);
+  });
+
+  it("is not requested from the API by any header", async () => {
+    const { readFileSync } = await import("node:fs");
+
+    // The storefront no longer tells the server which currency it wants.
+    expect(readFileSync("lib/api.ts", "utf8")).not.toContain("X-Currency");
   });
 });
 
-describe("the products named in the report", () => {
-  it("Large Hard-Shell Travel Suitcase — TZS 7,000", () => {
-    expect(formatCurrency(7000, "TZS")).toBe("TZS 7,000");
-    expect(formatCurrency(toUsd(7000), "USD")).toBe("$2.80");
+describe("a stored price reaches the screen unchanged", () => {
+  // The three figures from the incident reports.
+  it.each([
+    [7000, "TZS 7,000"],
+    [2500000, "TZS 2,500,000"],
+    [2700000, "TZS 2,700,000"],
+    [50000, "TZS 50,000"],
+  ])("%i renders as %s", (stored, expected) => {
+    expect(formatCurrency(stored)).toBe(expected);
   });
 
-  it("iPhone 17 Pro Max 256GB — TZS 2,700,000", () => {
-    expect(formatCurrency(2700000, "TZS")).toBe("TZS 2,700,000");
-    expect(toUsd(2700000)).toBe(1080);
-    expect(formatCurrency(toUsd(2700000), "USD")).toBe("$1,080.00");
+  it("never renders a shilling amount with a dollar sign", () => {
+    for (const stored of [7000, 2500000, 2700000]) {
+      const rendered = formatCurrency(stored);
+      expect(rendered).not.toContain("$");
+      expect(rendered).toContain("TZS");
+    }
   });
 
-  it("iPhone 17 Pro Max — TZS 2,500,000", () => {
-    expect(formatCurrency(2500000, "TZS")).toBe("TZS 2,500,000");
-    expect(toUsd(2500000)).toBe(1000);
-    expect(formatCurrency(toUsd(2500000), "USD")).toBe("$1,000.00");
+  it("never renders a converted figure", () => {
+    // 7000 at any rate anyone has typed. None of these may appear.
+    for (const converted of ["2.50", "2.80", "1,080", "964.29", "892.86"]) {
+      expect(formatCurrency(7000)).not.toContain(converted);
+    }
+  });
+
+  it("does not put decimals on shillings", () => {
+    expect(formatCurrency(7000)).toBe("TZS 7,000");
+    expect(formatCurrency(49999.83)).toBe("TZS 50,000");
+  });
+});
+
+describe("formatting is still safe at the edges", () => {
+  it("renders nothing rather than NaN", () => {
+    for (const bad of [null, undefined, NaN]) {
+      expect(formatCurrency(bad as number | null | undefined)).toBe("");
+    }
+  });
+
+  it("handles zero, large amounts and refunds", () => {
+    expect(formatCurrency(0)).toBe("TZS 0");
+    expect(formatCurrency(12500000)).toBe("TZS 12,500,000");
+    expect(formatCurrency(-50000)).toBe("-TZS 50,000");
+  });
+
+  it("renders a bare amount where the label is elsewhere", () => {
+    expect(formatCurrencyAmount(50000)).toBe("50,000");
   });
 });
 
 /**
- * An order carries its own currency, from the snapshot taken when it was
- * placed. It does not follow the reader's preference and it does not follow
- * the rate.
+ * An order agreed in another currency before the switcher was removed still
+ * renders from its own snapshot. That is why formatCurrency still accepts a
+ * currency at all — it is for history, not for choice.
  */
-type Order = { total: number; currency: "TZS" | "USD"; exchange_rate: number | null };
-
-const render = (order: Order) => formatCurrency(order.total, order.currency);
-
-describe("an order is rendered in its own currency", () => {
-  it("a shilling order reads as shillings even while browsing in dollars", () => {
-    setActiveCurrency("USD");
-
-    expect(render({ total: 7000, currency: "TZS", exchange_rate: null })).toBe("TZS 7,000");
-  });
-
-  it("a dollar order reads as dollars even while browsing in shillings", () => {
-    setActiveCurrency("TZS");
-
-    expect(render({ total: 2.8, currency: "USD", exchange_rate: 2500 })).toBe("$2.80");
-  });
-
-  it("is unmoved when the administrator changes the rate", () => {
-    // The order was converted once, at 2,500, and written down. Nothing here
-    // divides by anything, which is precisely why a later rate cannot reach it.
-    const order: Order = { total: 2.8, currency: "USD", exchange_rate: 2500 };
-
-    expect(render(order)).toBe("$2.80");
-    // Rate moves to 2,700 — the order is not recomputed, so it does not move.
-    expect(render(order)).toBe("$2.80");
-    expect(order.total).toBe(2.8);
-  });
-});
-
-describe("seller amounts", () => {
-  it("are shillings, whatever the seller is browsing in", () => {
-    setActiveCurrency("USD");
-
-    // A seller is paid in shillings; the console says shillings.
-    expect(formatCurrency(7000, "TZS")).toBe("TZS 7,000");
-    expect(formatCurrency(450000, "TZS")).toBe("TZS 450,000");
-  });
-});
-
-describe("switching currency changes nothing but the rendering", () => {
-  it("leaves the stored amount alone", () => {
-    const price = { base_current: 7000, current: 2.8, currency: "USD" as const };
-
-    setActiveCurrency("TZS");
-    setActiveCurrency("USD");
-    setActiveCurrency("TZS");
-
-    // The canonical figure is the seller's and is never touched by a display
-    // preference.
-    expect(price.base_current).toBe(7000);
-  });
-});
-
-describe("there is no rate in the browser", () => {
-  it("formatting never converts", () => {
-    // Same number in, two currencies out, no arithmetic. If this file ever
-    // multiplies by a rate, the browser and the server can disagree.
-    expect(formatCurrency(7000, "TZS")).toBe("TZS 7,000");
-    expect(formatCurrency(7000, "USD")).toBe("$7,000.00");
+describe("historical orders", () => {
+  it("still render in the currency they were agreed in", () => {
+    expect(formatCurrency(40, "USD")).toBe("$40.00");
+    expect(formatCurrency(100000, "TZS")).toBe("TZS 100,000");
   });
 });

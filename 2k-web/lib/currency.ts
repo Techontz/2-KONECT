@@ -1,102 +1,36 @@
 /**
- * Currency, on the client.
+ * Money formatting for the storefront.
  *
- * ---- this file does not convert ----
+ * ---- there is one currency ----
  *
- * It used to. `lib/format.ts` held `RATES = { USD: 0.000387 }`, a second copy
- * of a rate that also lived in the backend, in the opposite direction, with
- * nothing keeping the two in step. Whichever drifted first would have shown a
- * customer one price on the product page and another in the basket.
+ * 2KONECT prices in Tanzanian Shillings and shows Tanzanian Shillings. There
+ * is no customer currency selector and no vendor currency field, so a price
+ * has nothing to be converted into and nothing here converts.
  *
- * The server converts now. Every price on every response arrives already in
- * the currency the request asked for, at the rate an administrator set, with
- * the canonical figure beside it. So the client's whole job is to say which
- * currency it wants and to put a symbol around what comes back.
+ * That is deliberate rather than incidental. This file previously held a
+ * hardcoded rate; then the rate moved to the server and this file merely
+ * chose a currency to ask for. Both arrangements shared one property — a
+ * shelf price depended on an exchange rate being right — and when the rate
+ * was wrong the whole catalogue was wrong with it. Now a stored 7000 is
+ * TZS 7,000 by construction, and no rate can reach it.
  *
- * If you ever want a rate here, the one you want is on the payload — and
- * needing it means the sum belongs on the server.
+ * Orders are a separate matter. One agreed in another currency carries its
+ * own snapshot and renders from that, which is why `formatCurrency` still
+ * takes a currency at all.
  */
 
 export type CurrencyCode = "TZS" | "USD";
 
-export const CURRENCIES: ReadonlyArray<{
-  code: CurrencyCode;
-  label: string;
-  short: string;
-  flag: string;
-  symbol: string;
-}> = [
-  { code: "TZS", label: "Tanzanian Shilling", short: "TZS", flag: "🇹🇿", symbol: "TZS" },
-  { code: "USD", label: "US Dollar", short: "USD", flag: "🇺🇸", symbol: "$" },
-];
-
+/** The marketplace currency. The only one a customer or vendor ever sees. */
 export const DEFAULT_CURRENCY: CurrencyCode = "TZS";
-
-export const CURRENCY_STORAGE_KEY = "2konect.currency";
-
-/** The header the API reads. Must match ResolveDisplayCurrency::KEY's source. */
-export const CURRENCY_HEADER = "X-Currency";
 
 export function isCurrency(value: unknown): value is CurrencyCode {
   return value === "TZS" || value === "USD";
 }
 
-/* ------------------------------------------------------------------ */
-/* the active currency, outside React                                  */
-/* ------------------------------------------------------------------ */
-
-/**
- * Axios cannot read a React context, and a request fired from an event
- * handler must not send a currency one render out of date. So the active
- * choice is mirrored here, written by the provider and read by the request
- * interceptor. One value, one writer.
- */
-let active: CurrencyCode = DEFAULT_CURRENCY;
-
-export function getActiveCurrency(): CurrencyCode {
-  return active;
-}
-
-export function setActiveCurrency(code: CurrencyCode): void {
-  active = code;
-}
-
-/**
- * The currency stored from a previous visit, if any.
- *
- * Returns null rather than a default, because "they chose TZS" and "they have
- * never chosen" are different facts: the first must survive a trip to another
- * country, the second must not override one.
- */
-export function readStoredCurrency(): CurrencyCode | null {
-  if (typeof window === "undefined") return null;
-
-  try {
-    const raw = window.localStorage.getItem(CURRENCY_STORAGE_KEY);
-    return isCurrency(raw) ? raw : null;
-  } catch {
-    // Private browsing, or storage disabled. Not a reason to fail.
-    return null;
-  }
-}
-
-export function writeStoredCurrency(code: CurrencyCode): void {
-  if (typeof window === "undefined") return;
-
-  try {
-    window.localStorage.setItem(CURRENCY_STORAGE_KEY, code);
-  } catch {
-    /* The choice still applies to this visit; it just will not outlive it. */
-  }
-}
-
-/* ------------------------------------------------------------------ */
-/* formatting                                                          */
-/* ------------------------------------------------------------------ */
-
 const FRACTION_DIGITS: Record<CurrencyCode, number> = {
   // Shillings are quoted whole. "TZS 49,999.83" is not a price anyone has
-  // charged in Tanzania — it is an artefact of dividing.
+  // charged in Tanzania — it is an artefact of dividing, and nothing divides.
   TZS: 0,
   USD: 2,
 };
@@ -106,11 +40,26 @@ export function currencyDecimals(code: CurrencyCode): number {
 }
 
 /**
+ * The currency every marketplace price is in.
+ *
+ * Kept as a function rather than inlining the constant so the handful of call
+ * sites that ask read as a question with one answer, instead of quietly
+ * assuming.
+ */
+export function getActiveCurrency(): CurrencyCode {
+  return DEFAULT_CURRENCY;
+}
+
+/**
  * `TZS 50,000` / `$20.00`.
  *
- * The amount is taken as already being in `code` — this is display, not
- * conversion. Null, undefined and NaN render as an empty string rather than
- * "NaN", because a missing price should look missing, not broken.
+ * The amount is already in `code`. This puts a symbol and the right number of
+ * digits around it and does nothing else — no conversion has happened here
+ * since the server took that job, and none happens now that there is only one
+ * currency to be in.
+ *
+ * `USD` remains formattable for one reason: an order agreed in dollars before
+ * the selector was removed still has to render its own total correctly.
  */
 export function formatCurrency(
   amount: number | null | undefined,
@@ -136,9 +85,8 @@ export function formatCurrencyAmount(
 ): string {
   if (amount === null || amount === undefined || Number.isNaN(amount)) return "";
 
-  const digits = currencyDecimals(code);
   return amount.toLocaleString("en-US", {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
+    minimumFractionDigits: currencyDecimals(code),
+    maximumFractionDigits: currencyDecimals(code),
   });
 }

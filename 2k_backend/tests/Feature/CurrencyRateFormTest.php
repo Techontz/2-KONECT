@@ -135,7 +135,7 @@ class CurrencyRateFormTest extends TestCase
     }
 
     /** B & C. The active rate, and what the API would serve. */
-    public function test_the_active_rate_and_the_endpoint_both_report_2800(): void
+    public function test_the_active_rate_is_2800_and_the_endpoint_publishes_no_rate(): void
     {
         \Livewire\Livewire::test(CreateCurrencyRate::class)
             ->fillForm(['rate' => '2800', 'note' => 'monthly review'])
@@ -144,9 +144,13 @@ class CurrencyRateFormTest extends TestCase
 
         $this->assertEqualsWithDelta(2800.0, Currency::rate(), 0.001);
 
+        // The endpoint no longer publishes a rate — nothing customer-facing
+        // converts, so there is none to publish. The rate is still the
+        // authority for order snapshots, which is what Currency::rate() is.
         $this->getJson('/api/shop/currency')
             ->assertOk()
-            ->assertJsonPath('exchange_rate.rate', 2800);
+            ->assertJsonPath('exchange_rate', null)
+            ->assertJsonPath('default_currency', 'TZS');
     }
 
     /** F. Changing the rate changes what the catalogue converts to. */

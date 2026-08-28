@@ -4,7 +4,6 @@ import { FirebaseAnalytics } from "@/components/analytics/FirebaseAnalytics";
 import { LanguageProvider } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/store/auth";
 import { CartProvider } from "@/lib/store/cart";
-import { CurrencyProvider } from "@/lib/store/currency";
 import { LocationProvider } from "@/lib/store/location";
 import { WishlistProvider } from "@/lib/store/wishlist";
 
@@ -27,8 +26,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     // storefront rather than on a modal asking them a question before they
     // have seen what this is.
     <LanguageProvider>
-      <CurrencyProvider>
-        <LocationProvider>
+      <LocationProvider>
         <AuthProvider>
           <CartProvider>
             <WishlistProvider>
@@ -37,8 +35,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             </WishlistProvider>
           </CartProvider>
         </AuthProvider>
-        </LocationProvider>
-      </CurrencyProvider>
+      </LocationProvider>
     </LanguageProvider>
   );
 }

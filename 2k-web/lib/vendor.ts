@@ -215,8 +215,6 @@ export const vendorApi = {
     subcategory_id?: number;
     description?: string;
     new_price: number;
-    /** The currency the seller typed those figures in. Never converted. */
-    base_currency?: "TZS" | "USD";
     old_price?: number;
     stock: number;
     images: File[];
@@ -247,7 +245,6 @@ export const vendorApi = {
     if (fields.short_description) form.append("short_description", fields.short_description);
     if (fields.description) form.append("description", fields.description);
     form.append("new_price", String(fields.new_price));
-    if (fields.base_currency) form.append("base_currency", fields.base_currency);
     if (fields.old_price) form.append("old_price", String(fields.old_price));
     form.append("stock", String(fields.stock));
 
@@ -289,7 +286,6 @@ export const vendorApi = {
       description: string;
       short_description: string;
       new_price: number;
-      base_currency?: "TZS" | "USD";
       old_price: number;
       stock: number;
       images: File[];

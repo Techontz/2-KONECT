@@ -1,7 +1,5 @@
 import axios from "axios";
 
-import { CURRENCY_HEADER, getActiveCurrency } from "./currency";
-
 /**
  * Shared axios instance for the Laravel API.
  *
@@ -107,15 +105,6 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-
-  // Which currency the answer should be priced in. Read from the module-level
-  // value rather than from React, because a request fired from an event
-  // handler must not carry a currency one render out of date — and because
-  // axios cannot read a context anyway.
-  //
-  // The server treats anything it does not support as the canonical currency,
-  // so this can never make a request fail.
-  config.headers[CURRENCY_HEADER] = getActiveCurrency();
 
   return config;
 });

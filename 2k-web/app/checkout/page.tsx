@@ -9,13 +9,13 @@ import { apiError } from "@/lib/api";
 import { createCheckoutSession, paymentOptions, type PaymentOptions } from "@/lib/payments";
 import { AddressForm } from "@/components/account/AddressForm";
 import { BRAND } from "@/lib/brand";
+import { DEFAULT_CURRENCY } from "@/lib/currency";
 import { formatMoney } from "@/lib/format";
 import shop from "@/lib/shop";
 import type { Address as AddressType } from "@/lib/types";
 import { useAuth } from "@/lib/store/auth";
 import { useHydrated } from "@/lib/useHydrated";
 import { lineSourcing, unitPrice, useCart, keyOf } from "@/lib/store/cart";
-import { useCurrency } from "@/lib/store/currency";
 import { useLocation } from "@/lib/store/location";
 import { LocationPicker } from "@/components/location/LocationPicker";
 import { SiteChrome } from "@/components/layout/SiteChrome";
@@ -48,7 +48,6 @@ function CheckoutContent() {
   const cart = useCart();
   const router = useRouter();
   const { location: pinned, setLocation } = useLocation();
-  const { currency } = useCurrency();
 
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
@@ -670,7 +669,7 @@ function CheckoutContent() {
               <p className="mt-3 rounded-[var(--radius-sm)] bg-[color:var(--color-brand-50)] px-3 py-2 text-[12px] font-semibold text-[color:var(--color-ink)]">
                 {t("payment.chargedIn", { amount: formatMoney(total) })}
                 <span className="mt-0.5 block font-normal text-[color:var(--color-ink-muted)]">
-                  {t("payment.processedIn", { currency })}
+                  {t("payment.processedIn", { currency: DEFAULT_CURRENCY })}
                 </span>
               </p>
             ) : null}

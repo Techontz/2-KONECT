@@ -1,94 +1,65 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:app_2konect/core/format.dart';
-import 'package:app_2konect/providers/currency.dart';
 
-/// Currency, in the app.
+/// There is one marketplace currency, and the app cannot ask for another.
 ///
-/// The rate belongs to the server and so does the conversion, so there is no
-/// arithmetic here to test. What the app can get wrong is the precedence —
-/// whose choice wins — and whether the figure it prints matches the currency
-/// it asked for.
+/// The currency screen, its provider and the `X-Currency` header have all been
+/// removed. 2KONECT prices in Tanzanian Shillings and shows Tanzanian
+/// Shillings, so a price on a phone no longer depends on an exchange rate
+/// being right — which is what let a mistyped rate reprice a whole catalogue.
 void main() {
-  group('parsing', () {
-    test('accepts the two currencies 2KONECT prices in', () {
-      expect(AppCurrency.parse('TZS'), AppCurrency.tzs);
-      expect(AppCurrency.parse('USD'), AppCurrency.usd);
-      expect(AppCurrency.parse('usd'), AppCurrency.usd);
+  group('the app cannot switch currency', () {
+    test('the currency screen and provider are gone', () {
+      expect(File('lib/features/account/currency_screen.dart').existsSync(), isFalse);
+      expect(File('lib/providers/currency.dart').existsSync(), isFalse);
     });
 
-    test('rejects anything else rather than guessing', () {
-      // A visitor from Nairobi is offered USD, not KES: a currency nothing can
-      // be paid in would be worse than a foreign one that can.
-      for (final code in ['KES', 'UGX', 'GBP', 'EUR', '', 'null']) {
-        expect(AppCurrency.parse(code), isNull, reason: '$code is not supported');
-      }
-      expect(AppCurrency.parse(null), isNull);
+    test('no request carries a currency header', () {
+      final client = File('lib/core/network/api_client.dart').readAsStringSync();
+      expect(client.contains('X-Currency'), isFalse);
+      expect(client.contains('displayCurrency'), isFalse);
     });
 
-    test('falls back to shillings', () {
-      expect(AppCurrency.fallback, AppCurrency.tzs);
+    test('nothing routes to a currency screen', () {
+      final router = File('lib/core/router/app_router.dart').readAsStringSync();
+      expect(router.contains('CurrencyScreen'), isFalse);
+      expect(router.contains("'/currency'"), isFalse);
     });
   });
 
-  group('precedence', () {
-    /// The controller's rule, as it resolves it.
-    AppCurrency resolve({String? stored, String? suggested}) {
-      final chosen = AppCurrency.parse(stored);
-      if (chosen != null) return chosen;
-      return AppCurrency.parse(suggested) ?? AppCurrency.fallback;
-    }
-
-    test('a visitor in Tanzania is offered shillings', () {
-      expect(resolve(suggested: 'TZS'), AppCurrency.tzs);
-    });
-
-    test('a visitor anywhere else is offered dollars', () {
-      expect(resolve(suggested: 'USD'), AppCurrency.usd);
-    });
-
-    test('detection failing does not stop anybody shopping', () {
-      expect(resolve(), AppCurrency.tzs);
-    });
-
-    test('a choice already made beats the country', () {
-      // The rule the feature exists for.
-      expect(resolve(stored: 'USD', suggested: 'TZS'), AppCurrency.usd);
-      expect(resolve(stored: 'TZS', suggested: 'USD'), AppCurrency.tzs);
-    });
-  });
-
-  group('formatting matches the website exactly', () {
-    test('shillings are quoted whole', () {
-      // "TZS 49,999.83" is not a price anyone has charged in Tanzania.
+  group('a stored price reaches the screen unchanged', () {
+    test('the figures from the incident reports', () {
+      expect(Money.format(7000, 'TZS'), 'TZS 7,000');
+      expect(Money.format(2500000, 'TZS'), 'TZS 2,500,000');
+      expect(Money.format(2700000, 'TZS'), 'TZS 2,700,000');
       expect(Money.format(50000, 'TZS'), 'TZS 50,000');
+    });
+
+    test('never a dollar sign on a shilling amount', () {
+      for (final stored in [7000, 2500000, 2700000]) {
+        expect(Money.format(stored, 'TZS'), isNot(contains(r'$')));
+      }
+    });
+
+    test('shillings carry no decimals', () {
+      expect(Money.format(7000, 'TZS'), 'TZS 7,000');
       expect(Money.format(49999.83, 'TZS'), 'TZS 50,000');
     });
 
-    test('dollars use the symbol and keep their cents', () {
-      expect(Money.format(20, 'USD'), r'$20.00');
-      expect(Money.format(19.999, 'USD'), r'$20.00');
-    });
-
     test('a missing amount renders as nothing, never as NaN', () {
-      expect(Money.format(null, 'USD'), '');
-      expect(Money.format(null), '');
-    });
-
-    test('zero and large amounts are safe', () {
-      expect(Money.format(0, 'TZS'), 'TZS 0');
-      expect(Money.format(0, 'USD'), r'$0.00');
-      expect(Money.format(12500000, 'TZS'), 'TZS 12,500,000');
+      expect(Money.format(null, 'TZS'), '');
     });
   });
 
-  group('the app never converts', () {
-    test('it prints the figure it was given, in the currency named', () {
-      // Same number, two currencies, no arithmetic. If a rate ever appears in
-      // the app, the phone and the server can disagree — which is the bug this
-      // whole system exists to prevent.
-      expect(Money.format(20, 'TZS'), 'TZS 20');
-      expect(Money.format(20, 'USD'), r'$20.00');
+  /// An order agreed in another currency before the switcher was removed still
+  /// renders from its own snapshot. That is history, not choice.
+  group('historical orders', () {
+    test('still render in the currency they were agreed in', () {
+      expect(Money.format(40, 'USD'), r'$40.00');
+      expect(Money.format(100000, 'TZS'), 'TZS 100,000');
     });
   });
 }

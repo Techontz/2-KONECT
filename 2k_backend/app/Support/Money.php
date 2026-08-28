@@ -109,17 +109,25 @@ class Money
     }
 
     /**
-     * The currency this request's prices are being quoted in.
+     * The currency prices are quoted in. Always shillings.
      *
-     * Bound by {@see \App\Http\Middleware\ResolveDisplayCurrency}. Falls back
-     * to the canonical currency outside a request — a queue worker, a console
-     * command, a test that has not asked for anything else.
+     * The marketplace is priced in TZS and shown in TZS. There is no customer
+     * currency selector any more and no vendor currency field, so there is
+     * nothing for this to vary by — and having it vary was how a broken
+     * exchange rate reached a shelf price. A stored 7000 is TZS 7,000 on every
+     * screen, by construction rather than by a rate being correct.
+     *
+     * `X-Currency` is deliberately ignored rather than removed from the
+     * middleware: an older mobile build still sends it, and the right answer
+     * to a client asking for dollars is shillings, not an error.
+     *
+     * Orders are a separate matter and keep their own snapshot. An order
+     * agreed in USD before this change still reads in USD, because it carries
+     * its own currency and rate and never asks this method.
      */
     public static function displayCurrency(): string
     {
-        $key = \App\Http\Middleware\ResolveDisplayCurrency::KEY;
-
-        return app()->bound($key) ? Currency::normalise(app()->make($key)) : self::BASE;
+        return self::BASE;
     }
 
     public static function supported(): array

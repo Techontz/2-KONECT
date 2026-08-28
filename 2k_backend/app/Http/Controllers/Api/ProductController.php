@@ -46,10 +46,10 @@ class ProductController extends Controller
             'attributes'        => 'nullable|array',
             'attributes.*'      => 'nullable|string|max:255',
             'old_price'      => 'nullable|numeric',
+            // Shillings. A seller does not choose a currency — the
+            // marketplace has one, and `base_currency` is written as TZS
+            // rather than accepted from the request.
             'new_price'      => 'required|numeric',
-            // Which currency the seller typed that figure in. Their number is
-            // stored exactly as given and never converted on the way in.
-            'base_currency'  => 'sometimes|in:TZS,USD',
             'stock'          => 'required|integer|min:0',
             // Where the item actually is. Optional, so the Flutter app and any
             // older client keep posting exactly what they always did and get
@@ -113,7 +113,9 @@ class ProductController extends Controller
                 'description'       => $request->input('description'),
                 'old_price'      => $request->input('old_price'),
                 'new_price'      => $request->input('new_price'),
-                'base_currency'  => $request->input('base_currency', \App\Support\Currency::BASE),
+                // Always TZS, never from the request. A seller cannot price
+                // in dollars and a client cannot ask for it on their behalf.
+                'base_currency'  => \App\Support\Currency::BASE,
                 'stock'          => $request->input('stock', 0),
             ] + $this->sourcingAttributes($request));
 
@@ -404,7 +406,6 @@ class ProductController extends Controller
             'description'    => 'nullable|string',
             'old_price'      => 'nullable|numeric',
             'new_price'      => 'sometimes|required|numeric',
-            'base_currency'  => 'sometimes|in:TZS,USD',
             'stock'          => 'sometimes|required|integer|min:0',
             'short_description' => 'nullable|string|max:300',
             'availability'       => 'nullable|string|in:local,import',
@@ -451,7 +452,7 @@ class ProductController extends Controller
         try {
             $product->update($request->only([
                 'name', 'category_id', 'subcategory_id', 'description',
-                'short_description', 'old_price', 'new_price', 'base_currency', 'stock',
+                'short_description', 'old_price', 'new_price', 'stock',
             ]) + $this->sourcingAttributes($request));
 
             // Existing photos are production data and are only removed when the

@@ -6,7 +6,6 @@ import { BRAND } from "@/lib/brand";
 import { useT } from "@/lib/i18n";
 import type { Category } from "@/lib/types";
 import { Logo } from "@/components/brand/Logo";
-import { CurrencySwitcher } from "./CurrencySwitcher";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 
 /**
@@ -99,11 +98,8 @@ export function Footer({ categories = [] }: { categories?: Category[] }) {
               </div>
             </dl>
 
-            {/* The header's utility strip is desktop-only, so this is where a
-                phone finds the currency switcher. */}
-            <div className="mt-5 flex flex-wrap items-center gap-3">
+            <div className="mt-5">
               <LanguageSwitcher tone="dark" />
-              <CurrencySwitcher tone="dark" />
             </div>
           </div>
 

@@ -52,14 +52,7 @@ class ProductResource extends Resource
                 ->maxLength(10)
                 ->label('Old Price'),
 
-            Forms\Components\Select::make('base_currency')
-                ->label('Price currency')
-                ->options(['TZS' => 'TZS — Tanzanian Shilling', 'USD' => 'USD — US Dollar'])
-                ->default('TZS')
-                ->required()
-                ->native(false)
-                ->helperText('The currency these prices are typed in. The figures are stored exactly as entered and converted only when shown to a customer, at the rate set in Settings → Currency.'),
-
+            // Prices are shillings. There is no currency to choose.
             TextInput::make('new_price')
                 ->required()
                 ->numeric()

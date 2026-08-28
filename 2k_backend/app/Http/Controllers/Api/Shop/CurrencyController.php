@@ -36,36 +36,33 @@ class CurrencyController extends Controller
     /** GET /api/shop/currency */
     public function __invoke(Request $request): JsonResponse
     {
-        $country = $this->country($request);
-
+        // The marketplace is priced in shillings and shown in shillings. The
+        // endpoint stays so that an older mobile build asking the question
+        // still gets a coherent answer rather than a 404 — but the answer is
+        // now that there is one currency and no choice to make.
+        //
+        // Country detection is kept and reported. It costs nothing, it is used
+        // for nothing here, and a future decision to price differently
+        // somewhere else should not have to rediscover it.
         return response()->json([
-            // Null when the edge told us nothing. The client then keeps
-            // whatever it already had, which for a first visit is the
-            // application default rather than a guess.
-            'country'  => $country,
-            'detected' => $country !== null,
+            'country'  => $this->country($request),
+            'detected' => $this->country($request) !== null,
 
-            // A suggestion for a visitor with no preference of their own.
-            'suggested_currency' => Currency::forCountry($country),
             'default_currency'   => Currency::BASE,
+            'suggested_currency' => Currency::BASE,
+            // One entry, deliberately. A client reading this list to build a
+            // switcher will build nothing.
+            'supported' => [[
+                'code'     => Currency::BASE,
+                'symbol'   => Currency::symbol(Currency::BASE),
+                'decimals' => Currency::decimals(Currency::BASE),
+                'label'    => 'Tanzanian Shilling',
+                'flag'     => '🇹🇿',
+            ]],
 
-            'supported' => array_map(fn (string $code) => [
-                'code'     => $code,
-                'symbol'   => Currency::symbol($code),
-                'decimals' => Currency::decimals($code),
-                'label'    => $code === Currency::BASE ? 'Tanzanian Shilling' : 'US Dollar',
-                'flag'     => $code === Currency::BASE ? '🇹🇿' : '🇺🇸',
-            ], Currency::SUPPORTED),
-
-            // Sent so a client can say "converted at 2,500" where that helps a
-            // customer understand a figure. Not sent so the client can convert
-            // with it — every price on every response arrives already
-            // converted, by the server, at this rate.
-            'exchange_rate' => [
-                'base'  => Currency::QUOTE,
-                'quote' => Currency::BASE,
-                'rate'  => Currency::rate(),
-            ],
+            // No rate is published. Nothing customer-facing converts, so a
+            // rate here would only invite something to start.
+            'exchange_rate' => null,
         ]);
     }
 
