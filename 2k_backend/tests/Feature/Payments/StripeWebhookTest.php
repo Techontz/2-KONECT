@@ -576,4 +576,137 @@ class StripeWebhookTest extends TestCase
         // re-booting; the dedicated disabled-state test covers the 404.
         $this->assertFalse((bool) config('stripe.enabled'));
     }
+
+    /* ---------------------------------------------------------------- */
+    /* the webhook is what hands an import to its seller                 */
+    /* ---------------------------------------------------------------- */
+
+    /**
+     * The whole rule, end to end, in one test.
+     *
+     * An import is invisible to the seller while it is unpaid, and the thing
+     * that makes it visible is a signed Stripe event — not the shopper coming
+     * back from Stripe, not a status field somebody set, not a button.
+     */
+    public function test_a_signed_event_is_what_makes_an_import_visible_to_its_seller(): void
+    {
+        $order = $this->order(['fulfilment_type' => 'import', 'source_country' => 'CN']);
+
+        \Laravel\Sanctum\Sanctum::actingAs($this->vendor->user);
+        $this->assertSame([], $this->getJson('/api/shop/vendor/orders')->json('orders'));
+
+        $this->send($this->event('checkout.session.completed', $this->sessionObject()))->assertOk();
+
+        $this->assertSame('verified', $order->fresh()->payment_status);
+
+        \Laravel\Sanctum\Sanctum::actingAs($this->vendor->user);
+        $rows = $this->getJson('/api/shop/vendor/orders')->json('orders');
+
+        $this->assertCount(1, $rows);
+        $this->assertSame('Paid', $rows[0]['payment']['label']);
+        $this->assertSame('Import order', $rows[0]['origin']['label']);
+    }
+
+    public function test_an_unpaid_session_does_not_hand_an_import_over(): void
+    {
+        // `checkout.session.completed` fires for delayed payment methods while
+        // the session is still unpaid. Fulfilling on the event type alone
+        // would give away goods for payments that later fail.
+        $order = $this->order(['fulfilment_type' => 'import', 'source_country' => 'CN']);
+
+        $this->send($this->event(
+            'checkout.session.completed',
+            $this->sessionObject(['payment_status' => 'unpaid']),
+        ))->assertOk();
+
+        $this->assertSame('awaiting_payment', $order->fresh()->payment_status);
+
+        \Laravel\Sanctum\Sanctum::actingAs($this->vendor->user);
+        $this->assertSame([], $this->getJson('/api/shop/vendor/orders')->json('orders'));
+    }
+
+    public function test_a_failed_async_payment_keeps_an_import_off_the_sellers_list(): void
+    {
+        $order = $this->order(['fulfilment_type' => 'import', 'source_country' => 'CN']);
+
+        $this->send($this->event(
+            'checkout.session.async_payment_failed',
+            $this->sessionObject(['payment_status' => 'unpaid']),
+        ))->assertOk();
+
+        $this->assertSame('awaiting_payment', $order->fresh()->payment_status);
+
+        \Laravel\Sanctum\Sanctum::actingAs($this->vendor->user);
+        $this->assertSame([], $this->getJson('/api/shop/vendor/orders')->json('orders'));
+    }
+
+    public function test_an_expired_session_keeps_an_import_off_the_sellers_list(): void
+    {
+        $order = $this->order(['fulfilment_type' => 'import', 'source_country' => 'CN']);
+
+        $this->send($this->event(
+            'checkout.session.expired',
+            $this->sessionObject(['payment_status' => 'unpaid', 'status' => 'expired']),
+        ))->assertOk();
+
+        $this->assertSame('awaiting_payment', $order->fresh()->payment_status);
+
+        \Laravel\Sanctum\Sanctum::actingAs($this->vendor->user);
+        $this->assertSame([], $this->getJson('/api/shop/vendor/orders')->json('orders'));
+    }
+
+    /**
+     * A stale failure must not take a paid order back off its seller.
+     *
+     * WebhookProcessor only moves an order out of `awaiting_payment`,
+     * `awaiting_verification` or `rejected`, so `verified` is a one-way door.
+     * That is deliberate and it matters here: a shopper whose first session
+     * expired and who then paid on a second one has a real payment, and an
+     * expiry for the abandoned session arriving late must not strand the
+     * seller's work or the buyer's money.
+     */
+    public function test_a_late_expiry_for_an_abandoned_session_cannot_unpay_an_import(): void
+    {
+        $order = $this->order(['fulfilment_type' => 'import', 'source_country' => 'CN']);
+
+        $this->send($this->event('checkout.session.completed', $this->sessionObject()))->assertOk();
+        $this->assertSame('verified', $order->fresh()->payment_status);
+
+        $this->send($this->event(
+            'checkout.session.expired',
+            $this->sessionObject(['id' => 'cs_test_old', 'payment_intent' => 'pi_test_old', 'status' => 'expired']),
+            'evt_test_stale_expiry',
+        ))->assertOk();
+
+        $this->assertSame('verified', $order->fresh()->payment_status);
+
+        \Laravel\Sanctum\Sanctum::actingAs($this->vendor->user);
+        $this->assertCount(1, $this->getJson('/api/shop/vendor/orders')->json('orders'));
+    }
+
+    public function test_a_redelivered_event_does_not_move_an_import_twice(): void
+    {
+        $order = $this->order(['fulfilment_type' => 'import', 'source_country' => 'CN']);
+        $event = $this->event('checkout.session.completed', $this->sessionObject());
+
+        $this->send($event)->assertOk();
+        $this->send($event)->assertOk();
+        $this->send($event)->assertOk();
+
+        $this->assertSame('verified', $order->fresh()->payment_status);
+        $this->assertSame(1, StripeEvent::count());
+
+        // One timeline entry, not three. A buyer reading their order should
+        // not see "payment received" repeated because Stripe retried.
+        $this->assertSame(
+            1,
+            \App\Models\OrderEvent::where('reference', $order->reference)
+                ->where('title', 'Payment verified')
+                ->count(),
+        );
+
+        // And the seller has one order, not three.
+        \Laravel\Sanctum\Sanctum::actingAs($this->vendor->user);
+        $this->assertCount(1, $this->getJson('/api/shop/vendor/orders')->json('orders'));
+    }
 }

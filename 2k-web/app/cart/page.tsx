@@ -13,9 +13,6 @@ import { SiteChrome } from "@/components/layout/SiteChrome";
 import { AvailabilityBadge, DeliveryEstimate } from "@/components/sourcing/Availability";
 import { Button, ButtonLink, EmptyState } from "@/components/ui/Primitives";
 
-/** Matches OrderController::DELIVERY_FEE. */
-const DELIVERY_FEE = 3000;
-
 /**
  * Cart.
  *
@@ -64,8 +61,11 @@ export default function CartPage() {
   // it costs to move the last mile is not known until the shipment lands, and
   // it is arranged against the order afterwards. Matches CheckoutPolicy.
   const hasImport = cart.lines.some((line) => lineSourcing(line)?.is_local === false);
-  const deliveryFee = hasImport || cart.lines.length === 0 ? 0 : DELIVERY_FEE;
-  const total = subtotal + deliveryFee;
+  // No delivery is quoted here for any basket. A flat TZS 3,000 used to be
+  // added to local orders, which was a number rather than a price: what a
+  // rider's journey costs depends on where the customer is and what was
+  // arranged, and none of that is known while the basket is on screen.
+  const total = subtotal;
 
   // The two halves of a mixed basket, so the summary can be honest about the
   // fact that they will not turn up together.
@@ -215,7 +215,7 @@ export default function CartPage() {
                 />
                 <SummaryRow
                   label={t("cart.delivery")}
-                  value={hasImport ? t("payment.deliveryNotAdded") : formatMoney(deliveryFee)}
+                  value={hasImport ? t("payment.deliveryNotAdded") : t("payment.deliveryToBeConfirmed")}
                 />
               </dl>
 

@@ -22,9 +22,6 @@ import { AvailabilityBadge } from "@/components/sourcing/Availability";
 import { ClockIcon, LockIcon } from "@/components/sourcing/icons";
 import { Button, ButtonLink, EmptyState, Notice } from "@/components/ui/Primitives";
 
-/** Matches OrderController::DELIVERY_FEE. */
-const DELIVERY_FEE = 3000;
-
 /**
  * Checkout — the point at which the storefront asks who the shopper is.
  *
@@ -71,7 +68,6 @@ function CheckoutContent() {
   // Anything from abroad makes the whole basket prepaid, and takes delivery
   // out of this checkout entirely — see the note by the summary below.
   const hasImport = cart.lines.some((line) => lineSourcing(line)?.is_local === false);
-  const deliveryFee = hasImport || cart.lines.length === 0 ? 0 : DELIVERY_FEE;
 
   const [placing, setPlacing] = useState(false);
   // Which step of a card checkout we are on, so the button can say what is
@@ -229,7 +225,8 @@ function CheckoutContent() {
     (max, line) => Math.max(max, lineSourcing(line)?.lead_time.max ?? 0),
     0,
   );
-  const total = cart.subtotal + deliveryFee;
+  // Nothing is added to the goods. Delivery is settled after the order.
+  const total = cart.subtotal;
   const importCount = cart.lines.filter((line) => lineSourcing(line)?.is_local === false).length;
 
   if (cart.ready && cart.lines.length === 0) {
@@ -328,7 +325,7 @@ function CheckoutContent() {
       let url: string;
       try {
         url = await createCheckoutSession(result.reference);
-      } catch (sessionError) {
+      } catch {
         // The order was created but the payment page could not be opened.
         // Never re-submit — that would place a second order. Send the shopper
         // to the order, where the same payment can be retried against the
@@ -521,13 +518,21 @@ function CheckoutContent() {
               {t("payment.chooseMethodHint")}
             </p>
 
-            {/* Anything from abroad is prepaid, and the reason is stated
-                rather than left as a missing option. */}
+            {/* What this order type means for when money changes hands, said
+                before the options rather than discovered after them. The two
+                cases are genuinely different arrangements, not two buttons. */}
             {hasImport ? (
+              <Notice tone="warn" className="mb-3">
+                <span className="font-bold">🌍 {t("payment.importPrepaidNote")}</span>
+                <span className="mt-1 block">
+                  {importCount < cart.lines.length
+                    ? t("payment.mixedBasketNote")
+                    : t("payment.prepaidExplainer")}
+                </span>
+              </Notice>
+            ) : options?.cash_on_delivery ? (
               <Notice tone="info" className="mb-3">
-                {importCount < cart.lines.length
-                  ? t("payment.mixedBasketNote")
-                  : t("payment.prepaidExplainer")}
+                🇹🇿 {t("payment.localCodNote")}
               </Notice>
             ) : null}
 
@@ -626,7 +631,7 @@ function CheckoutContent() {
               <div className="flex justify-between gap-3">
                 <dt className="text-[color:var(--color-ink-muted)]">{t("checkout.delivery")}</dt>
                 <dd className="font-semibold">
-                  {hasImport ? t("payment.deliveryNotAdded") : formatMoney(deliveryFee)}
+                  {hasImport ? t("payment.deliveryNotAdded") : t("payment.deliveryToBeConfirmed")}
                 </dd>
               </div>
             </dl>

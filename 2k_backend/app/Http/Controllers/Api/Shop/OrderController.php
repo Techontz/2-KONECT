@@ -31,9 +31,6 @@ use Illuminate\Support\Str;
  */
 class OrderController extends Controller
 {
-    /** Flat delivery fee in TZS. */
-    private const DELIVERY_FEE = 3000;
-
     /**
      * Place an order.
      *
@@ -225,19 +222,20 @@ class OrderController extends Controller
 
         $first = $result['lines'][0];
 
-        // Delivery is charged at checkout only when the goods are already in
-        // the country. An imported order is quoted no delivery here and none
-        // is selected for it: what it costs to move the last mile is not known
-        // until the shipment has actually landed, and a flat fee added weeks
-        // early is a number invented to fill a column. Those orders get a
-        // delivery arranged against them afterwards — the delivery_requests
-        // flow that already exists — and the fee arrives with it.
+        // No delivery fee is charged at checkout, for any order.
         //
-        // Local orders are untouched: one fee, once per order, on the first
-        // line, exactly as before.
-        if (CheckoutPolicy::chargesDeliveryAtCheckout($result['lines'])) {
-            $first->update(['delivery_fee' => self::DELIVERY_FEE]);
-        }
+        // A flat TZS 3,000 used to be added to every local order here. It was
+        // a number, not a price: what delivery actually costs depends on where
+        // the customer is, how far the rider goes and what was arranged, and
+        // none of that is known while the basket is still on screen. Charging
+        // it anyway meant every customer in Dar es Salaam paid the same figure
+        // for journeys that are not the same, and — once cards went live — it
+        // meant Stripe collected it as part of a real payment.
+        //
+        // `orders.delivery_fee` stays, defaulting to 0. It is filled in by the
+        // delivery_requests flow that already exists, once someone knows what
+        // the journey costs. An import was never quoted one here in the first
+        // place, for the same reason a week earlier in its life.
 
         // Open the journey. Tracking reads recorded events, so a step is only
         // ever shown as done because it actually happened.
@@ -457,6 +455,11 @@ class OrderController extends Controller
             // accepted, so the state travels with the order rather than living
             // only in the admin panel.
             'payment_status'    => $first->payment_status ?? 'not_required',
+            // The same words the seller console and the admin table use, so
+            // "has this been paid?" has one answer across the system rather
+            // than three renderings of a raw column.
+            'payment'           => \App\Support\OrderGate::paymentBadge($first),
+            'origin'            => \App\Support\OrderGate::originBadge($first),
             'payment_reference' => $first->payment_reference,
             'payment_note'      => $first->payment_note,
             'delivery_address' => $first->delivery_address,

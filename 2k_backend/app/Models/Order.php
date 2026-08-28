@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Support\OrderGate;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Order extends Model
@@ -70,6 +72,42 @@ class Order extends Model
         'eta_max_days' => 'integer',
         'estimated_arrival_at' => 'date',
     ];
+
+    /**
+     * The last line of defence for the prepayment rule.
+     *
+     * Every controller that can advance an order asks {@see OrderGate} first,
+     * and every one of them answers politely when the answer is no. This is
+     * for the paths that do not go through a controller at all — the Filament
+     * edit form, whose status select offers every stop on the journey; a
+     * console command; a tinker session; the next endpoint somebody writes.
+     *
+     * An unpaid import may still be created, may stay `pending`, and may be
+     * cancelled or refunded. It may not be moved forward. Enforced here
+     * because a rule that only exists in controllers is a rule that lasts
+     * until the next surface is added.
+     *
+     * Query-builder updates bypass model events, so this is a backstop and not
+     * the whole enforcement — which is why the controllers check too.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (self $order) {
+            if (! $order->isDirty('status')) {
+                return;
+            }
+
+            // Closing an order is always allowed: cancelling returns reserved
+            // stock, and a refund is a record of money going back.
+            if (in_array($order->status, ['pending', 'cancelled', 'refunded'], true)) {
+                return;
+            }
+
+            if (OrderGate::awaitsPrepayment($order)) {
+                throw ValidationException::withMessages(['status' => OrderGate::MESSAGE]);
+            }
+        });
+    }
 
     public function buyer()
     {

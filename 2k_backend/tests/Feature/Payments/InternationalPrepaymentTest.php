@@ -183,14 +183,19 @@ class InternationalPrepaymentTest extends TestCase
         $this->assertSame(0, DeliveryRequest::count(), 'no delivery may be arranged by checking out');
     }
 
-    public function test_a_local_order_still_gets_its_delivery_fee(): void
+    public function test_a_local_order_is_charged_no_delivery_fee_at_checkout(): void
     {
         $product = $this->product('Local Kettle', 'local');
 
         $this->checkout([['product_id' => $product->id, 'quantity' => 1]], 'cash_on_delivery')
             ->assertStatus(201);
 
-        $this->assertEquals(3000, (float) Order::sum('delivery_fee'));
+        // No fee, for any order. The flat TZS 3,000 that used to be added here
+        // was a number rather than a price — what a rider's journey costs
+        // depends on where the customer is, and none of that is known while
+        // the basket is still on screen. The column is filled in later by the
+        // delivery flow, once somebody knows the answer.
+        $this->assertEquals(0, (float) Order::sum('delivery_fee'));
     }
 
     public function test_a_mixed_basket_is_charged_no_delivery_at_checkout(): void

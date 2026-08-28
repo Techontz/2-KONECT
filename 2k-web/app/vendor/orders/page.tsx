@@ -27,6 +27,14 @@ const TABS = [
  * travels through customs and a warehouse that a local one never sees, and
  * duplicating that route in the console is how the two drift apart.
  */
+/** The server's tone words, in the design system's vocabulary. */
+const PAYMENT_TONE: Record<string, "success" | "warn" | "sale" | "neutral"> = {
+  success: "success",
+  warning: "warn",
+  danger: "sale",
+  info: "neutral",
+};
+
 const STATUS_TONE: Record<string, "success" | "warn" | "brand" | "sale" | "neutral"> = {
   completed: "success",
   pending: "warn",
@@ -129,8 +137,19 @@ export default function VendorOrdersPage() {
                   </div>
                   <span className="flex flex-wrap items-center gap-1.5">
                     <Tag tone={order.fulfilment_type === "import" ? "import" : "local"}>
-                      {order.fulfilment_type === "import" ? "🌍 Import" : "🇹🇿 Local"}
+                      {order.origin?.flag ?? (order.fulfilment_type === "import" ? "🌍" : "🇹🇿")}{" "}
+                      {order.fulfilment_type === "import" ? "Import" : "Local"}
                     </Tag>
+                    {/* Whether the customer has paid, said on the card rather
+                        than left for the seller to ask an administrator. A
+                        local order on pay-on-delivery is not a problem and
+                        does not read like one; an import that reached this
+                        list has been paid, and says so. */}
+                    {order.payment ? (
+                      <Tag tone={PAYMENT_TONE[order.payment.tone] ?? "neutral"}>
+                        {order.payment.code === "verified" ? "✓ " : ""}{order.payment.label}
+                      </Tag>
+                    ) : null}
                     <Tag tone={STATUS_TONE[order.status] ?? "brand"}>
                       {order.status_label ?? order.status}
                     </Tag>

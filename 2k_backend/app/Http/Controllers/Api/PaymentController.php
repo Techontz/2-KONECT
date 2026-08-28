@@ -478,6 +478,15 @@ class PaymentController extends Controller
     {
         $order = $this->vendorActionable($request, $id);
 
+        // An import is bought to order. Accepting one before the customer has
+        // paid commits 2KONECT to a supplier abroad against money that may
+        // never arrive, which is exactly what CheckoutPolicy refuses at
+        // checkout — refusing it there and permitting it here would be no
+        // rule at all.
+        if ($refusal = \App\Support\OrderGate::refusal($order)) {
+            return response()->json(['message' => $refusal], 422);
+        }
+
         if (!in_array($order->status, ['pending', 'paid'])) {
             return response()->json(['message' => 'Order not in pending or paid state.'], 400);
         }
@@ -504,6 +513,14 @@ class PaymentController extends Controller
             // credited. Doing the check outside would leave a window in which
             // the order could change between the two.
             $order = $this->vendorActionable($request, $id, lock: true);
+
+            // Completing credits the seller's wallet. An unpaid import must
+            // never reach here — it cannot, because it could not have been
+            // approved into `processing` — but the wallet is the one place
+            // worth refusing twice.
+            if ($refusal = \App\Support\OrderGate::refusal($order)) {
+                abort(422, $refusal);
+            }
 
             if ($order->status !== 'processing') {
                 abort(400, 'Order not in processing state.');

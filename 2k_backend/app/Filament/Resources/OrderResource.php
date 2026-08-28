@@ -6,6 +6,7 @@ use App\Filament\Resources\OrderResource\Pages;
 use App\Models\CheckoutPaymentChannel;
 use App\Models\Order;
 use App\Models\OrderEvent;
+use App\Support\OrderGate;
 use App\Support\OrderJourney;
 use App\Support\Sourcing;
 use App\Support\StockReservation;
@@ -63,9 +64,24 @@ class OrderResource extends Resource
                         // Every stop on the journey, so an imported order can
                         // be moved through customs and the warehouse rather
                         // than jumping from "processing" to "shipped".
-                        ->options(collect(OrderJourney::all())
-                            ->mapWithKeys(fn ($s) => [$s => OrderJourney::label($s)])
-                            ->all())
+                        //
+                        // Narrowed to the closing states on an unpaid import.
+                        // The model refuses a forward save regardless, but
+                        // being told why here beats being told after filling
+                        // the form in.
+                        ->options(function (?Order $record) {
+                            $all = collect(OrderJourney::all())
+                                ->mapWithKeys(fn ($s) => [$s => OrderJourney::label($s)]);
+
+                            if ($record && OrderGate::awaitsPrepayment($record)) {
+                                return $all->only(['pending', 'cancelled', 'refunded'])->all();
+                            }
+
+                            return $all->all();
+                        })
+                        ->helperText(fn (?Order $record) => $record && OrderGate::awaitsPrepayment($record)
+                            ? '⚠ ' . OrderGate::MESSAGE
+                            : null)
                         ->required()
                         ->native(false),
 
@@ -230,6 +246,36 @@ class OrderResource extends Resource
                     })
                     ->toggleable(),
 
+                // The one line an administrator must not have to work out for
+                // themselves. An unpaid import looks exactly like a paid one
+                // in every other column, and the cost of confusing them is
+                // goods bought abroad against money that never arrives.
+                Tables\Columns\TextColumn::make('fulfilment_type')
+                    ->label('Process?')
+                    ->badge()
+                    ->state(fn (Order $order) => match (true) {
+                        OrderGate::awaitsPrepayment($order) => 'PAYMENT REQUIRED — DO NOT PROCESS',
+                        OrderGate::isImport($order)         => 'Payment verified — ready',
+                        default                             => OrderGate::paymentBadge($order)['label'],
+                    })
+                    ->color(fn (Order $order) => match (true) {
+                        OrderGate::awaitsPrepayment($order) => 'danger',
+                        OrderGate::isImport($order)         => 'success',
+                        default                             => 'gray',
+                    })
+                    ->icon(fn (Order $order) => OrderGate::awaitsPrepayment($order)
+                        ? 'heroicon-m-exclamation-triangle'
+                        : null),
+
+                // Where the goods come from, said once rather than inferred
+                // from a lead time or opened out of the product.
+                Tables\Columns\TextColumn::make('source_country')
+                    ->label('Origin')
+                    ->badge()
+                    ->state(fn (Order $order) => OrderGate::originBadge($order)['flag'] . ' ' . OrderGate::originBadge($order)['label'])
+                    ->color(fn (Order $order) => OrderGate::isImport($order) ? 'warning' : 'info')
+                    ->toggleable(),
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Placed')
                     ->dateTime('j M Y, H:i')
@@ -357,10 +403,25 @@ class OrderResource extends Resource
                     ->label('Mark next stage')
                     ->icon('heroicon-m-arrow-right-circle')
                     ->color('success')
-                    ->visible(fn (Order $order) => static::nextStage($order) !== null)
+                    ->visible(fn (Order $order) => static::nextStage($order) !== null && OrderGate::processable($order))
                     ->requiresConfirmation()
                     ->modalDescription(fn (Order $order) => 'Moves to: ' . OrderJourney::label(static::nextStage($order) ?? ''))
                     ->action(function (Order $order) {
+                        // Enforced here as well as hidden below, because a
+                        // hidden button is a suggestion. Filament actions are
+                        // reachable by anyone who can reach the panel, and the
+                        // rule this protects is the one that spends money on a
+                        // supplier abroad.
+                        if ($refusal = OrderGate::refusal($order)) {
+                            Notification::make()
+                                ->title('Payment required')
+                                ->body($refusal)
+                                ->danger()
+                                ->send();
+
+                            return;
+                        }
+
                         $next = static::nextStage($order);
 
                         if ($next === null) {
@@ -432,7 +493,25 @@ class OrderResource extends Resource
                     ->color('success')
                     ->requiresConfirmation()
                     ->deselectRecordsAfterCompletion()
-                    ->action(fn ($records) => $records->each->update(['status' => 'completed'])),
+                    ->action(function ($records) {
+                        // Partitioned rather than refused wholesale: an admin
+                        // sweeping fifty orders should not be stopped by one
+                        // unpaid import, but must be told which were skipped
+                        // rather than left to assume all fifty moved.
+                        $blocked = $records->filter(fn (Order $order) => ! OrderGate::processable($order));
+
+                        $records->reject(fn (Order $order) => ! OrderGate::processable($order))
+                            ->each->update(['status' => 'completed']);
+
+                        if ($blocked->isNotEmpty()) {
+                            Notification::make()
+                                ->title($blocked->count() . ' order(s) skipped')
+                                ->body(OrderGate::MESSAGE . ' Skipped: ' . $blocked->pluck('reference')->unique()->join(', '))
+                                ->warning()
+                                ->persistent()
+                                ->send();
+                        }
+                    }),
             ]);
     }
 

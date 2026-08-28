@@ -102,8 +102,13 @@ class CheckoutPolicy
      */
     public static function codRefusedMessage(): string
     {
+        // Names no method. Which channels are switched on is an administrator's
+        // decision and it changes without a release — this sentence used to
+        // say "Mobile Money or Lipa Namba" and went on saying it after both
+        // were turned off, telling customers to use methods the checkout no
+        // longer offered.
         return 'Cash on Delivery is not available for products ordered from abroad. '
-            . 'Please pay using Mobile Money or Lipa Namba.';
+            . 'Please choose one of the payment methods shown at checkout.';
     }
 
     /**

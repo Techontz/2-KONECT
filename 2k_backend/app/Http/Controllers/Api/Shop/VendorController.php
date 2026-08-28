@@ -132,6 +132,12 @@ class VendorController extends Controller
             ->with(['buyer:id,name,phone', 'product:id,name', 'product.images'])
             ->where('vendor_id', $vendor->id);
 
+        // An unpaid import is not this seller's work yet, so it is not in this
+        // seller's list. Excluded in the query rather than in the rendering:
+        // hiding it on screen leaves it reachable by anyone who calls the
+        // endpoint directly, and the console is not the only client of it.
+        \App\Support\OrderGate::scopeProcessable($query);
+
         if ($status = $request->query('status')) {
             $query->where('status', $status);
         }
@@ -149,6 +155,11 @@ class VendorController extends Controller
                 // console from a list of status strings it would have to keep
                 // in step with the backend.
                 'fulfilment_type' => $order->fulfilment_type ?? \App\Support\Sourcing::LOCAL,
+                // The seller should never have to ask whether the customer
+                // paid. Every order carries the answer and where the goods
+                // come from, in the same words the admin and the buyer see.
+                'origin'          => \App\Support\OrderGate::originBadge($order),
+                'payment'         => \App\Support\OrderGate::paymentBadge($order),
                 'next_status' => $this->nextStage($order),
                 'quantity'   => (int) $order->quantity,
                 'price'      => (float) $order->price,
@@ -200,6 +211,13 @@ class VendorController extends Controller
 
         if (! $order) {
             return response()->json(['message' => 'Order not found.'], 404);
+        }
+
+        // Cancelling an unpaid import is always allowed — it returns stock and
+        // closes a line nobody is going to pay for. Everything else is work,
+        // and work on an import waits for the money.
+        if ($data['status'] !== 'cancelled' && ($refusal = \App\Support\OrderGate::refusal($order))) {
+            return response()->json(['message' => $refusal], 422);
         }
 
         if (in_array($order->status, ['completed', 'cancelled'], true)) {

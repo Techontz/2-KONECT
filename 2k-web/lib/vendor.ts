@@ -103,6 +103,16 @@ export interface VendorOrder {
   status_label: string;
   /** Whether this line ships locally or has to be brought in. */
   fulfilment_type: "local" | "import";
+  /**
+   * What the seller must not have to ask about.
+   *
+   * Both come from the server so the console, the admin panel and the buyer's
+   * own order page use one vocabulary. An unpaid import never reaches this
+   * list at all — the query excludes it — so `payment` here is a statement
+   * about work that is genuinely the seller's.
+   */
+  payment?: { code: string; label: string; tone: string };
+  origin?: { code: "local" | "import"; label: string; flag: string };
   /** The next stop on this line's route, or null when it is closed. */
   next_status: { value: string; label: string } | null;
   quantity: number;

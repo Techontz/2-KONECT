@@ -355,6 +355,13 @@ class SourcingTest extends TestCase
 
         $line = Order::where('reference', $reference)->firstOrFail();
 
+        // Paid first. An import reaches a seller only after the money has, so
+        // walking one through its route now begins where that rule leaves off.
+        // Written directly here because this test is about the import route,
+        // not about how payment gets verified — that has its own suite.
+        Order::where('reference', $reference)->update(['payment_status' => 'verified']);
+        $line->refresh();
+
         Sanctum::actingAs($this->vendor->user);
 
         $this->postJson("/api/shop/vendor/orders/{$line->id}/status", [
