@@ -6,6 +6,19 @@ return [
 
     'env' => env('APP_ENV', 'production'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Public API documentation
+    |--------------------------------------------------------------------------
+    |
+    | Serves /api/docs and /api/docs.json, generated from the application's own
+    | route table. The routes it lists are not secret — a browser calls them —
+    | but publishing a tidy index of them is a decision to make per environment
+    | rather than inherit from a deployment. Off unless asked for.
+    |
+    */
+    'api_docs_enabled' => (bool) env('API_DOCS_ENABLED', false),
+
     'debug' => (bool) env('APP_DEBUG', false),
 
     'url' => env('APP_URL', 'http://localhost'),

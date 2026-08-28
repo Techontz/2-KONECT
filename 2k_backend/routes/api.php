@@ -147,6 +147,13 @@ if (config('stripe.enabled')) {
     Route::post('/webhooks/stripe', \App\Http\Controllers\Api\StripeWebhookController::class);
 }
 
+// 📘 API documentation
+//
+// Generated from this route table, so it cannot describe an endpoint that does
+// not exist. Off unless API_DOCS_ENABLED is set — see config/app.php.
+Route::get('/docs', [\App\Http\Controllers\Api\ApiDocsController::class, 'ui']);
+Route::get('/docs.json', [\App\Http\Controllers\Api\ApiDocsController::class, 'spec']);
+
 // 🗂️ Categories
 Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/categories/{id}', [CategoryController::class, 'show']);
